@@ -651,16 +651,18 @@ async function processPayment(method, total, paymentDetails = {}) {
     const orderId = String(++APP_STATE.orderIdCounter);
     localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
     const order = {
-        id: orderId,
-        date: new Date().toISOString(),
-        items: APP_STATE.cashierOrder.map(e=>({ name:e.menuItem.name, qty:e.quantity, price:e.menuItem.price })),
-        total: total,
-        paymentMethod: method,
-        memberPhone: APP_STATE.currentMember?.phone || '',
-        memberName: APP_STATE.currentMember?.name || '',
-        paymentDetails: paymentDetails,
-        discountApplied: getDiscountAmount()
-    };
+    id: orderId,
+    date: new Date().toISOString(),
+    items: APP_STATE.cashierOrder.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
+    total: total,
+    paymentMethod: method,
+    memberPhone: APP_STATE.currentMember?.phone || '',
+    memberName: APP_STATE.currentMember?.name || '',
+    paymentDetails: paymentDetails,
+    discountApplied: getDiscountAmount(),
+    status: 'pending',
+    callNumber: ''
+};
     APP_STATE.orders.push(order);
     if (APP_STATE.currentMember) {
         APP_STATE.currentMember.points += Math.floor(total);
@@ -1204,16 +1206,18 @@ function submitCustomerOrder() {
         }
     }
     const order = {
-        id: orderId,
-        date: new Date().toISOString(),
-        items: APP_STATE.customerCart.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: Number(e.menuItem.price) })),
-        total: total,
-        paymentMethod: 'customer_order',
-        memberPhone: member ? member.phone : phone,
-        memberName: member ? member.name : name,
-        paymentDetails: {},
-        discountApplied: 0
-    };
+    id: orderId,
+    date: new Date().toISOString(),
+    items: APP_STATE.customerCart.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: Number(e.menuItem.price) })),
+    total: total,
+    paymentMethod: 'customer_order',
+    memberPhone: member ? member.phone : phone,
+    memberName: member ? member.name : name,
+    paymentDetails: {},
+    discountApplied: 0,
+    status: 'pending',
+    callNumber: ''
+};
     APP_STATE.orders.push(order);
     syncToGoogleSheets('addOrder', { order, updatedMember: member });
     document.getElementById('customerCartModal').style.display = 'none';
