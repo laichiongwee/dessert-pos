@@ -1328,76 +1328,176 @@ function editStoreName() {
 }
 
 // ========== MENU EDIT MODAL ==========
-function openMenuEditModal(itemId = null) {
-  const select = document.getElementById('editItemCategory');
-  select.innerHTML = APP_STATE.categories.filter(c => c !== '全部').map(c => `<option value="${c}">${c}</option>`).join('');
-  
-  if (itemId) {
-    const item = APP_STATE.menu.find(i => i.id === itemId);
-    if (!item) return;
-    document.getElementById('editItemId').value = item.id;
-    document.getElementById('editItemName').value = item.name;
-    document.getElementById('editItemDesc').value = item.description || '';
-    document.getElementById('editItemPrice').value = item.price;
-    document.getElementById('editItemOrigPrice').value = item.originalPrice || '';
-    document.getElementById('editItemCategory').value = item.category;
-    document.getElementById('editItemEmoji').value = item.emoji || '';
-    document.getElementById('editItemImage').value = item.imageUrl || '';
-    document.getElementById('editItemAvailable').checked = item.available !== false;
-  } else {
-    document.getElementById('editItemId').value = '';
-    document.getElementById('editItemName').value = '';
-    document.getElementById('editItemDesc').value = '';
-    document.getElementById('editItemPrice').value = '';
-    document.getElementById('editItemOrigPrice').value = '';
-    // select first available category
-    if (APP_STATE.categories.length > 1) {
-      document.getElementById('editItemCategory').value = APP_STATE.categories[1];
+// ==================== MENU EDITING ====================
+
+// Render menu items for editing
+function openMenuEditModal(itemId) {
+    // Show the modal
+    document.getElementById('menuEditModal').style.display = 'flex';
+
+    // Populate category dropdown
+    const catSel = document.getElementById('editItemCategory');
+    catSel.innerHTML = APP_STATE.categories
+        .filter(cat => cat !== "全部")
+        .map(cat => `<option value="${cat}">${cat}</option>`)
+        .join('');
+
+    if (itemId) {
+        // Editing an item
+        const item = APP_STATE.menu.find(i => i.id === itemId);
+        if (!item) return;
+        document.getElementById('editItemId').value = item.id;
+        document.getElementById('editItemName').value = item.name || '';
+        document.getElementById('editItemDesc').value = item.desc || '';
+        document.getElementById('editItemPrice').value = item.price || '';
+        document.getElementById('editItemOrigPrice').value = item.originalPrice || '';
+        document.getElementById('editItemCategory').value = item.category || '';
+        document.getElementById('editItemEmoji').value = item.emoji || '';
+        document.getElementById('editItemImage').value = item.image || '';
+        document.getElementById('editItemAvailable').checked = !!item.available;
+        // Show delete button
+        showMenuDeleteBtn(true);
+    } else {
+        // Adding a new item
+        document.getElementById('editItemId').value = '';
+        document.getElementById('editItemName').value = '';
+        document.getElementById('editItemDesc').value = '';
+        document.getElementById('editItemPrice').value = '';
+        document.getElementById('editItemOrigPrice').value = '';
+        document.getElementById('editItemCategory').selectedIndex = 0;
+        document.getElementById('editItemEmoji').value = '';
+        document.getElementById('editItemImage').value = '';
+        document.getElementById('editItemAvailable').checked = true;
+        showMenuDeleteBtn(false);
     }
-    document.getElementById('editItemEmoji').value = '';
-    document.getElementById('editItemImage').value = '';
-    document.getElementById('editItemAvailable').checked = true;
-  }
-  document.getElementById('menuEditModal').style.display = 'flex';
+
+    renderAdminMenuGrid(); // Refresh item list shown with edit/delete buttons
 }
 
-function closeMenuEditModal(e) {
-  if (e && e.target !== document.getElementById('menuEditModal')) return;
-  document.getElementById('menuEditModal').style.display = 'none';
+function closeMenuEditModal(event) {
+    if (event && event.target !== document.getElementById('menuEditModal')) return;
+    document.getElementById('menuEditModal').style.display = 'none';
 }
-document.getElementById('menuEditModal').addEventListener('click', function(e) {
-  if (e.target === this) this.style.display = 'none';
+
+document.getElementById('menuEditModal').addEventListener('click', function(e){
+    if(e.target === this) this.style.display='none';
 });
 
+// Save or update item
 async function saveMenuItem() {
-  const id = document.getElementById('editItemId').value;
-  const data = {
-    id: id || 'I' + Date.now(),
-    name: document.getElementById('editItemName').value,
-    description: document.getElementById('editItemDesc').value,
-    price: parseFloat(document.getElementById('editItemPrice').value) || 0,
-    originalPrice: parseFloat(document.getElementById('editItemOrigPrice').value) || null,
-    category: document.getElementById('editItemCategory').value || '其他',
-    emoji: document.getElementById('editItemEmoji').value,
-    imageUrl: document.getElementById('editItemImage').value,
-    available: document.getElementById('editItemAvailable').checked
-  };
-  
-  if (id && APP_STATE.menu.some(i => i.id === id)) {
-    // update
-    const idx = APP_STATE.menu.findIndex(i => i.id === id);
-    APP_STATE.menu[idx] = data;
-    await syncToGoogleSheets('updateMenuItem', data);
-  } else {
-    // add new
-    APP_STATE.menu.push(data);
-    await syncToGoogleSheets('addMenuItem', data);
-  }
-  APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
-  renderAll();
-  document.getElementById('menuEditModal').style.display = 'none';
-  showToast('菜品已保存');
+    const id = document.getElementById('editItemId').value.trim();
+    const name = document.getElementById('editItemName').value.trim();
+    const desc = document.getElementById('editItemDesc').value.trim();
+    const price = parseFloat(document.getElementById('editItemPrice').value);
+    const originalPrice = parseFloat(document.getElementById('editItemOrigPrice').value);
+    const category = document.getElementById('editItemCategory').value;
+    const emoji = document.getElementById('editItemEmoji').value.trim();
+    const image = document.getElementById('editItemImage').value.trim();
+    const available = document.getElementById('editItemAvailable').checked;
+
+    if (!name || isNaN(price) || !category) {
+        showToast('请填写菜品名称、分类和价格');
+        return;
+    }
+
+    // Construct new/updated item
+    const menuItem = {
+        id: id || ('I' + Date.now().toString().slice(-6)),
+        name,
+        desc,
+        price,
+        originalPrice: isNaN(originalPrice) ? "" : originalPrice,
+        category,
+        emoji,
+        image,
+        available
+    };
+
+    // Add or update
+    const idx = APP_STATE.menu.findIndex(i => i.id === menuItem.id);
+    if (idx >= 0) {
+        APP_STATE.menu[idx] = menuItem;
+        await syncToGoogleSheets('editMenuItem', menuItem);
+        showToast('菜品已更新');
+    } else {
+        APP_STATE.menu.push(menuItem);
+        await syncToGoogleSheets('addMenuItem', menuItem);
+        showToast('菜品已添加');
+    }
+
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    closeMenuEditModal();
+    renderAll();
 }
+
+// Show/hide "删除" button
+function showMenuDeleteBtn(show) {
+    let btn = document.getElementById('deleteMenuItemBtn');
+    if (!btn) {
+        // Create if not exist yet
+        btn = document.createElement('button');
+        btn.id = "deleteMenuItemBtn";
+        btn.className = "btn btn-outline btn-sm";
+        btn.style.flex = "1";
+        btn.style.background = "#fff2f0";
+        btn.style.color = "#e85555";
+        btn.innerHTML = "🗑️ 删除";
+        btn.onclick = deleteMenuItem;
+        // Insert after save button
+        let btnRow = document.querySelector('#menuEditModal .modal-sheet > div[style*=gap]');
+        if (btnRow) btnRow.appendChild(btn);
+    }
+    btn.style.display = show ? 'block' : 'none';
+}
+
+// Delete menu item
+async function deleteMenuItem() {
+    const id = document.getElementById('editItemId').value.trim();
+    if (!id) return;
+    if (!confirm('确定要删除该菜品吗？')) return;
+    APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== id);
+    await syncToGoogleSheets('deleteMenuItem', {id});
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    closeMenuEditModal();
+    renderAll();
+    showToast('菜品已删除');
+}
+
+// Show a grid of existing menu items for edit
+function renderAdminMenuGrid() {
+    const grid = document.getElementById('adminMenuGrid');
+    if (!APP_STATE.adminUnlocked) return grid.innerHTML = '';
+    grid.style.display = 'grid';
+    grid.innerHTML = APP_STATE.menu.map(item =>
+        `<div class="menu-card admin-mode" style="position: relative;">
+            <span class="edit-icon" onclick="event.stopPropagation();openMenuEditModal('${item.id}')">✏️</span>
+            <span class="item-emoji">${item.emoji || ''}</span>
+            <div class="item-name">${item.name}</div>
+            <div style="font-size:0.78rem;color:var(--text-light);">${item.category || ''}</div>
+            <div class="item-price">RM ${Number(item.price).toFixed(2)}</div>
+            <div style="font-size:0.75em;color:#c45a2e">${item.available ? "在售" : "停售"}</div>
+        </div>`).join('') +
+        `<div class="menu-card admin-mode" style="opacity:0.7;" onclick="openMenuEditModal()">
+            <span class="item-emoji">＋</span>
+            <div class="item-name" style="color:#e8784a">添加新菜品</div>
+        </div>`;
+}
+// Call to make window-accessible
+window.openMenuEditModal = openMenuEditModal;
+window.saveMenuItem = saveMenuItem;
+window.deleteMenuItem = deleteMenuItem;
+window.renderAdminMenuGrid = renderAdminMenuGrid;
+
+// Always re-render menu grid when unlocking admin mode
+function toggleAdminMode() {
+    APP_STATE.adminUnlocked = !APP_STATE.adminUnlocked;
+    document.getElementById('adminBar').style.display = APP_STATE.adminUnlocked ? 'flex' : 'none';
+    document.getElementById('unlockBtn').style.display = APP_STATE.adminUnlocked ? 'none' : 'block';
+    renderAdminMenuGrid();
+}
+
+// Call this once app loads if unlocked
+if (APP_STATE.adminUnlocked) renderAdminMenuGrid();
 
 // ========== CATEGORY MODAL ==========
 function openCategoryModal() {
