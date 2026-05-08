@@ -196,6 +196,13 @@
 .member-dropdown-item:active {
     background: var(--persimmon-light);
 }
+
+#menuEditModal.modal-overlay {
+  z-index: 999 !important;
+}
+#menuEditModal .modal-sheet {
+  z-index: 1000 !important;
+}
     </style>
 </head>
 <body>
@@ -543,7 +550,13 @@ function renderAll() {
 }
 function renderCategoryTabs() { document.getElementById('categoryTabs').innerHTML = APP_STATE.categories.map(cat=>`<button class="cat-tab${cat===APP_STATE.activeCategory?' active':''}" onclick="setCategory('${cat}')">${cat}</button>`).join(''); }
 function setCategory(cat) { APP_STATE.activeCategory = cat; renderAll(); }
-function getFilteredMenu() { return APP_STATE.activeCategory==='全部' ? APP_STATE.menu : APP_STATE.menu.filter(i=>i.category===APP_STATE.activeCategory); }
+function getFilteredMenu() {
+  // Only show available items in menu:
+  return APP_STATE.activeCategory==='全部'
+    ? APP_STATE.menu.filter(i => i.available === true || i.available === 'TRUE')
+    : APP_STATE.menu.filter(i => (i.category === APP_STATE.activeCategory)
+         && (i.available === true || i.available === 'TRUE'));
+}
 function renderMenuGrid() { /* unchanged */ }
 function renderCustomerMenuGrid() { /* unchanged */ }
 function renderOrderPanel() { /* unchanged, but with discount using rules later */ }
@@ -639,16 +652,45 @@ async function submitNewMember() {
 }
 
 // ==================== PAYMENT MODAL ====================
-function openPaymentModal() {
-    if(APP_STATE.cashierOrder.length===0){ showToast('⚠️ 请先添加商品'); return; }
-    const total = getOrderTotal();
+APP_STATE.selectedOrderForPayment = null;
+
+function openPaymentModal(orderId) {
+    let payOrder = null;
+    if (orderId) {
+        payOrder = APP_STATE.orders.find(o => o.id === orderId);
+        APP_STATE.selectedOrderForPayment = payOrder;
+    } else {
+        APP_STATE.selectedOrderForPayment = null;
+    }
+    const total = payOrder ? Number(payOrder.total) : getOrderTotal();
     document.getElementById('payTotalDisplay').textContent = `RM ${total.toFixed(2)}`;
     document.getElementById('paymentModal').style.display='flex';
     document.getElementById('paymentMethodSelect').value='cash';
     showPaymentDetails();
+    // Optionally clear previous input
+    document.getElementById('cashReceived').value = '';
+    document.getElementById('changeDisplay').textContent = 'RM 0.00';
 }
-function closePaymentModal(e) { if(e&&e.target!==document.getElementById('paymentModal'))return; document.getElementById('paymentModal').style.display='none'; }
-document.getElementById('paymentModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+
+function calculateChange() {
+    let total;
+    if (APP_STATE.selectedOrderForPayment) {
+        total = Number(APP_STATE.selectedOrderForPayment.total);
+    } else {
+        total = getOrderTotal();
+    }
+    const received = parseFloat(document.getElementById('cashReceived').value) || 0;
+    const change = Math.max(0, received - total);
+    document.getElementById('changeDisplay').textContent = `RM ${change.toFixed(2)}`;
+}
+
+function closePaymentModal(e) { 
+    if(e && e.target!==document.getElementById('paymentModal')) return;
+    document.getElementById('paymentModal').style.display='none';
+    APP_STATE.selectedOrderForPayment = null;
+}
+
+// Remember to update finalizePayment or processPayment so it also clears the pointer after processing.
 
 function showPaymentDetails() {
     const method = document.getElementById('paymentMethodSelect').value;
@@ -656,12 +698,6 @@ function showPaymentDetails() {
     document.getElementById('cardDetails').style.display = method==='card'?'block':'none';
     document.getElementById('onlineDetails').style.display = method==='online'?'block':'none';
     if(method==='cash') calculateChange();
-}
-function calculateChange() {
-    const total = getOrderTotal();
-    const received = parseFloat(document.getElementById('cashReceived').value) || 0;
-    const change = Math.max(0, received - total);
-    document.getElementById('changeDisplay').textContent = `RM ${change.toFixed(2)}`;
 }
 
 function finalizePayment() {
@@ -1373,7 +1409,9 @@ function editStoreName() {
 function openMenuEditModal(itemId) {
     // Show the modal
     document.getElementById('menuEditModal').style.display = 'flex';
-
+	let modal = document.getElementById('menuEditModal');
+  modal.style.display = 'flex';
+  modal.style.zIndex = '999';
     // Populate category dropdown
     const catSel = document.getElementById('editItemCategory');
     catSel.innerHTML = APP_STATE.categories
