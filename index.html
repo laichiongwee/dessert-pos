@@ -413,6 +413,11 @@
 </div>
     <div class="payment-detail-row"><label>Emoji</label><input id="editItemEmoji" style="flex:1;"></div>
     <div class="payment-detail-row"><label>图片URL</label><input id="editItemImage" style="flex:1;"></div>
+	  <div class="payment-detail-row">
+  <label>菜单图片</label>
+  <input type="file" id="editItemImageUpload" accept="image/*">
+  <button class="btn btn-xs btn-outline" onclick="uploadMenuImage()">上传图片</button>
+</div>
     <div class="payment-detail-row"><label>在售</label><input type="checkbox" id="editItemAvailable" style="width:auto;"></div>
     <div style="display:flex;gap:8px;margin-top:12px;">
       <button class="btn btn-primary btn-sm" onclick="saveMenuItem()" style="flex:1;">💾 保存</button>
@@ -1772,6 +1777,49 @@ async function deleteMenuItemFromSheet(itemId) {
 window.openMenuSheetModal = openMenuSheetModal;
 window.closeMenuSheetModal = closeMenuSheetModal;
 window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
+
+	async function uploadMenuImage() {
+    const input = document.getElementById('editItemImageUpload');
+    if (!input.files || !input.files[0]) {
+        showToast('请选择图片文件');
+        return;
+    }
+    const file = input.files[0];
+    const menuId = document.getElementById('editItemId').value || '';
+    // Show uploading toast/spinner
+    showToast('图片上传中…');
+    // Prepare for multipart POST
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('menuId', menuId);
+
+    try {
+        // Replace with your actual Google Apps Script web app image upload URL!
+        const uploadUrl = 'https://script.google.com/macros/s/AKfycbzZnYYGQzAYQqE0yTlpDmKbNap5LJja2kuZ5umDD4K8w-gVLuE_qMU6DgNltUSnqSHN/exec';
+
+        const resp = await fetch(uploadUrl, { method: 'POST', body: formData });
+        const json = await resp.json();
+        if (json.success) {
+            showToast('图片已上传');
+            document.getElementById('editItemImage').value = json.url; // Fill URL input
+// <-- Add image preview here
+            let prev = document.getElementById('menuImagePreview');
+            if (!prev) {
+                prev = document.createElement('img');
+                prev.style.maxWidth = '100px';
+                prev.style.marginTop = '4px';
+                prev.id = 'menuImagePreview';
+                document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
+            }
+            prev.src = json.url;
+            // <-- end image preview
+        } else {
+            showToast('上传失败: ' + json.error);
+        }
+    } catch (err) {
+        showToast('上传错误: ' + err.message);
+    }
+}
     </script>
 </body>
 </html>
