@@ -1017,7 +1017,7 @@ function renderOrderPanel() {
 }
 
 function renderFulfillmentView() {
-    const activeOrders = APP_STATE.orders.filter(o => o.status && o.status !== 'completed');
+    const activeOrders = APP_STATE.orders.filter(o => (o.status || 'pending') !== 'completed');
     const completedOrders = APP_STATE.orders.filter(o => o.status === 'completed');
     
     document.getElementById('activeOrders').innerHTML = activeOrders.length === 0 
