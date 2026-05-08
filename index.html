@@ -210,7 +210,8 @@
     <button data-mode="customer" onclick="switchMode('customer')">📱 顾客</button>
     <button data-mode="fulfillment" onclick="switchMode('fulfillment')">📦 出餐</button>
 </div>
-        <button class="btn btn-outline btn-sm" onclick="openQRModal()">🔗 QR</button>
+        <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()">💰 待收款</button>
+		<button class="btn btn-outline btn-sm" onclick="openQRModal()">🔗 QR</button>
         <button class="btn btn-ghost btn-sm" onclick="openReportModal()">📊 报表</button>
         <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙️</button>
     </div>
@@ -223,6 +224,7 @@
         <button class="btn btn-xs btn-outline" onclick="openDiscountRulesModal()">🏷️ 优惠规则</button>
         <button class="btn btn-xs btn-outline" onclick="openCategoryModal()">📂 管理分类</button>
         <button class="btn btn-xs btn-outline" onclick="openMenuEditModal()">＋菜品</button>
+		<button class="btn btn-xs btn-outline" onclick="openMenuSheetModal()">📝 更新菜单</button>
         <button class="btn btn-xs btn-danger" onclick="toggleAdminMode()">🔒 锁定编辑</button>
     </div>
     <button class="btn btn-sm" onclick="toggleAdminMode()" id="unlockBtn" style="margin-bottom:8px;">🔓 解锁管理</button>
@@ -425,7 +427,34 @@
     <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;" onclick="closeCategoryModal()">关闭</button>
   </div>
 </div>
-
+<!-- Unpaid Orders Modal -->
+<div class="modal-overlay" id="unpaidOrdersModal" style="display:none;" onclick="closeUnpaidOrdersModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-handle"></div>
+        <h3>💰 待付款订单</h3>
+        <div id="unpaidOrdersList" style="max-height:60vh;overflow-y:auto;"></div>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;" onclick="closeUnpaidOrdersModal()">关闭</button>
+    </div>
+</div>
+	<!-- Menu Sheet Modal -->
+<div class="modal-overlay" id="menuSheetModal" style="display:none;" onclick="closeMenuSheetModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:700px;">
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:12px;">📝 菜单管理</h3>
+    <div style="overflow-x:auto">
+      <table id="menuSheetTable" class="daily-report-table">
+        <thead>
+          <tr>
+            <th>#</th><th>名称</th><th>描述</th><th>售价</th><th>原价</th><th>分类</th><th>Emoji</th><th>图片</th><th>在售</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openMenuEditModal()">＋ 添加新菜品</button>
+    </div>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-top:10px;" onclick="closeMenuSheetModal()">关闭</button>
+  </div>
+</div>
 <script>
 // ==================== GLOBAL STATE ====================
 const APP_STATE = {
@@ -551,12 +580,21 @@ function searchMemberSuggestions() {
         APP_STATE.currentMember = null;
     } else {
         dropdown.innerHTML = matches.map(m => 
-            `<div class="member-dropdown-item" onclick="selectMemberById('${m.id}')">${m.name} - ${m.phone}</div>`
+            `<div class="member-dropdown-item" 
+                onclick="event.stopPropagation(); selectMemberById('${m.id}');"
+                onmousedown="event.preventDefault();"
+            >${m.name} - ${m.phone}</div>`
         ).join('');
         dropdown.style.display = 'block';
     }
     updateMemberDisplay();
 }
+
+// Ensure dropdown doesn't close when clicking an item
+document.getElementById('memberDropdown').addEventListener('mousedown', function(e) {
+    e.stopPropagation();
+});
+	
 function selectMember(member) {
     APP_STATE.currentMember = member;
     document.getElementById('memberPhoneInput').value = member.phone;
@@ -1019,7 +1057,7 @@ function renderOrderPanel() {
 }
 
 function renderFulfillmentView() {
-    const activeOrders = APP_STATE.orders.filter(o => (o.status || 'pending') !== 'completed');
+    const activeOrders = APP_STATE.orders.filter(o => o.status !== 'completed');
     const completedOrders = APP_STATE.orders.filter(o => o.status === 'completed');
     
     document.getElementById('activeOrders').innerHTML = activeOrders.length === 0 
@@ -1035,23 +1073,24 @@ function renderOrderCard(order) {
     const status = order.status || 'pending';
     const callNumber = order.callNumber || '';
     const items = (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) || [];
-    const statusClass = status === 'completed' ? 'completed' : (status === 'ready' ? 'ready' : '');
-    const statusLabel = { pending: '待处理', preparing: '制作中', ready: '可取餐', completed: '已取餐' }[status] || '未知';
-    const badgeClass = `status-${status}`;
     
+    let statusLabel = { pending_payment: '待付款', pending: '待处理', preparing: '制作中', ready: '可取餐', completed: '已取餐' }[status] || '未知';
+    let badgeClass = `status-${status}`;
+    if (status === 'pending_payment') badgeClass = 'status-pending'; // use same orangish badge
+
     let buttons = '';
-    if (status === 'pending') {
-        buttons += `<button class="btn btn-xs btn-outline" onclick="updateOrderStatus('${order.id}','preparing')">开始准备</button>`;
-    }
-    if (status === 'preparing') {
-        buttons += `<button class="btn btn-xs btn-primary" onclick="markReady('${order.id}')">餐已好</button>`;
-    }
-    if (status === 'ready') {
-        buttons += `<button class="btn btn-xs btn-success" onclick="markCompleted('${order.id}')">客人取餐</button>`;
+    if (status === 'pending_payment') {
+        buttons = '<span style="color:var(--red);font-size:0.75rem;">⏳ 未付款</span>';
+    } else if (status === 'pending') {
+        buttons = `<button class="btn btn-xs btn-outline" onclick="updateOrderStatus('${order.id}','preparing')">开始准备</button>`;
+    } else if (status === 'preparing') {
+        buttons = `<button class="btn btn-xs btn-primary" onclick="markReady('${order.id}')">餐已好</button>`;
+    } else if (status === 'ready') {
+        buttons = `<button class="btn btn-xs btn-success" onclick="markCompleted('${order.id}')">客人取餐</button>`;
     }
 
     return `
-    <div class="order-card ${statusClass}">
+    <div class="order-card ${status === 'completed' ? 'completed' : ''}">
         <div class="flex-row">
             <span><strong>#${order.id}</strong></span>
             <span class="status-badge ${badgeClass}">${statusLabel}</span>
@@ -1215,7 +1254,7 @@ function submitCustomerOrder() {
     memberName: member ? member.name : name,
     paymentDetails: {},
     discountApplied: 0,
-    status: 'pending',
+    status: 'pending_payment',
     callNumber: ''
 };
     APP_STATE.orders.push(order);
@@ -1546,6 +1585,155 @@ async function addNewCategory() {
   showToast('分类已添加');
 }
 
+	function openUnpaidOrdersModal() {
+    renderUnpaidOrdersList();
+    document.getElementById('unpaidOrdersModal').style.display = 'flex';
+}
+
+function closeUnpaidOrdersModal(e) {
+    if (e && e.target !== document.getElementById('unpaidOrdersModal')) return;
+    document.getElementById('unpaidOrdersModal').style.display = 'none';
+}
+document.getElementById('unpaidOrdersModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+
+function renderUnpaidOrdersList() {
+    const unpaidOrders = APP_STATE.orders.filter(o => o.status === 'pending_payment');
+    const container = document.getElementById('unpaidOrdersList');
+    if (unpaidOrders.length === 0) {
+        container.innerHTML = '<p style="padding:20px;color:var(--text-lighter);">暂无待付款订单 🎉</p>';
+        return;
+    }
+    container.innerHTML = unpaidOrders.map(order => {
+        const items = (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) || [];
+        return `
+        <div class="order-card" style="margin-bottom:8px;">
+            <div><strong>#${order.id}</strong> · ${order.memberName || '顾客'}</div>
+            <div style="font-size:0.75rem;">${items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
+            <div class="flex-row" style="margin-top:4px;">
+                <span style="font-weight:800;">RM ${Number(order.total).toFixed(2)}</span>
+                <button class="btn btn-xs btn-primary" onclick="payCustomerOrder('${order.id}')">💳 收款</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function payCustomerOrder(orderId) {
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    if (!order) return;
+    // Open payment modal with this order's total, then on confirm:
+    openPaymentModalForOrder(order);
+}
+
+// Modified payment modal to handle existing orders
+function openPaymentModalForOrder(order) {
+    // close unpaid modal
+    document.getElementById('unpaidOrdersModal').style.display = 'none';
+    // set a global variable to indicate we're paying a customer order
+    window.currentPayingOrderId = order.id;
+    document.getElementById('payTotalDisplay').textContent = `RM ${Number(order.total).toFixed(2)}`;
+    document.getElementById('paymentModal').style.display = 'flex';
+    document.getElementById('paymentMethodSelect').value = 'cash';
+    showPaymentDetails();
+}
+
+// Override finalizePayment to check if we're paying a customer order
+const originalFinalizePayment = finalizePayment;
+finalizePayment = function() {
+    if (window.currentPayingOrderId) {
+        finalizeCustomerPayment();
+    } else {
+        originalFinalizePayment();
+    }
+};
+
+async function finalizeCustomerPayment() {
+    const orderId = window.currentPayingOrderId;
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    if (!order) return;
+    const method = document.getElementById('paymentMethodSelect').value;
+    const total = Number(order.total);
+    let paymentDetails = { method };
+    if (method === 'cash') {
+        const received = parseFloat(document.getElementById('cashReceived').value) || 0;
+        if (received < total) { showToast('⚠️ 实收金额不足'); return; }
+        paymentDetails.amountTendered = received;
+        paymentDetails.change = received - total;
+    } else if (method === 'card') {
+        paymentDetails.cardType = document.getElementById('cardType').value;
+        paymentDetails.cardLast4 = document.getElementById('cardLast4').value;
+        paymentDetails.refNum = document.getElementById('cardRefNum').value;
+    } else if (method === 'online') {
+        paymentDetails.onlineType = document.getElementById('onlineType').value;
+        paymentDetails.refNum = document.getElementById('onlineRefNum').value;
+    }
+    // Update order
+    order.status = 'pending';
+    order.paymentMethod = method;
+    order.paymentDetails = paymentDetails;
+    await syncToGoogleSheets('updateOrderStatus', { orderId, status: 'pending' });
+    // Also update member points if needed (similar to processPayment)
+    const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
+    if (member) {
+        member.points += Math.floor(total);
+        member.totalSpent += total;
+        await syncToGoogleSheets('addOrder', { order, updatedMember: member }); // this will also update member points
+    }
+    document.getElementById('paymentModal').style.display = 'none';
+    window.currentPayingOrderId = null;
+    renderFulfillmentView();
+    renderUnpaidOrdersList();
+    showToast(`✅ 订单 #${orderId} 已收款`);
+}
+
+	// Open menu sheet and render items as a table
+function openMenuSheetModal() {
+    document.getElementById('menuSheetModal').style.display = 'flex';
+    renderMenuSheetTable();
+}
+
+function closeMenuSheetModal(event) {
+    if (event && event.target !== document.getElementById('menuSheetModal')) return;
+    document.getElementById('menuSheetModal').style.display = 'none';
+}
+
+function renderMenuSheetTable() {
+    const tbody = document.getElementById('menuSheetTable').querySelector('tbody');
+    if (!tbody) return;
+    tbody.innerHTML = APP_STATE.menu.map((item, idx) => `
+      <tr>
+        <td>${item.id}</td>
+        <td>${item.name}</td>
+        <td>${item.desc || ''}</td>
+        <td>${Number(item.price).toFixed(2)}</td>
+        <td>${item.originalPrice || ''}</td>
+        <td>${item.category}</td>
+        <td>${item.emoji || ''}</td>
+        <td>${item.image || ''}</td>
+        <td>${item.available ? '是' : '否'}</td>
+        <td>
+          <button class="btn btn-xs btn-outline" onclick="openMenuEditModal('${item.id}')">编辑</button>
+          <button class="btn btn-xs btn-danger" style="margin-left:3px;" onclick="deleteMenuItemFromSheet('${item.id}')">删除</button>
+        </td>
+      </tr>
+    `).join('');
+}
+
+// Add a smart delete button for menu sheet
+async function deleteMenuItemFromSheet(itemId) {
+    if (!confirm('确定要删除该菜品吗？')) return;
+    APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== itemId);
+    await syncToGoogleSheets('deleteMenuItem', {id: itemId});
+    renderMenuSheetTable();
+    showToast('菜品已删除');
+    renderAll();
+}
+
+// Make accessible globally
+window.openMenuSheetModal = openMenuSheetModal;
+window.closeMenuSheetModal = closeMenuSheetModal;
+window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
     </script>
 </body>
 </html>
