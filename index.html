@@ -203,12 +203,20 @@
 #menuEditModal .modal-sheet {
   z-index: 1000 !important;
 }
+	
 		.menu-card .item-img {
     width: 100%;
     height: 90px;
     object-fit: cover;
     border-radius: 8px;
     margin-bottom: 6px;
+    display: block;
+}
+.menu-card .item-emoji {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 4px;
+    line-height: 1;
 }
     </style>
 </head>
@@ -592,20 +600,21 @@ function renderMenuGrid() {
     const grid = document.getElementById('menuGrid');
     const items = getFilteredMenu();
     grid.innerHTML = items.map(item => {
-        const hasSale = item.originalPrice && item.originalPrice > item.price;
-        // Show image if available, otherwise show emoji
-        const imageOrEmoji = item.imageUrl 
-            ? `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">`
-            : '';
-        const emojiSpan = `<span class="item-emoji" style="${item.imageUrl ? 'display:none;' : ''}">${item.emoji || '🍴'}</span>`;
+        const hasSale = item.originalPrice && Number(item.originalPrice) > Number(item.price);
+        
+        // Image or emoji logic
+        let imageOrEmojiHTML = '';
+        if (item.imageUrl && item.imageUrl.trim() !== '') {
+            imageOrEmojiHTML = `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">`;
+        }
+        imageOrEmojiHTML += `<span class="item-emoji" style="${item.imageUrl && item.imageUrl.trim() !== '' ? 'display:none;' : ''}">${item.emoji || '🍴'}</span>`;
         
         return `
         <div class="menu-card${item.available ? '' : ' out-of-stock'}" onclick="${item.available ? `addToOrder('${item.id}')` : ''}">
             ${hasSale ? '<span class="badge-sale">优惠</span>' : ''}
-            ${imageOrEmoji}
-            ${emojiSpan}
+            ${imageOrEmojiHTML}
             <div class="item-name">${item.name}</div>
-            <div class="item-description">${item.description || ''}</div>
+            <div class="item-desc">${item.description || ''}</div>
             <div class="item-price">
                 RM ${Number(item.price).toFixed(2)}
                 ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
@@ -617,19 +626,20 @@ function renderCustomerMenuGrid() {
     const grid = document.getElementById('customerMenuGrid');
     const items = getFilteredMenu();
     grid.innerHTML = items.map(item => {
-        const hasSale = item.originalPrice && item.originalPrice > item.price;
-        const imageOrEmoji = item.imageUrl 
-            ? `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">`
-            : '';
-        const emojiSpan = `<span class="item-emoji" style="${item.imageUrl ? 'display:none;' : ''}">${item.emoji || '🍴'}</span>`;
+        const hasSale = item.originalPrice && Number(item.originalPrice) > Number(item.price);
+        
+        let imageOrEmojiHTML = '';
+        if (item.imageUrl && item.imageUrl.trim() !== '') {
+            imageOrEmojiHTML = `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">`;
+        }
+        imageOrEmojiHTML += `<span class="item-emoji" style="${item.imageUrl && item.imageUrl.trim() !== '' ? 'display:none;' : ''}">${item.emoji || '🍴'}</span>`;
         
         return `
         <div class="menu-card${item.available ? '' : ' out-of-stock'}" onclick="${item.available ? `addToCustomerCart('${item.id}')` : ''}">
             ${hasSale ? '<span class="badge-sale">优惠</span>' : ''}
-            ${imageOrEmoji}
-            ${emojiSpan}
+            ${imageOrEmojiHTML}
             <div class="item-name">${item.name}</div>
-            <div class="item-description">${item.description || ''}</div>
+            <div class="item-desc">${item.description || ''}</div>
             <div class="item-price">
                 RM ${Number(item.price).toFixed(2)}
                 ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
@@ -1471,14 +1481,17 @@ function renderAdminMenuGrid() {
     if (!grid) return;
     const items = APP_STATE.menu;
     grid.innerHTML = items.map(item => {
-        const imageOrEmoji = item.imageUrl 
-            ? `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy">`
-            : `<span class="item-emoji">${item.emoji || '🍴'}</span>`;
+        let imageOrEmojiHTML = '';
+        if (item.imageUrl && item.imageUrl.trim() !== '') {
+            imageOrEmojiHTML = `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy">`;
+        } else {
+            imageOrEmojiHTML = `<span class="item-emoji">${item.emoji || '🍴'}</span>`;
+        }
         
         return `
         <div class="menu-card admin-mode" onclick="openMenuEditModal('${item.id}')">
             <span class="edit-icon" onclick="event.stopPropagation(); deleteMenuItem('${item.id}')">🗑️</span>
-            ${imageOrEmoji}
+            ${imageOrEmojiHTML}
             <div class="item-name">${item.name}</div>
             <div class="item-price">RM ${Number(item.price).toFixed(2)}</div>
         </div>`;
