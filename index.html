@@ -413,11 +413,12 @@
 </div>
     <div class="payment-detail-row"><label>Emoji</label><input id="editItemEmoji" style="flex:1;"></div>
     <div class="payment-detail-row"><label>图片URL</label><input id="editItemImage" style="flex:1;"></div>
-	  <div class="payment-detail-row">
-  <label>菜单图片</label>
-  <input type="file" id="editItemImageUpload" accept="image/*">
-  <button class="btn btn-xs btn-outline" onclick="uploadMenuImage()">上传图片</button>
+	<div class="payment-detail-row">
+    <label>上传图片</label>
+    <input type="file" id="editItemImageUpload" accept="image/*" style="flex:1;">
+    <button class="btn btn-xs btn-outline" onclick="uploadMenuImage()" type="button">上传</button>
 </div>
+<img id="menuImagePreview" style="max-width:100px;margin-top:4px;display:none;">
     <div class="payment-detail-row"><label>在售</label><input type="checkbox" id="editItemAvailable" style="width:auto;"></div>
     <div style="display:flex;gap:8px;margin-top:12px;">
       <button class="btn btn-primary btn-sm" onclick="saveMenuItem()" style="flex:1;">💾 保存</button>
@@ -1413,6 +1414,13 @@ function editStoreName() {
 // Render menu items for editing
 function openMenuEditModal(itemId) {
     // Show the modal
+	const imgPreview = document.getElementById('menuImagePreview');
+if (item && item.imageUrl) {
+    imgPreview.src = item.imageUrl;
+    imgPreview.style.display = 'block';
+} else {
+    imgPreview.style.display = 'none';
+}
     document.getElementById('menuEditModal').style.display = 'flex';
 	let modal = document.getElementById('menuEditModal');
   modal.style.display = 'flex';
@@ -1792,7 +1800,7 @@ window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
     formData.append('menuId', menuId);
 
     try {
-        const uploadUrl = 'https://script.google.com/macros/s/AKfycbzZnYYGQzAYQqE0yTlpDmKbNap5LJja2kuZ5umDD4K8w-gVLuE_qMU6DgNltUSnqSHN/exec';
+        const uploadUrl = APP_STATE.gasUrl;
         const resp = await fetch(uploadUrl, { method: 'POST', body: formData });
         const json = await resp.json();
         if (json.success) {
