@@ -1790,9 +1790,9 @@ window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
     showToast('图片上传中…');
     // Prepare for multipart POST
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('menuId', menuId);
-
+formData.append('file', file);
+formData.append('menuId', menuId);
+await fetch(URL, { method: 'POST', body: formData });
     try {
         // Replace with your actual Google Apps Script web app image upload URL!
         const uploadUrl = 'https://script.google.com/macros/s/AKfycbzZnYYGQzAYQqE0yTlpDmKbNap5LJja2kuZ5umDD4K8w-gVLuE_qMU6DgNltUSnqSHN/exec';
