@@ -549,12 +549,18 @@ async function fetchFromGoogleSheets() {
 
 async function syncToGoogleSheets(action, payload) {
     if (!APP_STATE.gasUrl) return null;
-    const params = new URLSearchParams(); params.append('action', action); params.append('data', JSON.stringify(payload));
+    const params = new URLSearchParams();
+    params.append('action', action);
+    params.append('data', JSON.stringify(payload));
     const url = APP_STATE.gasUrl + '?' + params.toString();
-    const resp = await fetch(url);
-    return await resp.json();
+    try {
+        const resp = await fetch(url);
+        return await resp.json();
+    } catch (e) {
+        console.error('同步失败:', e);
+        return null;
+    }
 }
-
 // ==================== RENDER ====================
 function renderAll() {
     renderCategoryTabs();
@@ -1487,51 +1493,49 @@ document.getElementById('menuEditModal').addEventListener('click', function(e){
 
 // Save or update item
 async function saveMenuItem() {
-  const id = document.getElementById('editItemId').value;
-  const data = {
-    id: id || 'I' + Date.now(),
-    name: document.getElementById('editItemName').value,
-    description: document.getElementById('editItemDesc').value,
-    price: parseFloat(document.getElementById('editItemPrice').value) || 0,
-    originalPrice: parseFloat(document.getElementById('editItemOrigPrice').value) || null,
-    category: document.getElementById('editItemCategory').value || '其他',
-    emoji: document.getElementById('editItemEmoji').value,
-    imageUrl: document.getElementById('editItemImage').value,  // ← THIS LINE IS CRITICAL
-    available: document.getElementById('editItemAvailable').checked
-  };
-
-    if (!name || isNaN(price) || !category) {
-        showToast('请填写菜品名称、分类和价格');
+    const id = document.getElementById('editItemId').value;
+    const name = document.getElementById('editItemName').value.trim();
+    const price = document.getElementById('editItemPrice').value;
+    
+    if (!name || !price) {
+        showToast('⚠️ 名称和价格不能为空');
         return;
     }
-
-    // Construct new/updated item
-    const menuItem = {
-        id: id || ('I' + Date.now().toString().slice(-6)),
-        name,
-        desc,
-        price,
-        originalPrice: isNaN(originalPrice) ? "" : originalPrice,
-        category,
-        emoji,
-        image,
-        available
+    
+    const data = {
+        id: id || 'I' + Date.now(),
+        name: name,
+        description: document.getElementById('editItemDesc').value.trim(),
+        price: parseFloat(price) || 0,
+        originalPrice: parseFloat(document.getElementById('editItemOrigPrice').value) || '',
+        category: document.getElementById('editItemCategory').value || '其他',
+        emoji: document.getElementById('editItemEmoji').value.trim(),
+        imageUrl: document.getElementById('editItemImage').value.trim(),
+        available: document.getElementById('editItemAvailable').checked
     };
-
-    // Add or update
-    const idx = APP_STATE.menu.findIndex(i => i.id === menuItem.id);
-    if (idx >= 0) {
-        APP_STATE.menu[idx] = menuItem;
-        await syncToGoogleSheets('editMenuItem', menuItem);
-        showToast('菜品已更新');
+    
+    console.log('Saving menu item:', data); // Debug line
+    
+    if (id && APP_STATE.menu.some(i => i.id === id)) {
+        // Update existing item
+        const idx = APP_STATE.menu.findIndex(i => i.id === id);
+        APP_STATE.menu[idx] = data;
+        await syncToGoogleSheets('updateMenuItem', data);
+        showToast('✅ 菜品已更新');
     } else {
-        APP_STATE.menu.push(menuItem);
-        await syncToGoogleSheets('addMenuItem', menuItem);
-        showToast('菜品已添加');
+        // Add new item
+        APP_STATE.menu.push(data);
+        await syncToGoogleSheets('addMenuItem', data);
+        showToast('✅ 新菜品已添加');
     }
-
+    
+    // Refresh categories
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
-    closeMenuEditModal();
+    
+    // Close modal
+    document.getElementById('menuEditModal').style.display = 'none';
+    
+    // Refresh all views
     renderAll();
 }
 
