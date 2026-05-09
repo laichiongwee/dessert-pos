@@ -322,8 +322,8 @@
         <h3>⚙️ 系统设置</h3>
         <label>数据同步 URL</label>
         <input type="url" id="gasUrlInput" placeholder="Apps Script GET URL" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
-        <label>图片上传 URL</label>
-        <input type="url" id="postUrlInput" placeholder="Apps Script POST URL" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
+        <label>ImgBB API 密钥</label>
+<input type="text" id="imgbbKeyInput" placeholder="貼上 ImgBB API key" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
         <button class="btn btn-primary btn-sm" onclick="saveSettings()" style="margin-top:8px;">💾 保存设置</button>
         <button class="btn btn-outline btn-sm" onclick="loadDemoData()">📦 加载演示数据</button>
     </div>
@@ -419,8 +419,6 @@
 	<div class="payment-detail-row">
     <label>上传图片</label>
     <input type="file" id="editItemImageUpload" accept="image/*" style="flex:1;">
-		<label>ImgBB API 密钥</label>
-<input type="text" id="imgbbKeyInput" placeholder="貼上 ImgBB API key" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
     <button class="btn btn-xs btn-outline" onclick="uploadMenuImage()" type="button">上传</button>
 </div>
 <img id="menuImagePreview" style="max-width:100px;margin-top:4px;display:none;">
