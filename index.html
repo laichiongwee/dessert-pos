@@ -1784,7 +1784,7 @@ async function deleteMenuItemFromSheet(itemId) {
     renderAll();
 }
 
-function uploadMenuImage() {
+async function uploadMenuImage() {
     const input = document.getElementById('editItemImageUpload');
     if (!input.files || !input.files[0]) {
         showToast('请选择图片文件');
@@ -1798,23 +1798,19 @@ function uploadMenuImage() {
     reader.onload = function(e) {
         const base64Data = e.target.result.split(',')[1];
         
-        // Build the upload URL (using GET URL)
         const params = new URLSearchParams();
         params.append('action', 'uploadImage');
         params.append('file', base64Data);
         params.append('menuId', menuId);
         params.append('mimeType', file.type);
         params.append('fileName', file.name);
-        // Add redirect URL back to current page
-        params.append('redirectUrl', window.location.href);
+        params.append('redirectUrl', window.location.href.split('?')[0]);
         
-        // Open in a hidden iframe to avoid CORS
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         iframe.src = APP_STATE.gasUrl + '?' + params.toString();
         document.body.appendChild(iframe);
         
-        // Listen for the result message
         const checkResult = setInterval(() => {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -1836,16 +1832,14 @@ function uploadMenuImage() {
                         }
                         prev.src = json.url;
                         prev.style.display = 'block';
-                        // Clean URL
                         window.history.replaceState({}, '', window.location.pathname);
                     } else {
                         showToast('上传失败: ' + json.error);
                     }
                 }
-            } catch(e) {}
+            } catch(err) {}
         }, 500);
         
-        // Timeout after 30 seconds
         setTimeout(() => {
             clearInterval(checkResult);
             if (document.body.contains(iframe)) {
