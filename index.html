@@ -1567,52 +1567,54 @@ function editStoreName() {
 // ==================== MENU EDITING ====================
 
 // Render menu items for editing
-function openMenuEditModal(itemId) {
-    // Show the modal
-
-    document.getElementById('menuEditModal').style.display = 'flex';
-	let modal = document.getElementById('menuEditModal');
-  modal.style.display = 'flex';
-  modal.style.zIndex = '999';
-    // Populate category dropdown
-    const catSel = document.getElementById('editItemCategory');
-    catSel.innerHTML = APP_STATE.categories
-        .filter(cat => cat !== "全部")
-        .map(cat => `<option value="${cat}">${cat}</option>`)
-        .join('');
-
+function openMenuEditModal(itemId = null) {
+    const select = document.getElementById('editItemCategory');
+    select.innerHTML = APP_STATE.categories.filter(c => c !== '全部').map(c => `<option value="${c}">${c}</option>`).join('');
+    
     if (itemId) {
-        // Editing an item
         const item = APP_STATE.menu.find(i => i.id === itemId);
         if (!item) return;
         document.getElementById('editItemId').value = item.id;
         document.getElementById('editItemName').value = item.name || '';
-        document.getElementById('editItemDesc').value = item.desc || '';
+        document.getElementById('editItemDesc').value = item.description || '';
         document.getElementById('editItemPrice').value = item.price || '';
         document.getElementById('editItemOrigPrice').value = item.originalPrice || '';
         document.getElementById('editItemCategory').value = item.category || '';
         document.getElementById('editItemEmoji').value = item.emoji || '';
-        document.getElementById('editItemImage').value = item.image || '';
-        document.getElementById('editItemAvailable').checked = !!item.available;
-        // Show delete button
-        showMenuDeleteBtn(true);
+        document.getElementById('editItemImage').value = item.imageUrl || '';
+        document.getElementById('editItemAvailable').checked = item.available !== false;
+        
+        // Show preview if image exists
+        const imgPreview = document.getElementById('menuImagePreview');
+        if (imgPreview) {
+            if (item.imageUrl && item.imageUrl.trim() !== '') {
+                imgPreview.src = item.imageUrl;
+                imgPreview.style.display = 'block';
+            } else {
+                imgPreview.src = '';
+                imgPreview.style.display = 'none';
+            }
+        }
     } else {
-        // Adding a new item
+        // New item - clear all fields
         document.getElementById('editItemId').value = '';
         document.getElementById('editItemName').value = '';
         document.getElementById('editItemDesc').value = '';
         document.getElementById('editItemPrice').value = '';
         document.getElementById('editItemOrigPrice').value = '';
-        document.getElementById('editItemCategory').selectedIndex = 0;
+        document.getElementById('editItemCategory').value = APP_STATE.categories[1] || '';
         document.getElementById('editItemEmoji').value = '';
         document.getElementById('editItemImage').value = '';
         document.getElementById('editItemAvailable').checked = true;
-        showMenuDeleteBtn(false);
+        
+        const imgPreview = document.getElementById('menuImagePreview');
+        if (imgPreview) {
+            imgPreview.src = '';
+            imgPreview.style.display = 'none';
+        }
     }
-
-    renderAdminMenuGrid(); // Refresh item list shown with edit/delete buttons
+    document.getElementById('menuEditModal').style.display = 'flex';
 }
-
 function closeMenuEditModal(event) {
     if (event && event.target !== document.getElementById('menuEditModal')) return;
     document.getElementById('menuEditModal').style.display = 'none';
