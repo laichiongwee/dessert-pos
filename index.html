@@ -571,7 +571,7 @@ async function syncToGoogleSheets(action, payload) {
         const resp = await fetch(url);
         return await resp.json();
     } catch (e) {
-        console.error('同步失败:', e);
+        console.error('Background sync error:', e);
         return null;
     }
 }
@@ -853,32 +853,33 @@ function finalizePayment() {
 async function processPayment(method, total, paymentDetails = {}) {
     const orderId = String(++APP_STATE.orderIdCounter);
     localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
+    
     const order = {
-    id: orderId,
-    date: new Date().toISOString(),
-    items: APP_STATE.cashierOrder.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
-    total: total,
-    paymentMethod: method,
-    memberPhone: APP_STATE.currentMember?.phone || '',
-    memberName: APP_STATE.currentMember?.name || '',
-    paymentDetails: paymentDetails,
-    discountApplied: getDiscountAmount(),
-    status: 'pending',
-    callNumber: ''
-};
+        id: orderId,
+        date: new Date().toISOString(),
+        items: APP_STATE.cashierOrder.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
+        total: total,
+        paymentMethod: method,
+        memberPhone: APP_STATE.currentMember?.phone || '',
+        memberName: APP_STATE.currentMember?.name || '',
+        paymentDetails: paymentDetails,
+        discountApplied: getDiscountAmount(),
+        status: 'pending',
+        callNumber: ''
+    };
+    
+    // Add locally and clear cart immediately
     APP_STATE.orders.push(order);
-    if (APP_STATE.currentMember) {
-        APP_STATE.currentMember.points += Math.floor(total);
-        APP_STATE.currentMember.totalSpent += total;
-        await syncToGoogleSheets('addOrder', { order, updatedMember: APP_STATE.currentMember });
-    } else {
-        await syncToGoogleSheets('addOrder', { order, updatedMember: null });
-    }
     APP_STATE.cashierOrder = [];
     APP_STATE.currentMember = null;
     document.getElementById('memberPhoneInput').value = '';
     renderOrderPanel();
     showToast(`✅ 订单 #${orderId} 已完成`);
+    
+    // Background sync
+    if (APP_STATE.gasUrl) {
+        syncToGoogleSheets('addOrder', { order, updatedMember: null }).catch(e => console.error('Background sync failed:', e));
+    }
 }
 function getOrderTotal() {
     const subtotal = APP_STATE.cashierOrder.reduce((s,e)=>s+e.menuItem.price*e.quantity,0);
@@ -1167,7 +1168,7 @@ async function submitNewMember() {
         showToast('⚠️ 请填写姓名和手机号');
         return;
     }
-    // Generate a simple unique ID
+    
     const memberId = 'M' + Date.now().toString().slice(-6);
     const newMember = {
         id: memberId,
@@ -1176,19 +1177,23 @@ async function submitNewMember() {
         points: 0,
         totalSpent: 0
     };
-    // Add locally
+    
+    // 1. Add locally and close modal instantly
     APP_STATE.members.push(newMember);
-    // Sync to Google Sheets
-    await syncToGoogleSheets('addMember', newMember);
-    // Clear form and close modal
+    document.getElementById('addMemberModal').style.display = 'none';
     document.getElementById('newMemberName').value = '';
     document.getElementById('newMemberPhone').value = '';
-    document.getElementById('addMemberModal').style.display = 'none';
-    // Optionally auto‑select the new member
+    showToast('✅ 会员已添加');
+    
+    // 2. Auto-select the new member
     APP_STATE.currentMember = newMember;
     document.getElementById('memberPhoneInput').value = newMember.phone;
     updateMemberDisplay();
-    showToast('✅ 会员 ' + name + ' 已添加');
+    
+    // 3. Sync to Google Sheets in the background
+    if (APP_STATE.gasUrl) {
+        syncToGoogleSheets('addMember', newMember).catch(e => console.error('Background sync failed:', e));
+    }
 }
 
 // ==================== RENDERING HELPERS ====================
@@ -1601,31 +1606,31 @@ async function saveMenuItem() {
         available: document.getElementById('editItemAvailable').checked
     };
     
-    console.log('Saving menu item:', data); // Debug line
-    
+    // 1. Update local state instantly
     if (id && APP_STATE.menu.some(i => i.id === id)) {
-        // Update existing item
         const idx = APP_STATE.menu.findIndex(i => i.id === id);
         APP_STATE.menu[idx] = data;
-        await syncToGoogleSheets('updateMenuItem', data);
-        showToast('✅ 菜品已更新');
     } else {
-        // Add new item
         APP_STATE.menu.push(data);
-        await syncToGoogleSheets('addMenuItem', data);
-        showToast('✅ 新菜品已添加');
     }
     
-    // Refresh categories
-    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
-    
-    // Close modal
+    // 2. Close modal and show success immediately
     document.getElementById('menuEditModal').style.display = 'none';
+    showToast('✅ 菜品已保存');
     
-    // Refresh all views
-    renderAll();
+    // 3. Refresh only the necessary views (no full renderAll)
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    renderCategoryTabs();
+    renderMenuGrid();
+    if (APP_STATE.mode === 'customer') renderCustomerMenuGrid();
+    if (APP_STATE.adminUnlocked) renderAdminMenuGrid();
+    
+    // 4. Sync to Google Sheets in the background (non-blocking)
+    if (APP_STATE.gasUrl) {
+        const action = id && APP_STATE.menu.some(i => i.id === id) ? 'updateMenuItem' : 'addMenuItem';
+        syncToGoogleSheets(action, data).catch(e => console.error('Background sync failed:', e));
+    }
 }
-
 // Show/hide "删除" button
 function showMenuDeleteBtn(show) {
     let btn = document.getElementById('deleteMenuItemBtn');
