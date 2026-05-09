@@ -1786,23 +1786,18 @@ window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
     }
     const file = input.files[0];
     const menuId = document.getElementById('editItemId').value || '';
-    // Show uploading toast/spinner
     showToast('图片上传中…');
-    // Prepare for multipart POST
     const formData = new FormData();
-formData.append('file', file);
-formData.append('menuId', menuId);
-await fetch(URL, { method: 'POST', body: formData });
-    try {
-        // Replace with your actual Google Apps Script web app image upload URL!
-        const uploadUrl = 'https://script.google.com/macros/s/AKfycbzZnYYGQzAYQqE0yTlpDmKbNap5LJja2kuZ5umDD4K8w-gVLuE_qMU6DgNltUSnqSHN/exec';
+    formData.append('file', file);
+    formData.append('menuId', menuId);
 
+    try {
+        const uploadUrl = 'https://script.google.com/macros/s/AKfycbzZnYYGQzAYQqE0yTlpDmKbNap5LJja2kuZ5umDD4K8w-gVLuE_qMU6DgNltUSnqSHN/exec';
         const resp = await fetch(uploadUrl, { method: 'POST', body: formData });
         const json = await resp.json();
         if (json.success) {
             showToast('图片已上传');
-            document.getElementById('editItemImage').value = json.url; // Fill URL input
-// <-- Add image preview here
+            document.getElementById('editItemImage').value = json.url;
             let prev = document.getElementById('menuImagePreview');
             if (!prev) {
                 prev = document.createElement('img');
@@ -1812,7 +1807,6 @@ await fetch(URL, { method: 'POST', body: formData });
                 document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
             }
             prev.src = json.url;
-            // <-- end image preview
         } else {
             showToast('上传失败: ' + json.error);
         }
