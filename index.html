@@ -1775,10 +1775,6 @@ async function deleteMenuItemFromSheet(itemId) {
     renderAll();
 }
 
-// Make accessible globally
-window.openMenuSheetModal = openMenuSheetModal;
-window.closeMenuSheetModal = closeMenuSheetModal;
-window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
 
 	async function uploadMenuImage() {
     const input = document.getElementById('editItemImageUpload');
@@ -1794,7 +1790,7 @@ window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
     formData.append('menuId', menuId);
 
     try {
-        const uploadUrl = APP_STATE.gasUrl;
+        const uploadUrl = APP_STATE.gasUrl;  // Use the same URL from settings
         const resp = await fetch(uploadUrl, { method: 'POST', body: formData });
         const json = await resp.json();
         if (json.success) {
@@ -1816,6 +1812,12 @@ window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
         showToast('上传错误: ' + err.message);
     }
 }
+
+	// Make accessible globally
+window.openMenuSheetModal = openMenuSheetModal;
+window.closeMenuSheetModal = closeMenuSheetModal;
+window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
+
     </script>
 </body>
 </html>
