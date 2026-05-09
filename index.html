@@ -1414,13 +1414,7 @@ function editStoreName() {
 // Render menu items for editing
 function openMenuEditModal(itemId) {
     // Show the modal
-	const imgPreview = document.getElementById('menuImagePreview');
-if (item && item.imageUrl) {
-    imgPreview.src = item.imageUrl;
-    imgPreview.style.display = 'block';
-} else {
-    imgPreview.style.display = 'none';
-}
+
     document.getElementById('menuEditModal').style.display = 'flex';
 	let modal = document.getElementById('menuEditModal');
   modal.style.display = 'flex';
