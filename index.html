@@ -419,6 +419,8 @@
 	<div class="payment-detail-row">
     <label>上传图片</label>
     <input type="file" id="editItemImageUpload" accept="image/*" style="flex:1;">
+		<label>ImgBB API 密钥</label>
+<input type="text" id="imgbbKeyInput" placeholder="貼上 ImgBB API key" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
     <button class="btn btn-xs btn-outline" onclick="uploadMenuImage()" type="button">上传</button>
 </div>
 <img id="menuImagePreview" style="max-width:100px;margin-top:4px;display:none;">
@@ -484,6 +486,7 @@ const APP_STATE = {
     orderIdCounter: parseInt(localStorage.getItem('orderIdCounter') || '1000'),
     adminUnlocked: false,
 	postUrl: localStorage.getItem('postUrl') || '',
+	imgbbKey: localStorage.getItem('imgbbKey') || '',   // 留空，強制使用者從設定輸入
 };
 
 // ==================== DEMO DATA (fallback) ====================
@@ -918,13 +921,30 @@ document.getElementById('reportModal').addEventListener('click', function(e){ if
         });
 
         // ==================== SETTINGS ====================
-        function openSettings() {
+       function openSettings() {
     document.getElementById('gasUrlInput').value = APP_STATE.gasUrl;
-    document.getElementById('postUrlInput').value = APP_STATE.postUrl;
+    document.getElementById('postUrlInput').value = APP_STATE.postUrl || '';
+    document.getElementById('imgbbKeyInput').value = APP_STATE.imgbbKey || '';
     document.getElementById('settingsModal').style.display = 'flex';
 }
 
-
+function saveSettings() {
+    APP_STATE.gasUrl = document.getElementById('gasUrlInput').value.trim();
+    APP_STATE.postUrl = document.getElementById('postUrlInput').value.trim();
+    APP_STATE.imgbbKey = document.getElementById('imgbbKeyInput').value.trim();
+    localStorage.setItem('gasUrl', APP_STATE.gasUrl);
+    localStorage.setItem('postUrl', APP_STATE.postUrl);
+    localStorage.setItem('imgbbKey', APP_STATE.imgbbKey);
+    document.getElementById('settingsModal').style.display = 'none';
+    if (APP_STATE.gasUrl) {
+        fetchFromGoogleSheets().then(() => showToast('✅ 設定已儲存並同步'))
+            .catch(() => showToast('⚠️ 網址已儲存但連接失敗'));
+    } else {
+        loadDemoData();
+        renderAll();
+        showToast('✅ 已切換到本機演示模式');
+    }
+}
         function closeSettingsModal(event) {
             if (event && event.target !== document.getElementById('settingsModal')) return;
             document.getElementById('settingsModal').style.display = 'none';
@@ -933,23 +953,7 @@ document.getElementById('reportModal').addEventListener('click', function(e){ if
             if (e.target === this) this.style.display = 'none';
         });
 
-        function saveSettings() {
-    const gasUrl = document.getElementById('gasUrlInput').value.trim();
-    const postUrl = document.getElementById('postUrlInput').value.trim();
-    APP_STATE.gasUrl = gasUrl;
-    APP_STATE.postUrl = postUrl;
-    localStorage.setItem('gasUrl', gasUrl);
-    localStorage.setItem('postUrl', postUrl);
-    document.getElementById('settingsModal').style.display = 'none';
-    if (gasUrl) {
-        fetchFromGoogleSheets().then(() => showToast('✅ 设置已保存并同步'))
-            .catch(() => showToast('⚠️ URL已保存但连接失败'));
-    } else {
-        loadDemoData();
-        renderAll();
-        showToast('✅ 已切换到本地演示模式');
-    }
-}
+   
 
         // ==================== TOAST ====================
         function showToast(message) {
@@ -1787,57 +1791,47 @@ async function deleteMenuItemFromSheet(itemId) {
 async function uploadMenuImage() {
     const input = document.getElementById('editItemImageUpload');
     if (!input.files || !input.files[0]) {
-        showToast('请选择图片文件');
+        showToast('請選擇圖片檔案');
         return;
     }
     const file = input.files[0];
-    const menuId = document.getElementById('editItemId').value || '';
-    showToast('图片上传中...');
-    
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const base64Data = e.target.result.split(',')[1];
-        
-        try {
-            const uploadUrl = APP_STATE.postUrl;
-            if (!uploadUrl) {
-                showToast('❌ 请在设置中填写图片上传URL');
-                return;
+    const apiKey = APP_STATE.imgbbKey;
+    if (!apiKey) {
+        showToast('❌ 請先在設定中填入 ImgBB API 密钥');
+        return;
+    }
+    showToast('圖片上傳中…');
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+        const resp = await fetch('https://api.imgbb.com/1/upload?key=' + apiKey, {
+            method: 'POST',
+            body: formData
+        });
+        const json = await resp.json();
+        if (json.success) {
+            const imageUrl = json.data.url;   // 直連圖片 URL
+            showToast('✅ 圖片已上傳');
+            document.getElementById('editItemImage').value = imageUrl;
+            // 顯示預覽
+            let prev = document.getElementById('menuImagePreview');
+            if (!prev) {
+                prev = document.createElement('img');
+                prev.id = 'menuImagePreview';
+                prev.style.maxWidth = '100px';
+                prev.style.marginTop = '4px';
+                document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
             }
-            
-            const resp = await fetch(uploadUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    file: base64Data,
-                    menuId: menuId,
-                    mimeType: file.type,
-                    fileName: file.name
-                })
-            });
-            
-            const json = await resp.json();
-            if (json.success) {
-                showToast('✅ 图片已上传');
-                document.getElementById('editItemImage').value = json.url;
-                let prev = document.getElementById('menuImagePreview');
-                if (!prev) {
-                    prev = document.createElement('img');
-                    prev.id = 'menuImagePreview';
-                    prev.style.maxWidth = '100px';
-                    prev.style.marginTop = '4px';
-                    document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
-                }
-                prev.src = json.url;
-                prev.style.display = 'block';
-            } else {
-                showToast('上传失败: ' + json.error);
-            }
-        } catch (err) {
-            showToast('上传错误: ' + err.message);
+            prev.src = imageUrl;
+            prev.style.display = 'block';
+        } else {
+            showToast('上傳失敗：' + (json.error?.message || '未知錯誤'));
         }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+        showToast('上傳錯誤：' + err.message);
+    }
 }
 
 	// Make accessible globally
