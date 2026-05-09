@@ -320,7 +320,10 @@
 <div class="modal-overlay" id="settingsModal" style="display:none;" onclick="closeSettingsModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
         <h3>⚙️ 系统设置</h3>
-        <input type="url" id="gasUrlInput" placeholder="Google Apps Script URL" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;">
+        <label>数据同步 URL</label>
+        <input type="url" id="gasUrlInput" placeholder="Apps Script GET URL" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
+        <label>图片上传 URL</label>
+        <input type="url" id="postUrlInput" placeholder="Apps Script POST URL" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
         <button class="btn btn-primary btn-sm" onclick="saveSettings()" style="margin-top:8px;">💾 保存设置</button>
         <button class="btn btn-outline btn-sm" onclick="loadDemoData()">📦 加载演示数据</button>
     </div>
@@ -480,6 +483,7 @@ const APP_STATE = {
     gasUrl: localStorage.getItem('gasUrl') || '',
     orderIdCounter: parseInt(localStorage.getItem('orderIdCounter') || '1000'),
     adminUnlocked: false,
+	postUrl: localStorage.getItem('postUrl') || '',
 };
 
 // ==================== DEMO DATA (fallback) ====================
@@ -915,9 +919,11 @@ document.getElementById('reportModal').addEventListener('click', function(e){ if
 
         // ==================== SETTINGS ====================
         function openSettings() {
-            document.getElementById('gasUrlInput').value = APP_STATE.gasUrl;
-            document.getElementById('settingsModal').style.display = 'flex';
-        }
+    document.getElementById('gasUrlInput').value = APP_STATE.gasUrl;
+    document.getElementById('postUrlInput').value = APP_STATE.postUrl;
+    document.getElementById('settingsModal').style.display = 'flex';
+}
+
 
         function closeSettingsModal(event) {
             if (event && event.target !== document.getElementById('settingsModal')) return;
@@ -928,19 +934,22 @@ document.getElementById('reportModal').addEventListener('click', function(e){ if
         });
 
         function saveSettings() {
-            const url = document.getElementById('gasUrlInput').value.trim();
-            APP_STATE.gasUrl = url;
-            localStorage.setItem('gasUrl', url);
-            document.getElementById('settingsModal').style.display = 'none';
-            if (url) {
-                fetchFromGoogleSheets().then(() => showToast('✅ 设置已保存并同步'))
-                    .catch(() => showToast('⚠️ URL已保存但连接失败'));
-            } else {
-                loadDemoData();
-                renderAll();
-                showToast('✅ 已切换到本地演示模式');
-            }
-        }
+    const gasUrl = document.getElementById('gasUrlInput').value.trim();
+    const postUrl = document.getElementById('postUrlInput').value.trim();
+    APP_STATE.gasUrl = gasUrl;
+    APP_STATE.postUrl = postUrl;
+    localStorage.setItem('gasUrl', gasUrl);
+    localStorage.setItem('postUrl', postUrl);
+    document.getElementById('settingsModal').style.display = 'none';
+    if (gasUrl) {
+        fetchFromGoogleSheets().then(() => showToast('✅ 设置已保存并同步'))
+            .catch(() => showToast('⚠️ URL已保存但连接失败'));
+    } else {
+        loadDemoData();
+        renderAll();
+        showToast('✅ 已切换到本地演示模式');
+    }
+}
 
         // ==================== TOAST ====================
         function showToast(message) {
@@ -1790,18 +1799,20 @@ async function uploadMenuImage() {
     reader.onload = async function(e) {
         const base64Data = e.target.result.split(',')[1];
         
-        // Build GET URL with all data as query parameters
-        const params = new URLSearchParams();
-        params.append('action', 'uploadImage');
-        params.append('file', base64Data);
-        params.append('menuId', menuId);
-        params.append('mimeType', file.type);
-        params.append('fileName', file.name);
-        
-        const uploadUrl = APP_STATE.gasUrl + '?' + params.toString();
+        const payload = {
+            file: base64Data,
+            menuId: menuId,
+            mimeType: file.type,
+            fileName: file.name
+        };
         
         try {
-            const resp = await fetch(uploadUrl);
+            const uploadUrl = APP_STATE.postUrl || APP_STATE.gasUrl;
+            const resp = await fetch(uploadUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
             const json = await resp.json();
             if (json.success) {
                 showToast('✅ 图片已上传');
