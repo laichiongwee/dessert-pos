@@ -1786,25 +1786,22 @@ async function uploadMenuImage() {
     const menuId = document.getElementById('editItemId').value || '';
     showToast('图片上传中…');
     
-    // Convert file to base64
     const reader = new FileReader();
     reader.onload = async function(e) {
-        const base64Data = e.target.result.split(',')[1]; // Remove the data:image/... prefix
+        const base64Data = e.target.result.split(',')[1];
         
-        const payload = {
-            file: base64Data,
-            menuId: menuId,
-            mimeType: file.type,
-            fileName: file.name
-        };
+        // Build GET URL with all data as query parameters
+        const params = new URLSearchParams();
+        params.append('action', 'uploadImage');
+        params.append('file', base64Data);
+        params.append('menuId', menuId);
+        params.append('mimeType', file.type);
+        params.append('fileName', file.name);
+        
+        const uploadUrl = APP_STATE.gasUrl + '?' + params.toString();
         
         try {
-            const uploadUrl = APP_STATE.gasUrl;
-            const resp = await fetch(uploadUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const resp = await fetch(uploadUrl);
             const json = await resp.json();
             if (json.success) {
                 showToast('✅ 图片已上传');
