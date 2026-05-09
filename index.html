@@ -1776,7 +1776,7 @@ async function deleteMenuItemFromSheet(itemId) {
 }
 
 
-	async function uploadMenuImage() {
+async function uploadMenuImage() {
     const input = document.getElementById('editItemImageUpload');
     if (!input.files || !input.files[0]) {
         showToast('请选择图片文件');
@@ -1785,32 +1785,48 @@ async function deleteMenuItemFromSheet(itemId) {
     const file = input.files[0];
     const menuId = document.getElementById('editItemId').value || '';
     showToast('图片上传中…');
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('menuId', menuId);
-
-    try {
-        const uploadUrl = APP_STATE.gasUrl;  // Use the same URL from settings
-        const resp = await fetch(uploadUrl, { method: 'POST', body: formData });
-        const json = await resp.json();
-        if (json.success) {
-            showToast('图片已上传');
-            document.getElementById('editItemImage').value = json.url;
-            let prev = document.getElementById('menuImagePreview');
-            if (!prev) {
-                prev = document.createElement('img');
-                prev.style.maxWidth = '100px';
-                prev.style.marginTop = '4px';
-                prev.id = 'menuImagePreview';
-                document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
+    
+    // Convert file to base64
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const base64Data = e.target.result.split(',')[1]; // Remove the data:image/... prefix
+        
+        const payload = {
+            file: base64Data,
+            menuId: menuId,
+            mimeType: file.type,
+            fileName: file.name
+        };
+        
+        try {
+            const uploadUrl = APP_STATE.gasUrl;
+            const resp = await fetch(uploadUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const json = await resp.json();
+            if (json.success) {
+                showToast('✅ 图片已上传');
+                document.getElementById('editItemImage').value = json.url;
+                let prev = document.getElementById('menuImagePreview');
+                if (!prev) {
+                    prev = document.createElement('img');
+                    prev.style.maxWidth = '100px';
+                    prev.style.marginTop = '4px';
+                    prev.id = 'menuImagePreview';
+                    document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
+                }
+                prev.src = json.url;
+                prev.style.display = 'block';
+            } else {
+                showToast('上传失败: ' + json.error);
             }
-            prev.src = json.url;
-        } else {
-            showToast('上传失败: ' + json.error);
+        } catch (err) {
+            showToast('上传错误: ' + err.message);
         }
-    } catch (err) {
-        showToast('上传错误: ' + err.message);
-    }
+    };
+    reader.readAsDataURL(file);
 }
 
 	// Make accessible globally
