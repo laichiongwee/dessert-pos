@@ -1197,64 +1197,7 @@ function renderCustomerCategoryTabs() {
         `<button class="cat-tab${cat === APP_STATE.activeCategory ? ' active' : ''}" onclick="setCategory('${cat}')">${cat}</button>`
     ).join('');
 }
-
-function renderMenuGrid() {
-    const grid = document.getElementById('menuGrid');
-    const items = getFilteredMenu();
-    grid.innerHTML = items.map(item => {
-        const hasSale = item.originalPrice && item.originalPrice > item.price;
-        return `
-        <div class="menu-card${item.available ? '' : ' out-of-stock'}" onclick="${item.available ? `addToOrder('${item.id}')` : ''}">
-            ${hasSale ? '<span class="badge-sale">优惠</span>' : ''}
-            <span class="item-emoji">${item.emoji || '🍴'}</span>
-            <div class="item-name">${item.name}</div>
-            <div class="item-price">
-                RM ${Number(item.price).toFixed(2)}
-                ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
-            </div>
-        </div>`;
-    }).join('');
-}
-
-function renderCustomerMenuGrid() {
-    const grid = document.getElementById('customerMenuGrid');
-    const items = getFilteredMenu();
-    grid.innerHTML = items.map(item => {
-        const hasSale = item.originalPrice && item.originalPrice > item.price;
-        return `
-        <div class="menu-card${item.available ? '' : ' out-of-stock'}" onclick="${item.available ? `addToCustomerCart('${item.id}')` : ''}">
-            ${hasSale ? '<span class="badge-sale">优惠</span>' : ''}
-            <span class="item-emoji">${item.emoji || '🍴'}</span>
-            <div class="item-name">${item.name}</div>
-            <div class="item-price">
-                RM ${Number(item.price).toFixed(2)}
-                ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
-            </div>
-        </div>`;
-    }).join('');
-}
-
-function renderOrderPanel() {
-    const container = document.getElementById('orderItems');
-    if (APP_STATE.cashierOrder.length === 0) {
-        container.innerHTML = '<div class="order-empty"><span class="icon">🛒</span>点击菜单添加商品</div>';
-    } else {
-        container.innerHTML = APP_STATE.cashierOrder.map((entry, idx) => `
-        <div class="order-item-row">
-            <span class="oi-name">${entry.menuItem.name}</span>
-            <div class="oi-qty">
-                <button onclick="adjustOrderQty(${idx}, -1)">−</button>
-                <span>${entry.quantity}</span>
-                <button onclick="adjustOrderQty(${idx}, 1)">+</button>
-            </div>
-            <span class="oi-price">RM ${(Number(entry.menuItem.price) * entry.quantity).toFixed(2)}</span>
-            <button class="oi-del" onclick="removeFromOrder(${idx})">✕</button>
-        </div>
-        `).join('');
-    }
-    updateOrderTotals();
-    updateMemberDisplay();
-}
+	
 
 function renderFulfillmentView() {
     const activeOrders = APP_STATE.orders.filter(o => o.status !== 'completed');
