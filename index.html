@@ -203,6 +203,13 @@
 #menuEditModal .modal-sheet {
   z-index: 1000 !important;
 }
+		.menu-card .item-img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 6px;
+}
     </style>
 </head>
 <body>
@@ -581,24 +588,91 @@ function getFilteredMenu() {
     : APP_STATE.menu.filter(i => (i.category === APP_STATE.activeCategory)
          && (i.available === true || i.available === 'TRUE'));
 }
-function renderMenuGrid() { /* unchanged */ }
-function renderCustomerMenuGrid() { /* unchanged */ }
-function renderOrderPanel() { /* unchanged, but with discount using rules later */ }
+function renderMenuGrid() {
+    const grid = document.getElementById('menuGrid');
+    const items = getFilteredMenu();
+    grid.innerHTML = items.map(item => {
+        const hasSale = item.originalPrice && item.originalPrice > item.price;
+        // Show image if available, otherwise show emoji
+        const imageOrEmoji = item.imageUrl 
+            ? `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">`
+            : '';
+        const emojiSpan = `<span class="item-emoji" style="${item.imageUrl ? 'display:none;' : ''}">${item.emoji || '🍴'}</span>`;
+        
+        return `
+        <div class="menu-card${item.available ? '' : ' out-of-stock'}" onclick="${item.available ? `addToOrder('${item.id}')` : ''}">
+            ${hasSale ? '<span class="badge-sale">优惠</span>' : ''}
+            ${imageOrEmoji}
+            ${emojiSpan}
+            <div class="item-name">${item.name}</div>
+            <div class="item-description">${item.description || ''}</div>
+            <div class="item-price">
+                RM ${Number(item.price).toFixed(2)}
+                ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+function renderCustomerMenuGrid() {
+    const grid = document.getElementById('customerMenuGrid');
+    const items = getFilteredMenu();
+    grid.innerHTML = items.map(item => {
+        const hasSale = item.originalPrice && item.originalPrice > item.price;
+        const imageOrEmoji = item.imageUrl 
+            ? `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">`
+            : '';
+        const emojiSpan = `<span class="item-emoji" style="${item.imageUrl ? 'display:none;' : ''}">${item.emoji || '🍴'}</span>`;
+        
+        return `
+        <div class="menu-card${item.available ? '' : ' out-of-stock'}" onclick="${item.available ? `addToCustomerCart('${item.id}')` : ''}">
+            ${hasSale ? '<span class="badge-sale">优惠</span>' : ''}
+            ${imageOrEmoji}
+            ${emojiSpan}
+            <div class="item-name">${item.name}</div>
+            <div class="item-description">${item.description || ''}</div>
+            <div class="item-price">
+                RM ${Number(item.price).toFixed(2)}
+                ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+function renderOrderPanel() {
+    const container = document.getElementById('orderItems');
+    if (APP_STATE.cashierOrder.length === 0) {
+        container.innerHTML = '<div class="order-empty"><span class="icon">🛒</span>点击菜单添加商品</div>';
+    } else {
+        container.innerHTML = APP_STATE.cashierOrder.map((entry, idx) => `
+        <div class="order-item-row">
+            <span class="oi-name">${entry.menuItem.name}</span>
+            <div class="oi-qty">
+                <button onclick="adjustOrderQty(${idx}, -1)">−</button>
+                <span>${entry.quantity}</span>
+                <button onclick="adjustOrderQty(${idx}, 1)">+</button>
+            </div>
+            <span class="oi-price">RM ${(Number(entry.menuItem.price) * entry.quantity).toFixed(2)}</span>
+            <button class="oi-del" onclick="removeFromOrder(${idx})">✕</button>
+        </div>
+        `).join('');
+    }
+    updateOrderTotals();
+    updateMemberDisplay();
+}
 function updateOrderTotals() {
-    let subtotal = APP_STATE.cashierOrder.reduce((s,e)=>s+e.menuItem.price*e.quantity,0);
+    let subtotal = APP_STATE.cashierOrder.reduce((s, e) => s + Number(e.menuItem.price) * e.quantity, 0);
     let discount = 0;
     if (APP_STATE.currentMember) {
-        const applicableRules = APP_STATE.discountRules.filter(r=>Number(r.minPoints) <= (APP_STATE.currentMember.points||0));
+        const applicableRules = APP_STATE.discountRules.filter(r => Number(r.minPoints) <= (APP_STATE.currentMember.points || 0));
         for (let rule of applicableRules) {
-            if (rule.type === 'percentage') discount += subtotal * (Number(rule.value)/100);
+            if (rule.type === 'percentage') discount += subtotal * (Number(rule.value) / 100);
             else if (rule.type === 'fixed') discount += Number(rule.value);
         }
         discount = Math.min(discount, subtotal);
     }
     document.getElementById('subtotalDisplay').textContent = `RM ${subtotal.toFixed(2)}`;
-    document.getElementById('discountRow').hidden = discount===0;
+    document.getElementById('discountRow').hidden = discount === 0;
     document.getElementById('discountDisplay').textContent = `-RM ${discount.toFixed(2)}`;
-    document.getElementById('totalDisplay').textContent = `RM ${(subtotal-discount).toFixed(2)}`;
+    document.getElementById('totalDisplay').textContent = `RM ${(subtotal - discount).toFixed(2)}`;
 }
 
 // ==================== MEMBER SEARCH WITH DROPDOWN ====================
@@ -651,8 +725,18 @@ function clearMember() {
 function updateMemberDisplay() {
     const display = document.getElementById('memberInfoDisplay');
     if (APP_STATE.currentMember) {
-        display.innerHTML = `${APP_STATE.currentMember.name} · 积分:${APP_STATE.currentMember.points} · 消费:RM ${Number(APP_STATE.currentMember.totalSpent).toFixed(2)}`;
-    } else display.innerHTML = '';
+        display.innerHTML = `
+        <div class="member-info">
+            <div class="member-avatar">${APP_STATE.currentMember.name.charAt(0)}</div>
+            <div>
+                <strong>${APP_STATE.currentMember.name}</strong> · 积分: ${APP_STATE.currentMember.points} · 
+                累计消费: RM ${Number(APP_STATE.currentMember.totalSpent).toFixed(2)}
+                ${APP_STATE.currentMember.points >= 50 ? ' 🎉可兑换折扣' : ''}
+            </div>
+        </div>`;
+    } else {
+        display.innerHTML = '<span style="color:#C0A0A0;">未关联会员</span>';
+    }
     updateOrderTotals();
 }
 
@@ -794,10 +878,39 @@ function getDiscountAmount() {
 }
 
 // ==================== ADD TO ORDER ====================
-function addToOrder(itemId) { /* unchanged */ }
-function adjustOrderQty(idx,delta) { /* unchanged */ }
-function removeFromOrder(idx) { /* unchanged */ }
-function clearOrder() { /* unchanged */ }
+function addToOrder(itemId) {
+    const item = APP_STATE.menu.find(m => m.id === itemId);
+    if (!item || !item.available) return;
+    const existing = APP_STATE.cashierOrder.find(e => e.menuItem.id === itemId);
+    if (existing) {
+        existing.quantity++;
+    } else {
+        APP_STATE.cashierOrder.push({ menuItem: item, quantity: 1 });
+    }
+    renderOrderPanel();
+    showToast(`已添加: ${item.name}`);
+}
+function adjustOrderQty(index, delta) {
+    APP_STATE.cashierOrder[index].quantity += delta;
+    if (APP_STATE.cashierOrder[index].quantity <= 0) {
+        APP_STATE.cashierOrder.splice(index, 1);
+    }
+    renderOrderPanel();
+}
+
+function removeFromOrder(index) {
+    APP_STATE.cashierOrder.splice(index, 1);
+    renderOrderPanel();
+}
+
+function clearOrder() {
+    APP_STATE.cashierOrder = [];
+    APP_STATE.currentMember = null;
+    document.getElementById('memberPhoneInput').value = '';
+    document.getElementById('memberDropdown').style.display = 'none';
+    renderOrderPanel();
+    showToast('订单已清空');
+}
 
 // ==================== DISCOUNT RULES MODAL ====================
 function openDiscountRulesModal() { document.getElementById('discountRulesModal').style.display='flex'; renderDiscountRulesList(); }
@@ -1357,16 +1470,21 @@ function renderAdminMenuGrid() {
     const grid = document.getElementById('adminMenuGrid');
     if (!grid) return;
     const items = APP_STATE.menu;
-    grid.innerHTML = items.map(item => `
+    grid.innerHTML = items.map(item => {
+        const imageOrEmoji = item.imageUrl 
+            ? `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy">`
+            : `<span class="item-emoji">${item.emoji || '🍴'}</span>`;
+        
+        return `
         <div class="menu-card admin-mode" onclick="openMenuEditModal('${item.id}')">
             <span class="edit-icon" onclick="event.stopPropagation(); deleteMenuItem('${item.id}')">🗑️</span>
-            <span class="item-emoji">${item.emoji || '🍴'}</span>
+            ${imageOrEmoji}
             <div class="item-name">${item.name}</div>
             <div class="item-price">RM ${Number(item.price).toFixed(2)}</div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 }
-
+	
 async function updateMenuItemField(id, field, value) {
     const item = APP_STATE.menu.find(i => i.id === id);
     if (!item) return;
@@ -1800,49 +1918,115 @@ async function deleteMenuItemFromSheet(itemId) {
     renderAll();
 }
 
+	function compressImage(file, maxSizeKB = 200) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                // Start with original dimensions
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Try to compress
+                let quality = 0.9;
+                let result = canvas.toDataURL('image/jpeg', quality);
+                
+                // Reduce quality until size is under maxSizeKB
+                while (result.length / 1024 > maxSizeKB && quality > 0.1) {
+                    quality -= 0.1;
+                    result = canvas.toDataURL('image/jpeg', quality);
+                }
+                
+                // If still too large, reduce dimensions
+                while (result.length / 1024 > maxSizeKB && width > 200) {
+                    width *= 0.8;
+                    height *= 0.8;
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    result = canvas.toDataURL('image/jpeg', quality);
+                }
+                
+                // Convert base64 to blob
+                const byteString = atob(result.split(',')[1]);
+                const mimeString = result.split(',')[0].split(':')[1].split(';')[0];
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                const blob = new Blob([ab], { type: mimeString });
+                
+                // Create a new file from blob
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), { type: 'image/jpeg' });
+                resolve(compressedFile);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+	
 async function uploadMenuImage() {
     const input = document.getElementById('editItemImageUpload');
     if (!input.files || !input.files[0]) {
-        showToast('請選擇圖片檔案');
+        showToast('请选择图片文件');
         return;
     }
     const file = input.files[0];
     const apiKey = APP_STATE.imgbbKey;
     if (!apiKey) {
-        showToast('❌ 請先在設定中填入 ImgBB API 密钥');
+        showToast('❌ 请先在设置中填入 ImgBB API 密钥');
         return;
     }
-    showToast('圖片上傳中…');
-
-    const formData = new FormData();
-    formData.append('image', file);
-
+    
+    showToast('图片压缩并上传中…');
+    
     try {
+        // Compress image to ~200KB before upload
+        const compressedFile = await compressImage(file, 200);
+        console.log(`压缩完成: ${(file.size/1024).toFixed(1)}KB → ${(compressedFile.size/1024).toFixed(1)}KB`);
+        
+        const formData = new FormData();
+        formData.append('image', compressedFile);
+
         const resp = await fetch('https://api.imgbb.com/1/upload?key=' + apiKey, {
             method: 'POST',
             body: formData
         });
         const json = await resp.json();
         if (json.success) {
-            const imageUrl = json.data.url;   // 直連圖片 URL
-            showToast('✅ 圖片已上傳');
+            const imageUrl = json.data.url;
+            showToast('✅ 图片已上传');
             document.getElementById('editItemImage').value = imageUrl;
-            // 顯示預覽
+            // Show preview
             let prev = document.getElementById('menuImagePreview');
             if (!prev) {
                 prev = document.createElement('img');
                 prev.id = 'menuImagePreview';
                 prev.style.maxWidth = '100px';
                 prev.style.marginTop = '4px';
+                prev.style.borderRadius = '8px';
                 document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
             }
             prev.src = imageUrl;
             prev.style.display = 'block';
         } else {
-            showToast('上傳失敗：' + (json.error?.message || '未知錯誤'));
+            showToast('上传失败: ' + (json.error?.message || '未知错误'));
         }
     } catch (err) {
-        showToast('上傳錯誤：' + err.message);
+        showToast('上传错误: ' + err.message);
+        console.error('Upload error:', err);
     }
 }
 
