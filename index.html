@@ -1487,15 +1487,18 @@ document.getElementById('menuEditModal').addEventListener('click', function(e){
 
 // Save or update item
 async function saveMenuItem() {
-    const id = document.getElementById('editItemId').value.trim();
-    const name = document.getElementById('editItemName').value.trim();
-    const desc = document.getElementById('editItemDesc').value.trim();
-    const price = parseFloat(document.getElementById('editItemPrice').value);
-    const originalPrice = parseFloat(document.getElementById('editItemOrigPrice').value);
-    const category = document.getElementById('editItemCategory').value;
-    const emoji = document.getElementById('editItemEmoji').value.trim();
-    const image = document.getElementById('editItemImage').value.trim();
-    const available = document.getElementById('editItemAvailable').checked;
+  const id = document.getElementById('editItemId').value;
+  const data = {
+    id: id || 'I' + Date.now(),
+    name: document.getElementById('editItemName').value,
+    description: document.getElementById('editItemDesc').value,
+    price: parseFloat(document.getElementById('editItemPrice').value) || 0,
+    originalPrice: parseFloat(document.getElementById('editItemOrigPrice').value) || null,
+    category: document.getElementById('editItemCategory').value || '其他',
+    emoji: document.getElementById('editItemEmoji').value,
+    imageUrl: document.getElementById('editItemImage').value,  // ← THIS LINE IS CRITICAL
+    available: document.getElementById('editItemAvailable').checked
+  };
 
     if (!name || isNaN(price) || !category) {
         showToast('请填写菜品名称、分类和价格');
