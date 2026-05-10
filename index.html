@@ -1960,17 +1960,10 @@ async function updateOrderStatus(orderId, newStatus, callNumber = null) {
 }
 	
 async function markReady(orderId) {
-    let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
-    APP_STATE.settings.callNumberCounter = callNum;
-    
-    // 更新设置表中的 callNumberCounter
-    await supabaseClient.from('settings').upsert(
-        { key: 'callNumberCounter', value: String(callNum) },
-        { onConflict: 'key' }
-    );
-    
-    await updateOrderStatus(orderId, 'ready', String(callNum));
-    showToast(`请取餐：${callNum}号`);
+    // 直接更新状态为 ready，不再生成 callNumber（支付时已生成）
+    await updateOrderStatus(orderId, 'ready');
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    showToast(`请取餐：${order?.callNumber || ''}号`);
 }
 async function markCompleted(orderId) {
     await updateOrderStatus(orderId, 'completed');
