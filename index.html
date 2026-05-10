@@ -919,19 +919,24 @@ function openPaymentModal(orderId) {
     } else {
         APP_STATE.selectedOrderForPayment = null;
     }
+    window.currentPayingOrderId = null;  // Reset customer order flag
     const total = payOrder ? Number(payOrder.total) : getOrderTotal();
     document.getElementById('payTotalDisplay').textContent = `RM ${total.toFixed(2)}`;
-    document.getElementById('paymentModal').style.display='flex';
-    document.getElementById('paymentMethodSelect').value='cash';
-    showPaymentDetails();
-    // Optionally clear previous input
+    document.getElementById('paymentModal').style.display = 'flex';
+    document.getElementById('paymentMethodSelect').value = 'cash';
     document.getElementById('cashReceived').value = '';
     document.getElementById('changeDisplay').textContent = 'RM 0.00';
+    showPaymentDetails();
+    calculateChange();
 }
 
 function calculateChange() {
     let total;
-    if (APP_STATE.selectedOrderForPayment) {
+    if (window.currentPayingOrderId) {
+        // Paying a customer order - get total from the order
+        const order = APP_STATE.orders.find(o => o.id === window.currentPayingOrderId);
+        total = order ? Number(order.total) : getOrderTotal();
+    } else if (APP_STATE.selectedOrderForPayment) {
         total = Number(APP_STATE.selectedOrderForPayment.total);
     } else {
         total = getOrderTotal();
@@ -2116,9 +2121,11 @@ function openPaymentModalForOrder(order) {
     document.getElementById('payTotalDisplay').textContent = `RM ${Number(order.total).toFixed(2)}`;
     document.getElementById('paymentModal').style.display = 'flex';
     document.getElementById('paymentMethodSelect').value = 'cash';
+    document.getElementById('cashReceived').value = '';  // Clear previous input
+    document.getElementById('changeDisplay').textContent = 'RM 0.00';  // Reset change display
     showPaymentDetails();
+    calculateChange();  // Force recalculation
 }
-
 // Override finalizePayment to check if we're paying a customer order
 const originalFinalizePayment = finalizePayment;
 finalizePayment = function() {
