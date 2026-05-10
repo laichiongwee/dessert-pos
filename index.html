@@ -530,13 +530,12 @@
   </div>
 </div>
 <script>
-	// ==================== SUPABASE & STRIPE CONFIG ====================
-const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co/rest/v1/';  // 替换为你的 Supabase URL
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';                // 替换为你的 anon key
+// ==================== SUPABASE & STRIPE CONFIG ====================
+const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const stripe = Stripe('pk_test_51TVNNWGaRTxvbl03MtFuj3oMYc8mfFD8rOs6el6tVc2ppw9RMG3HXik9gOgIzaquz3mqWUM3bEKJ6PjAu7JI8Tyx00XZKfqIe4'); // 替换为你的 Stripe publishable key
-
+const stripe = Stripe('pk_test_51TVNNWGaRTxvbl03MtFuj3oMYc8mfFD8rOs6el6tVc2ppw9RMG3HXik9gOgIzaquz3mqWUM3bEKJ6PjAu7JI8Tyx00XZKfqIe4');
 // ==================== 套餐权限 JSON ====================
 const PLAN_PERMISSIONS = {
   free: {
@@ -644,7 +643,26 @@ document.addEventListener('click', function(e) {
     if (dropdown) dropdown.style.display = 'none';
   }
 });
+function showLogin() {
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = 'none';
+  document.getElementById('authMessage').textContent = '';
+}
 
+function showRegister() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
+  document.getElementById('resetForm').style.display = 'none';
+  document.getElementById('authMessage').textContent = '';
+}
+
+function showReset() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = 'block';
+  document.getElementById('authMessage').textContent = '';
+}
 function loadDemoData() {
     APP_STATE.menu = getDemoMenu();
     APP_STATE.members = getDemoMembers();
