@@ -669,6 +669,8 @@ const APP_STATE = {
     supabaseReady: false
 };
 
+	let realtimeSubscription = null;
+	
 // ==================== DEMO DATA (fallback) ====================
 function getDemoMenu() { /* unchanged */ return [
     { id: '01', name: '柿柿润糖水', price: 10.00, category: '糖水', emoji: '🍅', available: true },
@@ -1596,6 +1598,7 @@ async function checkUser() {
         document.getElementById('publicCustomerView').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         await fetchAllData();
+		initRealtime();   // 启动实时监听
         renderAll();
         updateQRCode();
     } else if (mode === 'customer') {
@@ -1612,6 +1615,42 @@ async function checkUser() {
         document.getElementById('mainApp').style.display = 'none';
     }
 }
+
+	async function initRealtime() {
+    if (realtimeSubscription) {
+        await supabaseClient.removeChannel(realtimeSubscription);
+    }
+
+    realtimeSubscription = supabaseClient
+        .channel('orders-changes')
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'orders' },
+            (payload) => {
+                console.log('实时订单变更:', payload);
+                // 更新本地 orders 数组
+                if (payload.eventType === 'INSERT') {
+                    APP_STATE.orders.unshift(payload.new);
+                } else if (payload.eventType === 'UPDATE') {
+                    const idx = APP_STATE.orders.findIndex(o => o.id === payload.new.id);
+                    if (idx !== -1) APP_STATE.orders[idx] = payload.new;
+                } else if (payload.eventType === 'DELETE') {
+                    APP_STATE.orders = APP_STATE.orders.filter(o => o.id !== payload.old.id);
+                }
+
+                // 根据当前界面自动刷新待收款列表或出餐界面
+                if (APP_STATE.mode === 'cashier') {
+                    if (document.getElementById('unpaidOrdersModal').style.display === 'flex') {
+                        renderUnpaidOrdersList();
+                    }
+                } else if (APP_STATE.mode === 'fulfillment') {
+                    renderFulfillmentView();
+                }
+            }
+        )
+        .subscribe();
+}
+	
 async function loadUserProfile() {
   const { data: profile } = await supabaseClient
     .from('profiles')
@@ -1687,10 +1726,13 @@ async function handleResetPassword(e) {
 }
 
 async function logout() {
-  await supabaseClient.auth.signOut();
-  checkUser();
+    if (realtimeSubscription) {
+        await supabaseClient.removeChannel(realtimeSubscription);
+        realtimeSubscription = null;
+    }
+    await supabaseClient.auth.signOut();
+    checkUser();
 }
-
 	async function fetchPublicMenu() {
     const { data: menu } = await supabaseClient.from('menu').select('*');
     if (menu) {
@@ -1829,8 +1871,8 @@ async function submitPublicOrder() {
     document.getElementById('publicCustomerPhone').value = '';
     updatePublicCartCount();
 
-    // 显示成功提示，并提供跟踪链接
-    showPublicOrderSuccessModal(orderId);
+    // ✅ 跳转到订单状态页面，而不是弹窗
+    window.location.href = 'order-status.html?orderId=' + orderId;
 }
 	
         // ==================== URL PARAM CHECK ====================
