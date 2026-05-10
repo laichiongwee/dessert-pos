@@ -584,6 +584,25 @@
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()">取消</button>
     </div>
 </div>
+	<!-- 收据模态框 -->
+<div class="modal-overlay" id="receiptModal" style="display:none;" onclick="closeReceiptModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px;padding:0;">
+        <!-- 内容由 JS 动态填充 -->
+    </div>
+</div>
+
+	<!-- 公开订单成功模态框 -->
+<div class="modal-overlay" id="publicOrderSuccessModal" style="display:none;" onclick="closePublicOrderSuccessModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px;text-align:center;padding:24px;">
+        <h3>✅ 订单已提交</h3>
+        <p style="font-size:0.9rem;color:var(--text-light);margin-top:8px;">
+            订单号：<strong>${orderId}</strong><br>
+            请前往柜台付款
+        </p>
+        <a id="publicTrackLink" href="#" target="_blank" style="display:inline-block;margin-top:12px;color:var(--persimmon);font-weight:600;">查看订单状态 →</a>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:16px;" onclick="closePublicOrderSuccessModal()">关闭</button>
+    </div>
+</div>
 	
 <script>
 // ==================== SUPABASE & STRIPE CONFIG ====================
@@ -1041,10 +1060,20 @@ function finalizePayment() {
 }
 
 async function processPayment(method, total, paymentDetails = {}) {
-	if (!checkOrderLimit()) return;
+    if (!checkOrderLimit()) return;
+
+    // 生成叫号号码
+    let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
+    APP_STATE.settings.callNumberCounter = callNum;
+    // 同步到 Supabase
+    await supabaseClient.from('settings').upsert(
+        { key: 'callNumberCounter', value: String(callNum) },
+        { onConflict: 'key' }
+    );
+
     const orderId = String(++APP_STATE.orderIdCounter);
     localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
-    
+
     const order = {
         id: orderId,
         date: new Date().toISOString(),
@@ -1056,16 +1085,15 @@ async function processPayment(method, total, paymentDetails = {}) {
         paymentDetails: paymentDetails,
         discountApplied: getDiscountAmount(),
         status: 'pending',
-        callNumber: ''
+        callNumber: String(callNum)       // 支付时就分配叫号号码
     };
-    
+
     // 本地添加
     APP_STATE.orders.unshift(order);
     APP_STATE.cashierOrder = [];
     APP_STATE.currentMember = null;
     document.getElementById('memberPhoneInput').value = '';
     renderOrderPanel();
-    showToast(`✅ 订单 #${orderId} 已完成`);
 
     // 写入 Supabase
     const { error } = await supabaseClient.from('orders').insert([order]);
@@ -1083,6 +1111,70 @@ async function processPayment(method, total, paymentDetails = {}) {
             }).eq('id', member.id);
         }
     }
+
+    // 弹出收据
+    showOrderReceipt(order);
+}
+
+	function showOrderReceipt(order) {
+    // 动态生成收据内容
+    const receiptHTML = `
+    <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
+        <h2 style="color:var(--persimmon);margin-bottom:4px;">🍅 柿柿润糖水</h2>
+        <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
+        <div style="font-size:3rem;font-weight:800;color:var(--red);margin:12px 0;">🔔 ${order.callNumber}</div>
+        <div style="font-size:0.85rem;color:var(--text-light);">叫号号码</div>
+        <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
+        <table style="width:100%;font-size:0.8rem;text-align:left;border-collapse:collapse;">
+            ${order.items.map(item => `
+                <tr>
+                    <td style="padding:4px 0;">${item.name} x${item.qty}</td>
+                    <td style="text-align:right;">RM ${(item.price * item.qty).toFixed(2)}</td>
+                </tr>
+            `).join('')}
+        </table>
+        <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
+        <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
+            <span>总计</span>
+            <span>RM ${order.total.toFixed(2)}</span>
+        </div>
+        <div style="font-size:0.8rem;color:var(--text-light);text-align:left;line-height:1.6;">
+            <div>支付方式：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
+            ${renderPaymentDetailsLine(order)}
+        </div>
+        <button class="btn btn-primary btn-sm" style="margin-top:16px;width:100%;" onclick="closeReceiptModal()">关闭</button>
+    </div>`;
+
+    // 将收据放入一个模态框
+    const modal = document.getElementById('receiptModal');
+    modal.querySelector('.modal-sheet').innerHTML = receiptHTML;
+    modal.style.display = 'flex';
+}
+
+function getPaymentMethodLabel(method) {
+    const labels = { cash: '💰 现金', card: '💳 信用卡/借记卡', online: '📱 线上支付' };
+    return labels[method] || method;
+}
+
+function renderPaymentDetailsLine(order) {
+    const details = order.paymentDetails || {};
+    if (order.paymentMethod === 'cash' && details.amountTendered) {
+        return `<div>实收：RM ${details.amountTendered.toFixed(2)}</div>
+                <div>找零：RM ${details.change.toFixed(2)}</div>`;
+    }
+    if (order.paymentMethod === 'card' && details.cardLast4) {
+        return `<div>卡号末四位：**** ${details.cardLast4}</div>
+                <div>参考号：${details.refNum || ''}</div>`;
+    }
+    if (order.paymentMethod === 'online' && details.refNum) {
+        return `<div>平台：${details.onlineType || ''}</div>
+                <div>交易参考号：${details.refNum}</div>`;
+    }
+    return '';
+}
+
+function closeReceiptModal() {
+    document.getElementById('receiptModal').style.display = 'none';
 }
 function getOrderTotal() {
     const subtotal = APP_STATE.cashierOrder.reduce((s,e)=>s+e.menuItem.price*e.quantity,0);
@@ -1707,8 +1799,8 @@ function closePublicCartModal(event) {
 
 async function submitPublicOrder() {
     const name = document.getElementById('publicCustomerName').value.trim();
-    if (!name) { showToast('請輸入姓名'); return; }
-    if (APP_STATE.publicCart.length === 0) { showToast('購物車是空的'); return; }
+    if (!name) { showToast('请输入姓名'); return; }
+    if (APP_STATE.publicCart.length === 0) { showToast('购物车是空的'); return; }
     const phone = document.getElementById('publicCustomerPhone').value.trim();
     const total = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
     const orderId = 'PUB-' + Date.now();
@@ -1723,12 +1815,12 @@ async function submitPublicOrder() {
         paymentDetails: {},
         discountApplied: 0,
         status: 'pending_payment',
-        callNumber: ''
+        callNumber: '' // 柜台付款后分配叫号
     };
     const { error } = await supabaseClient.from('orders').insert([order]);
     if (error) {
         console.error('Order insert error:', error);
-        showToast('送出失敗，請稍後再試');
+        showToast('送出失败，请稍后再试');
         return;
     }
     APP_STATE.publicCart = [];
@@ -1736,7 +1828,9 @@ async function submitPublicOrder() {
     document.getElementById('publicCustomerName').value = '';
     document.getElementById('publicCustomerPhone').value = '';
     updatePublicCartCount();
-    showToast(`訂單 #${orderId} 已送出！請等待叫號`);
+
+    // 显示成功提示，并提供跟踪链接
+    showPublicOrderSuccessModal(orderId);
 }
 	
         // ==================== URL PARAM CHECK ====================
@@ -2692,6 +2786,19 @@ window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
 document.addEventListener('DOMContentLoaded', () => {
   checkUser();
 });
+
+	function showPublicOrderSuccessModal(orderId) {
+    const modal = document.getElementById('publicOrderSuccessModal');
+    // 更新订单号和链接
+    modal.querySelector('p').innerHTML = `订单号：<strong>${orderId}</strong><br>请前往柜台付款`;
+    modal.querySelector('#publicTrackLink').href = `track.html?orderId=${orderId}`;
+    modal.style.display = 'flex';
+}
+
+function closePublicOrderSuccessModal() {
+    document.getElementById('publicOrderSuccessModal').style.display = 'none';
+}
+	
     </script>
 	</div> <!-- 闭合 #mainApp -->
 </body>
