@@ -533,8 +533,7 @@
 // ==================== SUPABASE & STRIPE CONFIG ====================
 const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const stripe = Stripe('pk_test_51TVNNWGaRTxvbl03MtFuj3oMYc8mfFD8rOs6el6tVc2ppw9RMG3HXik9gOgIzaquz3mqWUM3bEKJ6PjAu7JI8Tyx00XZKfqIe4');
 // ==================== 套餐权限 JSON ====================
 const PLAN_PERMISSIONS = {
@@ -653,11 +652,11 @@ async function fetchAllData() {
       { data: discountRules },
       { data: settingsRows }
     ] = await Promise.all([
-      supabase.from('menu').select('*'),
-      supabase.from('members').select('*'),
-      supabase.from('orders').select('*').order('date', { ascending: false }),
-      supabase.from('discount_rules').select('*'),
-      supabase.from('settings').select('*')
+      supabaseClient.from('menu').select('*'),
+      supabaseClient.from('members').select('*'),
+      supabaseClient.from('orders').select('*').order('date', { ascending: false }),
+      supabaseClient.from('discount_rules').select('*'),
+      supabaseClient.from('settings').select('*')
     ]);
 
     APP_STATE.menu = menu.map(item => ({
@@ -895,7 +894,7 @@ async function submitNewMember() {
     APP_STATE.members.push(newMember);
     
     // 写入 Supabase
-    const { error } = await supabase.from('members').insert([newMember]);
+    const { error } = await supabaseClient.from('members').insert([newMember]);
     if (error) {
         console.error('Add member error:', error);
         showToast('⚠️ 会员添加失败，请重试');
@@ -1007,7 +1006,7 @@ async function processPayment(method, total, paymentDetails = {}) {
     showToast(`✅ 订单 #${orderId} 已完成`);
 
     // 写入 Supabase
-    const { error } = await supabase.from('orders').insert([order]);
+    const { error } = await supabaseClient.from('orders').insert([order]);
     if (error) console.error('Order insert error:', error);
 
     // 更新会员积分（如果有会员）
@@ -1016,7 +1015,7 @@ async function processPayment(method, total, paymentDetails = {}) {
         if (member) {
             member.points += Math.floor(total);
             member.totalSpent += Number(total);
-            await supabase.from('members').update({
+            await supabaseClient.from('members').update({
                 points: member.points,
                 totalSpent: member.totalSpent
             }).eq('id', member.id);
@@ -1101,7 +1100,7 @@ async function addDiscountRule() {
     
     APP_STATE.discountRules.push(rule);
     
-    const { error } = await supabase.from('discount_rules').insert([rule]);
+    const { error } = await supabaseClient.from('discount_rules').insert([rule]);
     if (error) console.error('Add discount rule error:', error);
     
     renderDiscountRulesList();
@@ -1148,7 +1147,7 @@ async function closeDay() {
         closedBy: 'Cashier'
     };
     
-    const { error } = await supabase.from('daily_reports').insert([report]);
+    const { error } = await supabaseClient.from('daily_reports').insert([report]);
     if (error) console.error('Save daily report error:', error);
     
     document.getElementById('reportModal').style.display = 'none';
@@ -1272,7 +1271,7 @@ function saveSettings() {
     
     // 同步到 Supabase
     if (typeof supabase !== 'undefined') {
-        supabase.from('settings').upsert(
+        supabaseClient.from('settings').upsert(
             { key: 'imgbbKey', value: APP_STATE.imgbbKey },
             { onConflict: 'key' }
         ).then(({ error }) => {
@@ -1312,7 +1311,7 @@ function saveSettings() {
         }
 // ==================== AUTH ====================
 async function checkUser() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     APP_STATE.currentUser = session.user;
     await loadUserProfile();
@@ -1339,7 +1338,7 @@ async function loadUserProfile() {
   }
 }
 
-supabase.auth.onAuthStateChange((event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_OUT') {
     document.getElementById('authContainer').style.display = 'block';
     document.getElementById('mainApp').style.display = 'none';
@@ -1369,7 +1368,7 @@ async function handleLogin(e) {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value;
   const password = document.getElementById('loginPassword').value;
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) {
     document.getElementById('authMessage').textContent = error.message;
   } else {
@@ -1381,7 +1380,7 @@ async function handleRegister(e) {
   e.preventDefault();
   const email = document.getElementById('registerEmail').value;
   const password = document.getElementById('registerPassword').value;
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { error } = await supabaseClient.auth.signUp({ email, password });
   if (error) {
     document.getElementById('authMessage').textContent = error.message;
   } else {
@@ -1392,7 +1391,7 @@ async function handleRegister(e) {
 async function handleResetPassword(e) {
   e.preventDefault();
   const email = document.getElementById('resetEmail').value;
-  const { error } = await supabase.auth.sendPasswordResetEmail(email, { redirectTo: window.location.origin });
+  const { error } = await supabaseClient.auth.sendPasswordResetEmail(email, { redirectTo: window.location.origin });
   if (error) {
     document.getElementById('authMessage').textContent = error.message;
   } else {
@@ -1401,7 +1400,7 @@ async function handleResetPassword(e) {
 }
 
 async function logout() {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   checkUser();
 }
 	
@@ -1516,7 +1515,7 @@ async function updateOrderStatus(orderId, newStatus, callNumber = null) {
     const updateData = { status: newStatus };
     if (callNumber !== null) updateData.callNumber = String(callNumber);
     
-    const { error } = await supabase.from('orders').update(updateData).eq('id', orderId);
+    const { error } = await supabaseClient.from('orders').update(updateData).eq('id', orderId);
     if (error) {
         console.error('Update order status error:', error);
         return;
@@ -1536,7 +1535,7 @@ async function markReady(orderId) {
     APP_STATE.settings.callNumberCounter = callNum;
     
     // 更新设置表中的 callNumberCounter
-    await supabase.from('settings').upsert(
+    await supabaseClient.from('settings').upsert(
         { key: 'callNumberCounter', value: String(callNum) },
         { onConflict: 'key' }
     );
@@ -1667,7 +1666,7 @@ function submitCustomerOrder() {
         if (member) {
             member.points += Math.floor(total);
             member.totalSpent += total;
-            supabase.from('members').update({
+            supabaseClient.from('members').update({
                 points: member.points,
                 totalSpent: member.totalSpent
             }).eq('id', member.id).then(({ error }) => {
@@ -1693,7 +1692,7 @@ function submitCustomerOrder() {
     APP_STATE.orders.push(order);
     
     // 写入 Supabase
-    supabase.from('orders').insert([order]).then(({ error }) => {
+    supabaseClient.from('orders').insert([order]).then(({ error }) => {
         if (error) console.error('Customer order insert failed:', error);
     });
     
@@ -1751,7 +1750,7 @@ async function updateMenuItemField(id, field, value) {
     if (!item) return;
     item[field] = value;
     const updateData = { [field]: value };
-    const { error } = await supabase.from('menu').update(updateData).eq('id', id);
+    const { error } = await supabaseClient.from('menu').update(updateData).eq('id', id);
     if (error) console.error('Update field error:', error);
     showToast(`已更新${field}`);
 }
@@ -1759,7 +1758,7 @@ async function updateMenuItemField(id, field, value) {
 async function deleteMenuItem(id) {
     if (!confirm('删除该菜品？')) return;
     
-    const { error } = await supabase.from('menu').delete().eq('id', id);
+    const { error } = await supabaseClient.from('menu').delete().eq('id', id);
     if (error) {
         console.error('Delete error:', error);
         showToast('⚠️ 删除失败，请重试');
@@ -1792,7 +1791,7 @@ async function addNewMenuItem() {
     APP_STATE.menu.push(newItem);
     
     // 改为 Supabase
-    const { error } = await supabase.from('menu').insert([newItem]);
+    const { error } = await supabaseClient.from('menu').insert([newItem]);
     if (error) console.error('Add menu item error:', error);
     
     renderAdminMenuGrid();
@@ -1814,7 +1813,7 @@ function uploadLogo() {
         const logoUrl = e.target.result;
         APP_STATE.settings.logoUrl = logoUrl;
         document.querySelector('.header-brand img').src = logoUrl;
-        await supabase.from('settings').upsert(
+        await supabaseClient.from('settings').upsert(
             { key: 'logoUrl', value: logoUrl },
             { onConflict: 'key' }
         );
@@ -1827,7 +1826,7 @@ function editStoreName() {
     if (!newName) return;
     APP_STATE.settings.storeName = newName;
     document.querySelector('.header-brand span').textContent = newName;
-    supabase.from('settings').upsert(
+    supabaseClient.from('settings').upsert(
         { key: 'storeName', value: newName },
         { onConflict: 'key' }
     ).then(({ error }) => {
@@ -1920,7 +1919,7 @@ async function saveMenuItem() {
     };
     
     // 写入 Supabase (upsert: 存在则更新，不存在则插入)
-    const { error } = await supabase.from('menu').upsert([data], { onConflict: 'id' });
+    const { error } = await supabaseClient.from('menu').upsert([data], { onConflict: 'id' });
     if (error) {
         console.error('Menu save error:', error);
         showToast('⚠️ 保存失败，请重试');
@@ -1972,7 +1971,7 @@ async function deleteMenuItem() {
     if (!id) return;
     if (!confirm('确定要删除该菜品吗？')) return;
     APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== id);
-    const { error } = await supabase.from('menu').delete().eq('id', id);
+    const { error } = await supabaseClient.from('menu').delete().eq('id', id);
 if (error) console.error('Delete error:', error);
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     closeMenuEditModal();
@@ -2045,7 +2044,7 @@ async function deleteCategory(cat) {
   
   // 改为 Supabase 批量更新
   await Promise.all(APP_STATE.menu.map(item => 
-    supabase.from('menu').update({ category: item.category }).eq('id', item.id)
+    supabaseClient.from('menu').update({ category: item.category }).eq('id', item.id)
   ));
   
   APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
@@ -2158,7 +2157,7 @@ async function finalizeCustomerPayment() {
     order.paymentMethod = method;
     order.paymentDetails = paymentDetails;
     
-    const { error } = await supabase.from('orders').update({
+    const { error } = await supabaseClient.from('orders').update({
         status: 'pending',
         paymentMethod: method,
         paymentDetails: paymentDetails
@@ -2171,7 +2170,7 @@ async function finalizeCustomerPayment() {
     if (member) {
         member.points += Math.floor(total);
         member.totalSpent += total;
-        await supabase.from('members').update({
+        await supabaseClient.from('members').update({
             points: member.points,
             totalSpent: member.totalSpent
         }).eq('id', member.id);
@@ -2221,7 +2220,7 @@ function renderMenuSheetTable() {
 async function deleteMenuItemFromSheet(itemId) {
     if (!confirm('确定要删除该菜品吗？')) return;
     
-    const { error } = await supabase.from('menu').delete().eq('id', itemId);
+    const { error } = await supabaseClient.from('menu').delete().eq('id', itemId);
     if (error) {
         console.error('Delete error:', error);
         showToast('⚠️ 删除失败');
