@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🍅 柿柿润糖水 - POS System</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
@@ -220,7 +222,41 @@
     </style>
 </head>
 <body>
+<!-- 登录界面 -->
+<div id="authContainer" style="max-width:400px;margin:60px auto;padding:20px;background:white;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);display:block;">
+  <h2 style="text-align:center;color:var(--persimmon);">🍅 柿柿润糖水</h2>
+  <div id="authForms">
+    <form id="loginForm" onsubmit="handleLogin(event)" style="display:block;">
+      <input type="email" id="loginEmail" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="password" id="loginPassword" placeholder="密码" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <button type="submit" class="btn btn-primary" style="width:100%;">🔐 登录</button>
+      <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
+        <a href="#" onclick="showRegister()">注册新账号</a> |
+        <a href="#" onclick="showReset()">忘记密码？</a>
+      </p>
+    </form>
+    <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
+      <input type="email" id="registerEmail" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="password" id="registerPassword" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <button type="submit" class="btn btn-primary" style="width:100%;">📝 注册</button>
+      <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
+        <a href="#" onclick="showLogin()">已有账号？登录</a>
+      </p>
+    </form>
+    <form id="resetForm" onsubmit="handleResetPassword(event)" style="display:none;">
+      <input type="email" id="resetEmail" placeholder="注册邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <button type="submit" class="btn btn-primary" style="width:100%;">📧 发送重置链接</button>
+      <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
+        <a href="#" onclick="showLogin()">返回登录</a>
+      </p>
+    </form>
+  </div>
+  <div id="authMessage" style="color:red;text-align:center;margin-top:8px;font-size:0.8rem;"></div>
+</div>
 
+<!-- 主应用（默认隐藏） -->
+<div id="mainApp" style="display:none;">
+	
 <!-- HEADER -->
 <header class="header">
     <div class="header-brand"><span>🍅</span><span>柿柿润糖水</span></div>
@@ -493,6 +529,52 @@
   </div>
 </div>
 <script>
+	// ==================== SUPABASE & STRIPE CONFIG ====================
+const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co/rest/v1/';  // 替换为你的 Supabase URL
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';                // 替换为你的 anon key
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const stripe = Stripe('pk_test_51TVNNWGaRTxvbl03MtFuj3oMYc8mfFD8rOs6el6tVc2ppw9RMG3HXik9gOgIzaquz3mqWUM3bEKJ6PjAu7JI8Tyx00XZKfqIe4'); // 替换为你的 Stripe publishable key
+
+// ==================== 套餐权限 JSON ====================
+const PLAN_PERMISSIONS = {
+  free: {
+    orderDailyLimit: 20,
+    unlimitedOrder: false,
+    cloudSync: false,
+    multiDevice: false,
+    reportBasic: false,
+    inventoryManage: false,
+    multiShop: false,
+    staffPermission: false,
+    dataExport: false,
+    customReceipt: false
+  },
+  basic: {
+    orderDailyLimit: 9999,
+    unlimitedOrder: true,
+    cloudSync: true,
+    multiDevice: true,
+    reportBasic: true,
+    inventoryManage: false,
+    multiShop: false,
+    staffPermission: false,
+    dataExport: false,
+    customReceipt: true
+  },
+  pro: {
+    orderDailyLimit: 9999,
+    unlimitedOrder: true,
+    cloudSync: true,
+    multiDevice: true,
+    reportBasic: true,
+    inventoryManage: true,
+    multiShop: true,
+    staffPermission: true,
+    dataExport: true,
+    customReceipt: true
+  }
+};
 // ==================== GLOBAL STATE ====================
 const APP_STATE = {
     mode: 'cashier',
@@ -504,8 +586,12 @@ const APP_STATE = {
     gasUrl: localStorage.getItem('gasUrl') || '',
     orderIdCounter: parseInt(localStorage.getItem('orderIdCounter') || '1000'),
     adminUnlocked: false,
-	postUrl: localStorage.getItem('postUrl') || '',
-	imgbbKey: localStorage.getItem('imgbbKey') || '',   // 留空，強制使用者從設定輸入
+    postUrl: localStorage.getItem('postUrl') || '',
+    imgbbKey: localStorage.getItem('imgbbKey') || '',
+    // 新增：
+    currentUser: null,
+    currentPlan: 'free',
+    supabaseReady: false
 };
 
 // ==================== DEMO DATA (fallback) ====================
@@ -547,34 +633,46 @@ function loadDemoData() {
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i=>i.category))];
 }
 
-async function fetchFromGoogleSheets() {
-    const url = APP_STATE.gasUrl + '?action=getAll';
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP '+resp.status);
-    const data = await resp.json();
-    if (data.menu) APP_STATE.menu = data.menu.map(item=>({...item, price:Number(item.price), available:item.available==='TRUE'||item.available===true}));
-	if (data.settings) APP_STATE.settings = data.settings;
-    if (data.members) APP_STATE.members = data.members.map(m=>({...m, points:Number(m.points), totalSpent:Number(m.totalSpent)}));
-    if (data.orders) { APP_STATE.orders = data.orders; const ids = data.orders.map(o=>parseInt(o.id)||0); if(ids.length) APP_STATE.orderIdCounter = Math.max(...ids); }
-    if (data.discountRules) APP_STATE.discountRules = data.discountRules;
-    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i=>i.category))];
-    renderAll();
+async function fetchAllData() {
+  try {
+    const [
+      { data: menu },
+      { data: members },
+      { data: orders },
+      { data: discountRules },
+      { data: settingsRows }
+    ] = await Promise.all([
+      supabase.from('menu').select('*'),
+      supabase.from('members').select('*'),
+      supabase.from('orders').select('*').order('date', { ascending: false }),
+      supabase.from('discount_rules').select('*'),
+      supabase.from('settings').select('*')
+    ]);
+
+    APP_STATE.menu = menu.map(item => ({
+      ...item,
+      price: Number(item.price),
+      originalPrice: item.originalPrice ? Number(item.originalPrice) : null,
+      available: item.available === true || item.available === 'TRUE'
+    }));
+    APP_STATE.members = members.map(m => ({
+      ...m,
+      points: Number(m.points),
+      totalSpent: Number(m.totalSpent)
+    }));
+    APP_STATE.orders = orders || [];
+    APP_STATE.discountRules = discountRules || [];
+    APP_STATE.settings = {};
+    if (settingsRows) settingsRows.forEach(row => { APP_STATE.settings[row.key] = row.value; });
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    APP_STATE.supabaseReady = true;
+  } catch (e) {
+    console.error('Supabase fetch error:', e);
+    loadDemoData();
+  }
 }
 
-async function syncToGoogleSheets(action, payload) {
-    if (!APP_STATE.gasUrl) return null;
-    const params = new URLSearchParams();
-    params.append('action', action);
-    params.append('data', JSON.stringify(payload));
-    const url = APP_STATE.gasUrl + '?' + params.toString();
-    try {
-        const resp = await fetch(url);
-        return await resp.json();
-    } catch (e) {
-        console.error('Background sync error:', e);
-        return null;
-    }
-}
+
 // ==================== RENDER ====================
 function renderAll() {
     renderCategoryTabs();
@@ -868,17 +966,29 @@ async function processPayment(method, total, paymentDetails = {}) {
         callNumber: ''
     };
     
-    // Add locally and clear cart immediately
-    APP_STATE.orders.push(order);
+    // 本地添加
+    APP_STATE.orders.unshift(order);
     APP_STATE.cashierOrder = [];
     APP_STATE.currentMember = null;
     document.getElementById('memberPhoneInput').value = '';
     renderOrderPanel();
     showToast(`✅ 订单 #${orderId} 已完成`);
-    
-    // Background sync
-    if (APP_STATE.gasUrl) {
-        syncToGoogleSheets('addOrder', { order, updatedMember: null }).catch(e => console.error('Background sync failed:', e));
+
+    // 写入 Supabase
+    const { error } = await supabase.from('orders').insert([order]);
+    if (error) console.error('Order insert error:', error);
+
+    // 更新会员积分（如果有会员）
+    if (order.memberPhone) {
+        const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
+        if (member) {
+            member.points += Math.floor(total);
+            member.totalSpent += Number(total);
+            await supabase.from('members').update({
+                points: member.points,
+                totalSpent: member.totalSpent
+            }).eq('id', member.id);
+        }
     }
 }
 function getOrderTotal() {
@@ -1110,7 +1220,101 @@ function saveSettings() {
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 2500);
         }
+// ==================== AUTH ====================
+async function checkUser() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    APP_STATE.currentUser = session.user;
+    await loadUserProfile();
+    document.getElementById('authContainer').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    await fetchAllData();
+    renderAll();
+    updateQRCode();
+  } else {
+    document.getElementById('authContainer').style.display = 'block';
+    document.getElementById('mainApp').style.display = 'none';
+  }
+}
 
+async function loadUserProfile() {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan_id, subscription_status')
+    .eq('id', APP_STATE.currentUser.id)
+    .single();
+  if (profile) {
+    APP_STATE.currentPlan = profile.plan_id || 'free';
+    APP_STATE.subscriptionStatus = profile.subscription_status || 'active';
+  }
+}
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') {
+    document.getElementById('authContainer').style.display = 'block';
+    document.getElementById('mainApp').style.display = 'none';
+  }
+});
+
+function showLogin() {
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = 'none';
+  document.getElementById('authMessage').textContent = '';
+}
+function showRegister() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
+  document.getElementById('resetForm').style.display = 'none';
+  document.getElementById('authMessage').textContent = '';
+}
+function showReset() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = 'block';
+  document.getElementById('authMessage').textContent = '';
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById('authMessage').textContent = error.message;
+  } else {
+    checkUser();
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const email = document.getElementById('registerEmail').value;
+  const password = document.getElementById('registerPassword').value;
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) {
+    document.getElementById('authMessage').textContent = error.message;
+  } else {
+    document.getElementById('authMessage').textContent = '注册成功！请检查邮箱确认（如果开启了邮件验证）。';
+  }
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById('resetEmail').value;
+  const { error } = await supabase.auth.sendPasswordResetEmail(email, { redirectTo: window.location.origin });
+  if (error) {
+    document.getElementById('authMessage').textContent = error.message;
+  } else {
+    document.getElementById('authMessage').textContent = '密码重置邮件已发送，请检查邮箱。';
+  }
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+  checkUser();
+}
+	
         // ==================== URL PARAM CHECK ====================
         function checkUrlParams() {
             const params = new URLSearchParams(window.location.search);
@@ -1254,14 +1458,23 @@ function renderOrderCard(order) {
 }
 
 async function updateOrderStatus(orderId, newStatus, callNumber = null) {
+    const updateData = { status: newStatus };
+    if (callNumber !== null) updateData.callNumber = String(callNumber);
+    
+    const { error } = await supabase.from('orders').update(updateData).eq('id', orderId);
+    if (error) {
+        console.error('Update order status error:', error);
+        return;
+    }
+    
+    // 同时更新本地
     const order = APP_STATE.orders.find(o => o.id === orderId);
-    if (!order) return;
-    order.status = newStatus;
-    if (callNumber !== null) order.callNumber = callNumber;
-    await syncToGoogleSheets('updateOrderStatus', { orderId, status: newStatus, callNumber });
+    if (order) {
+        order.status = newStatus;
+        if (callNumber !== null) order.callNumber = String(callNumber);
+    }
     renderFulfillmentView();
 }
-
 async function markReady(orderId) {
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
     APP_STATE.settings.callNumberCounter = callNum;
@@ -1380,33 +1593,48 @@ function submitCustomerOrder() {
     const name = document.getElementById('customerNameInput').value.trim();
     if (!name) { showToast('⚠️ 请输入您的姓名'); return; }
     if (APP_STATE.customerCart.length === 0) { showToast('⚠️ 购物车是空的'); return; }
+    
     const phone = document.getElementById('customerPhoneInput').value.trim();
     const total = APP_STATE.customerCart.reduce((sum, e) => sum + Number(e.menuItem.price) * e.quantity, 0);
     const orderId = String(++APP_STATE.orderIdCounter);
     localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
+    
     let member = null;
     if (phone) {
         member = APP_STATE.members.find(m => String(m.phone).includes(phone));
         if (member) {
             member.points += Math.floor(total);
             member.totalSpent += total;
+            supabase.from('members').update({
+                points: member.points,
+                totalSpent: member.totalSpent
+            }).eq('id', member.id).then(({ error }) => {
+                if (error) console.error('Member update error:', error);
+            });
         }
     }
+    
     const order = {
-    id: orderId,
-    date: new Date().toISOString(),
-    items: APP_STATE.customerCart.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: Number(e.menuItem.price) })),
-    total: total,
-    paymentMethod: 'customer_order',
-    memberPhone: member ? member.phone : phone,
-    memberName: member ? member.name : name,
-    paymentDetails: {},
-    discountApplied: 0,
-    status: 'pending_payment',
-    callNumber: ''
-};
+        id: orderId,
+        date: new Date().toISOString(),
+        items: APP_STATE.customerCart.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: Number(e.menuItem.price) })),
+        total: total,
+        paymentMethod: 'customer_order',
+        memberPhone: member ? member.phone : phone,
+        memberName: member ? member.name : name,
+        paymentDetails: {},
+        discountApplied: 0,
+        status: 'pending_payment',
+        callNumber: ''
+    };
+    
     APP_STATE.orders.push(order);
-    syncToGoogleSheets('addOrder', { order, updatedMember: member });
+    
+    // 写入 Supabase
+    supabase.from('orders').insert([order]).then(({ error }) => {
+        if (error) console.error('Customer order insert failed:', error);
+    });
+    
     document.getElementById('customerCartModal').style.display = 'none';
     APP_STATE.customerCart = [];
     updateCartBadge();
@@ -1414,7 +1642,6 @@ function submitCustomerOrder() {
     document.getElementById('customerPhoneInput').value = '';
     showToast(`✅ 订单 #${orderId} 已提交! 请等待取餐 🍅`);
 }
-
 // ==================== QUICK PAYMENT (for keyboard shortcut) ====================
 function quickPayment(method) {
     if (APP_STATE.cashierOrder.length === 0) { showToast('⚠️ 请先添加商品'); return; }
@@ -1628,7 +1855,8 @@ async function saveMenuItem() {
     // 4. Sync to Google Sheets in the background (non-blocking)
     if (APP_STATE.gasUrl) {
         const action = id && APP_STATE.menu.some(i => i.id === id) ? 'updateMenuItem' : 'addMenuItem';
-        syncToGoogleSheets(action, data).catch(e => console.error('Background sync failed:', e));
+        const { error } = await supabase.from('menu').upsert([data], { onConflict: 'id' });
+if (error) console.error('Menu save error:', error);
     }
 }
 // Show/hide "删除" button
@@ -1657,7 +1885,8 @@ async function deleteMenuItem() {
     if (!id) return;
     if (!confirm('确定要删除该菜品吗？')) return;
     APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== id);
-    await syncToGoogleSheets('deleteMenuItem', {id});
+    const { error } = await supabase.from('menu').delete().eq('id', id);
+if (error) console.error('Delete error:', error);
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     closeMenuEditModal();
     renderAll();
@@ -2010,5 +2239,6 @@ window.closeMenuSheetModal = closeMenuSheetModal;
 window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
 
     </script>
+	</div> <!-- 闭合 #mainApp -->
 </body>
 </html>
