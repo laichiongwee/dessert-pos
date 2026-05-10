@@ -304,9 +304,7 @@
     <div class="header-brand"><span>🍅</span><span>柿柿润糖水</span></div>
     <div class="header-actions">
         <div class="mode-switch" id="modeSwitcher">
-		
     <button data-mode="cashier" class="active" onclick="switchMode('cashier')">💰 收银</button>
-    <button data-mode="customer" onclick="switchMode('customer')">📱 顾客</button>
     <button data-mode="fulfillment" onclick="switchMode('fulfillment')">📦 出餐</button>
 </div>
         <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()">💰 待收款</button>
@@ -314,6 +312,7 @@
 		<button class="btn btn-outline btn-sm" onclick="openQRModal()">🔗 QR</button>
         <button class="btn btn-ghost btn-sm" onclick="openReportModal()">📊 报表</button>
         <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙️</button>
+		<button class="btn btn-xs btn-outline" onclick="logout()">🚪 登出</button>
     </div>
 </header>
 <!-- Admin bar 独立放置 -->
@@ -1196,12 +1195,13 @@ async function closeDay() {
 function closeReportModal(e) { if(e&&e.target!==document.getElementById('reportModal'))return; document.getElementById('reportModal').style.display='none'; }
 document.getElementById('reportModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
         // ==================== MODE SWITCH ====================
-      function switchMode(mode) {
+   function switchMode(mode) {
     APP_STATE.mode = mode;
     document.querySelectorAll('#modeSwitcher button').forEach(b => b.classList.remove('active'));
-    document.querySelector(`#modeSwitcher button[data-mode="${mode}"]`).classList.add('active');
+    const activeBtn = document.querySelector(`#modeSwitcher button[data-mode="${mode}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
     document.getElementById('cashierView').classList.toggle('active', mode === 'cashier');
-    document.getElementById('customerView').classList.toggle('active', mode === 'customer');
     const fulfillView = document.getElementById('fulfillmentView');
     if (fulfillView) fulfillView.classList.toggle('active', mode === 'fulfillment');
     
@@ -1209,11 +1209,6 @@ document.getElementById('reportModal').addEventListener('click', function(e){ if
         renderCategoryTabs();
         renderMenuGrid();
         renderOrderPanel();
-    } else if (mode === 'customer') {
-        APP_STATE.activeCategory = '全部';
-        renderCustomerCategoryTabs();
-        renderCustomerMenuGrid();
-        updateCartBadge();
     } else if (mode === 'fulfillment') {
         renderFulfillmentView();
         if (APP_STATE.adminUnlocked) {
@@ -1223,7 +1218,7 @@ document.getElementById('reportModal').addEventListener('click', function(e){ if
         } else {
             document.getElementById('adminBar').style.display = 'none';
             document.getElementById('unlockBtn').style.display = 'block';
-            document.getElementById('adminMenuGrid').innerHTML = ''; // hide menu list when locked
+            document.getElementById('adminMenuGrid').innerHTML = '';
         }
     }
 }
