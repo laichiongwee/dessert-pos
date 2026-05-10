@@ -308,7 +308,7 @@
     <button data-mode="fulfillment" onclick="switchMode('fulfillment')">📦 出餐</button>
 </div>
         <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()">💰 待收款</button>
-		<button class="btn btn-xs btn-outline" onclick="openSubscriptionPage()" id="upgradeBtn" style="display:none;">⭐ 升级套餐</button>
+		<button class="btn btn-xs btn-outline" onclick="openPricingModal()" id="upgradeBtn" style="display:none;">⭐ 升级套餐</button>
 		<button class="btn btn-outline btn-sm" onclick="openQRModal()">🔗 QR</button>
         <button class="btn btn-ghost btn-sm" onclick="openReportModal()">📊 报表</button>
         <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙️</button>
@@ -562,6 +562,29 @@
     <button class="btn btn-outline btn-sm" style="width:100%;margin-top:10px;" onclick="closeMenuSheetModal()">关闭</button>
   </div>
 </div>
+
+	<!-- 套餐升级模态框 -->
+<div class="modal-overlay" id="pricingModal" style="display:none;" onclick="closePricingModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:600px;">
+        <div class="modal-handle"></div>
+        <h3 style="text-align:center;margin-bottom:16px;">⭐ 升级套餐</h3>
+        <p style="text-align:center;font-size:0.85rem;color:var(--text-light);margin-bottom:16px;">当前套餐：<strong id="currentPlanLabel">免费版</strong></p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="planCards">
+            <!-- 动态生成 -->
+        </div>
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+            <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
+                <input type="radio" name="billingCycle" value="monthly" checked onchange="updatePlanPrices()"> 月付
+            </label>
+            <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
+                <input type="radio" name="billingCycle" value="yearly" onchange="updatePlanPrices()"> 年付（8折）
+            </label>
+        </div>
+        <p style="font-size:0.7rem;color:var(--text-lighter);margin-top:8px;">所有价格均已包含 SST（6%）。若选择年付，您将一次性支付全年费用。</p>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()">取消</button>
+    </div>
+</div>
+	
 <script>
 // ==================== SUPABASE & STRIPE CONFIG ====================
 const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
@@ -1226,23 +1249,137 @@ function updateUpgradeButton() {
   const btn = document.getElementById('upgradeBtn');
   if (btn) btn.style.display = APP_STATE.currentPlan !== 'pro' ? 'inline-block' : 'none';
 }
-	async function openSubscriptionPage() {
-  const plan = prompt('请输入要购买的套餐 (basic 或 pro)：');
-  if (!plan || !['basic', 'pro'].includes(plan)) return;
-  const billing = prompt('月付输入 monthly，年付输入 yearly：');
-  const priceId = getPriceId(plan, billing);
-  if (!priceId) { showToast('无效选择'); return; }
+// ==================== 套餐卡片配置 ====================
+const PLAN_DETAILS = {
+    basic: {
+        name: 'Basic 标准版',
+        priceRM: 29,
+        priceUSD: 7,
+        features: [
+            '无限订单',
+            '云数据同步',
+            '多设备同时登录',
+            '基础报表',
+            '小票打印',
+            '基础会员折扣'
+        ],
+        color: '#4CAF84'
+    },
+    pro: {
+        name: 'Pro 专业版',
+        priceRM: 69,
+        priceUSD: 17,
+        features: [
+            'Basic 全部功能',
+            '库存原料管理',
+            '员工账号 & 权限',
+            '多门店管理',
+            '数据导出 Excel/PDF',
+            '自定义小票模板',
+            '对接外卖平台接口'
+        ],
+        color: '#E8784A'
+    }
+};
 
-  showToast('正在跳转支付...');
-  const { error } = await stripe.redirectToCheckout({
-    lineItems: [{ price: priceId, quantity: 1 }],
-    mode: 'subscription',
-    successUrl: window.location.origin + '?session_id={CHECKOUT_SESSION_ID}',
-    cancelUrl: window.location.origin,
-    customerEmail: APP_STATE.currentUser.email
-  });
-  if (error) showToast('支付跳转失败: ' + error.message);
+function updatePlanPrices() {
+    const billing = document.querySelector('input[name="billingCycle"]:checked').value;
+    const monthlyBasic = 29;
+    const yearlyBasic = 278.4;
+    const monthlyPro = 69;
+    const yearlyPro = 662.4;
+    
+    document.querySelectorAll('#planCards .plan-price').forEach(el => {
+        const plan = el.dataset.plan;
+        const currency = el.dataset.currency || 'RM';
+        if (plan === 'basic') {
+            el.textContent = billing === 'monthly' 
+                ? `RM ${monthlyBasic}` 
+                : `RM ${yearlyBasic}`;
+        } else if (plan === 'pro') {
+            el.textContent = billing === 'monthly' 
+                ? `RM ${monthlyPro}` 
+                : `RM ${yearlyPro}`;
+        }
+    });
 }
+
+function openPricingModal() {
+    const currentPlan = APP_STATE.currentPlan || 'free';
+    document.getElementById('currentPlanLabel').textContent = 
+        currentPlan === 'free' ? '免费版' : (currentPlan === 'basic' ? 'Basic 标准版' : 'Pro 专业版');
+    
+    const planCardsHTML = Object.keys(PLAN_DETAILS).map(planId => {
+        const plan = PLAN_DETAILS[planId];
+        const billing = document.querySelector('input[name="billingCycle"]:checked')?.value || 'monthly';
+        const price = billing === 'monthly' 
+            ? (planId === 'basic' ? 29 : 69)
+            : (planId === 'basic' ? 278.4 : 662.4);
+        const isCurrent = currentPlan === planId;
+        return `
+            <div style="border:2px solid ${plan.color};border-radius:var(--radius-sm);padding:16px;text-align:center;background:white;display:flex;flex-direction:column;justify-content:space-between;">
+                <div>
+                    <h4 style="color:${plan.color};margin-bottom:8px;">${plan.name}</h4>
+                    <div class="plan-price" data-plan="${planId}" data-currency="RM" style="font-size:1.8rem;font-weight:800;">RM ${price}</div>
+                    <div style="font-size:0.75rem;color:var(--text-lighter);">${billing === 'monthly' ? '每月' : '每年'}</div>
+                    <ul style="list-style:none;padding:0;margin:12px 0;text-align:left;font-size:0.8rem;">
+                        ${plan.features.map(f => `<li style="padding:4px 0;">✅ ${f}</li>`).join('')}
+                    </ul>
+                </div>
+                <button class="btn btn-primary btn-sm" 
+                    onclick="handlePlanSelection('${planId}')"
+                    ${isCurrent ? 'disabled' : ''}
+                    style="margin-top:8px;background:${plan.color};box-shadow:none;">
+                    ${isCurrent ? '当前套餐' : '选择此套餐'}
+                </button>
+            </div>
+        `;
+    }).join('');
+    
+    document.getElementById('planCards').innerHTML = planCardsHTML;
+    document.getElementById('pricingModal').style.display = 'flex';
+}
+
+function closePricingModal(event) {
+    if (event && event.target !== document.getElementById('pricingModal')) return;
+    document.getElementById('pricingModal').style.display = 'none';
+}
+document.getElementById('pricingModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+
+// 处理用户选择套餐，触发 Stripe Checkout
+function handlePlanSelection(planId) {
+    const billing = document.querySelector('input[name="billingCycle"]:checked').value;
+    const priceId = getPriceId(planId, billing);
+    if (!priceId) {
+        showToast('支付配置错误，请联系管理员');
+        return;
+    }
+    // 关闭定价弹窗
+    closePricingModal();
+    openStripeCheckout(priceId);
+}
+
+async function openStripeCheckout(priceId) {
+    try {
+        showToast('正在跳转支付...');
+        const { error } = await stripe.redirectToCheckout({
+            lineItems: [{ price: priceId, quantity: 1 }],
+            mode: 'subscription',
+            successUrl: window.location.origin + '?session_id={CHECKOUT_SESSION_ID}',
+            cancelUrl: window.location.origin,
+            customerEmail: APP_STATE.currentUser?.email
+        });
+        if (error) {
+            showToast('支付跳转失败: ' + error.message);
+        }
+    } catch (err) {
+        showToast('支付跳转错误: ' + err.message);
+    }
+}
+
+// 价格 ID 映射（需要你在 Stripe 中创建产品后替换）
 
 function getPriceId(plan, billing) {
   const prices = {
@@ -1347,24 +1484,31 @@ function saveSettings() {
 // ==================== AUTH ====================
 async function checkUser() {
     const { data: { session } } = await supabaseClient.auth.getSession();
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+
     if (session) {
-        // 已登入 → 顯示後台
+        // ✅ 已登录 → 进入管理后台
+        APP_STATE.currentUser = session.user;
+        await loadUserProfile();
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('publicCustomerView').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
-        APP_STATE.currentUser = session.user;
-        await loadUserProfile();
         await fetchAllData();
         renderAll();
         updateQRCode();
-    } else {
-        // 未登入 → 顯示顧客點餐畫面
+    } else if (mode === 'customer') {
+        // 🛒 未登录但明确请求顾客点餐模式（通过 QR 码）
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('publicCustomerView').style.display = 'block';
         document.getElementById('mainApp').style.display = 'none';
-        // 載入菜單（使用公開權限）
         await fetchPublicMenu();
         renderPublicMenu();
+    } else {
+        // 🔐 默认显示登录界面
+        document.getElementById('authContainer').style.display = 'block';
+        document.getElementById('publicCustomerView').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'none';
     }
 }
 async function loadUserProfile() {
