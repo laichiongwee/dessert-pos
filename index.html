@@ -1118,8 +1118,7 @@ async function processPayment(method, total, paymentDetails = {}) {
     showOrderReceipt(order);
 }
 
-	function showOrderReceipt(order) {
-    // 动态生成收据内容
+function showOrderReceipt(order) {
     const receiptHTML = `
     <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
         <h2 style="color:var(--persimmon);margin-bottom:4px;">🍅 柿柿润糖水</h2>
@@ -1144,15 +1143,63 @@ async function processPayment(method, total, paymentDetails = {}) {
             <div>支付方式：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
             ${renderPaymentDetailsLine(order)}
         </div>
-        <button class="btn btn-primary btn-sm" style="margin-top:16px;width:100%;" onclick="closeReceiptModal()">关闭</button>
+    </div>
+    <div style="padding:0 16px 16px; display:flex; gap:8px;">
+        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="printReceipt('${order.id}')">🖨️ 打印收据</button>
+        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="closeReceiptModal()">关闭</button>
     </div>`;
 
-    // 将收据放入一个模态框
     const modal = document.getElementById('receiptModal');
     modal.querySelector('.modal-sheet').innerHTML = receiptHTML;
     modal.style.display = 'flex';
 }
 
+	function printReceipt(orderId) {
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    if (!order) return;
+    const printContent = `
+        <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
+            <h2 style="color:#E8784A;margin-bottom:4px;">🍅 柿柿润糖水</h2>
+            <div style="font-size:0.8rem;color:#6B4E4E;margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
+            <div style="font-size:3rem;font-weight:800;color:#E85555;margin:12px 0;">🔔 ${order.callNumber}</div>
+            <div style="font-size:0.85rem;color:#6B4E4E;">叫号号码</div>
+            <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
+            <table style="width:100%;font-size:0.8rem;text-align:left;border-collapse:collapse;">
+                ${order.items.map(item => `
+                    <tr>
+                        <td style="padding:4px 0;">${item.name} x${item.qty}</td>
+                        <td style="text-align:right;">RM ${(item.price * item.qty).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </table>
+            <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
+            <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
+                <span>总计</span>
+                <span>RM ${order.total.toFixed(2)}</span>
+            </div>
+            <div style="font-size:0.8rem;color:#6B4E4E;text-align:left;line-height:1.6;">
+                <div>支付方式：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
+                ${renderPaymentDetailsLine(order)}
+            </div>
+        </div>
+    `;
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    printWindow.document.write(`
+        <html>
+        <head><title>收据 ${orderId}</title>
+        <style>
+            body { margin:0; padding:0; }
+            @media print { body { margin:0; } }
+        </style></head>
+        <body>${printContent}</body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.onafterprint = () => printWindow.close();
+}
+	
 function getPaymentMethodLabel(method) {
     const labels = { cash: '💰 现金', card: '💳 信用卡/借记卡', online: '📱 线上支付' };
     return labels[method] || method;
@@ -2599,11 +2646,11 @@ async function finalizeCustomerPayment() {
     const orderId = window.currentPayingOrderId;
     const order = APP_STATE.orders.find(o => o.id === orderId);
     if (!order) return;
-    
+
     const method = document.getElementById('paymentMethodSelect').value;
     const total = Number(order.total);
     let paymentDetails = { method };
-    
+
     if (method === 'cash') {
         const received = parseFloat(document.getElementById('cashReceived').value) || 0;
         if (received < total) { showToast('⚠️ 实收金额不足'); return; }
@@ -2617,20 +2664,29 @@ async function finalizeCustomerPayment() {
         paymentDetails.onlineType = document.getElementById('onlineType').value;
         paymentDetails.refNum = document.getElementById('onlineRefNum').value;
     }
-    
-    // 更新订单
+
+    // 生成叫号号码
+    let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
+    APP_STATE.settings.callNumberCounter = callNum;
+    await supabaseClient.from('settings').upsert(
+        { key: 'callNumberCounter', value: String(callNum) },
+        { onConflict: 'key' }
+    );
+
     order.status = 'pending';
     order.paymentMethod = method;
     order.paymentDetails = paymentDetails;
-    
+    order.callNumber = String(callNum);
+
     const { error } = await supabaseClient.from('orders').update({
         status: 'pending',
         paymentMethod: method,
-        paymentDetails: paymentDetails
+        paymentDetails: paymentDetails,
+        callNumber: String(callNum)
     }).eq('id', orderId);
-    
+
     if (error) console.error('Payment update error:', error);
-    
+
     // 更新会员积分
     const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
     if (member) {
@@ -2641,12 +2697,13 @@ async function finalizeCustomerPayment() {
             totalSpent: member.totalSpent
         }).eq('id', member.id);
     }
-    
+
     document.getElementById('paymentModal').style.display = 'none';
     window.currentPayingOrderId = null;
     renderFulfillmentView();
     renderUnpaidOrdersList();
     showToast(`✅ 订单 #${orderId} 已收款`);
+    showOrderReceipt(order);       // 弹出收据
 }
 
 	// Open menu sheet and render items as a table
