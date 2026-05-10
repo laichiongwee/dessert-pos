@@ -1645,7 +1645,9 @@ async function checkUser() {
         document.getElementById('publicCustomerView').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         await fetchAllData();
-		initRealtime();   // 启动实时监听
+    if (!realtimeSubscription) {
+        initRealtime();
+    }  // 启动实时监听
         renderAll();
         updateQRCode();
     } else if (mode === 'customer') {
@@ -1670,12 +1672,14 @@ async function checkUser() {
 
     realtimeSubscription = supabaseClient
         .channel('orders-changes')
+        .on('system', { event: 'connected' }, () => {
+            console.log('✅ Realtime connected');
+        })
         .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'orders' },
             (payload) => {
                 console.log('实时订单变更:', payload);
-                // 更新本地 orders 数组
                 if (payload.eventType === 'INSERT') {
                     APP_STATE.orders.unshift(payload.new);
                 } else if (payload.eventType === 'UPDATE') {
@@ -1685,7 +1689,6 @@ async function checkUser() {
                     APP_STATE.orders = APP_STATE.orders.filter(o => o.id !== payload.old.id);
                 }
 
-                // 根据当前界面自动刷新待收款列表或出餐界面
                 if (APP_STATE.mode === 'cashier') {
                     if (document.getElementById('unpaidOrdersModal').style.display === 'flex') {
                         renderUnpaidOrdersList();
