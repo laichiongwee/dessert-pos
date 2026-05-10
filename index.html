@@ -268,6 +268,7 @@
     <button data-mode="fulfillment" onclick="switchMode('fulfillment')">📦 出餐</button>
 </div>
         <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()">💰 待收款</button>
+		<button class="btn btn-xs btn-outline" onclick="openSubscriptionPage()" id="upgradeBtn" style="display:none;">⭐ 升级套餐</button>
 		<button class="btn btn-outline btn-sm" onclick="openQRModal()">🔗 QR</button>
         <button class="btn btn-ghost btn-sm" onclick="openReportModal()">📊 报表</button>
         <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙️</button>
@@ -601,14 +602,32 @@ function getDemoMenu() { /* unchanged */ return [
     { id: '03', name: 'Set A', price: 30.00, category: '套餐', emoji: '🎀', available: true },
     { id: '04', name: 'Set B', price: 55.00, category: '套餐', emoji: '🎁', available: true },
 ];}
+
 function getDemoMembers() { return [
     { id: 'M001', name: '小明', phone: '0123456789', points: 120, totalSpent: 240.00 },
     { id: 'M002', name: '阿花', phone: '0178369622', points: 85, totalSpent: 170.00 },
 ];}
 function getDemoDiscountRules() { return []; }
 
+	function canAccess(feature) {
+  const plan = PLAN_PERMISSIONS[APP_STATE.currentPlan] || PLAN_PERMISSIONS.free;
+  return plan[feature] === true;
+}
+
+function checkOrderLimit() {
+    if (APP_STATE.currentPlan === 'free') {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayOrders = APP_STATE.orders.filter(o => o.date?.startsWith(today)).length;
+        if (todayOrders >= PLAN_PERMISSIONS.free.orderDailyLimit) {
+            showToast('🚫 免费版每日订单已达上限，请升级套餐');
+            return false;
+        }
+    }
+    return true;
+}
 // ==================== INIT ====================
 async function init() {
+	await checkUser(); // 认证检查
     if (!APP_STATE.gasUrl) {
         loadDemoData();
 		APP_STATE.settings = { storeName: '柿柿润糖水', logoUrl: '', callNumberCounter: 0 };
@@ -866,21 +885,41 @@ document.getElementById('addMemberModal').addEventListener('click', function(e){
 async function submitNewMember() {
     const name = document.getElementById('newMemberName').value.trim();
     const phone = document.getElementById('newMemberPhone').value.trim();
-    if(!name||!phone){ showToast('⚠️ 请填写完整'); return; }
-    const member = { id:'M'+Date.now().toString().slice(-6), name, phone, points:0, totalSpent:0 };
-    APP_STATE.members.push(member);
-    await syncToGoogleSheets('addMember', member);
-    document.getElementById('addMemberModal').style.display='none';
-    document.getElementById('newMemberName').value=''; document.getElementById('newMemberPhone').value='';
-    APP_STATE.currentMember = member;
-    document.getElementById('memberPhoneInput').value = member.phone;
-    updateMemberDisplay();
+    if (!name || !phone) {
+        showToast('⚠️ 请填写姓名和手机号');
+        return;
+    }
+    
+    const memberId = 'M' + Date.now().toString().slice(-6);
+    const newMember = {
+        id: memberId,
+        name: name,
+        phone: phone,
+        points: 0,
+        totalSpent: 0
+    };
+    
+    // 本地添加
+    APP_STATE.members.push(newMember);
+    
+    // 写入 Supabase
+    const { error } = await supabase.from('members').insert([newMember]);
+    if (error) {
+        console.error('Add member error:', error);
+        showToast('⚠️ 会员添加失败，请重试');
+        APP_STATE.members = APP_STATE.members.filter(m => m.id !== memberId);
+        return;
+    }
+    
+    document.getElementById('addMemberModal').style.display = 'none';
+    document.getElementById('newMemberName').value = '';
+    document.getElementById('newMemberPhone').value = '';
     showToast('✅ 会员已添加');
+    
+    APP_STATE.currentMember = newMember;
+    document.getElementById('memberPhoneInput').value = newMember.phone;
+    updateMemberDisplay();
 }
-
-// ==================== PAYMENT MODAL ====================
-APP_STATE.selectedOrderForPayment = null;
-
 function openPaymentModal(orderId) {
     let payOrder = null;
     if (orderId) {
@@ -949,6 +988,7 @@ function finalizePayment() {
 }
 
 async function processPayment(method, total, paymentDetails = {}) {
+	if (!checkOrderLimit()) return;
     const orderId = String(++APP_STATE.orderIdCounter);
     localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
     
@@ -1056,10 +1096,22 @@ async function addDiscountRule() {
     const type = document.getElementById('newRuleType').value;
     const value = document.getElementById('newRuleValue').value;
     const minPoints = document.getElementById('newRuleMinPoints').value;
-    if(!type||!value){ showToast('填写完整'); return; }
-    const rule = { id:'D'+Date.now(), type, value:Number(value), minPoints:Number(minPoints)||0, validFrom:'', validTo:'' };
+    if (!type || !value) { showToast('填写完整'); return; }
+    
+    const rule = {
+        id: 'D' + Date.now(),
+        type,
+        value: Number(value),
+        minPoints: Number(minPoints) || 0,
+        validFrom: '',
+        validTo: ''
+    };
+    
     APP_STATE.discountRules.push(rule);
-    await syncToGoogleSheets('addDiscountRule', rule);
+    
+    const { error } = await supabase.from('discount_rules').insert([rule]);
+    if (error) console.error('Add discount rule error:', error);
+    
     renderDiscountRulesList();
     showToast('规则已添加');
 }
@@ -1091,20 +1143,23 @@ function openReportModal() {
         </table>`;
 }
 async function closeDay() {
-    const today = new Date().toISOString().slice(0,10);
-    const todayOrders = APP_STATE.orders.filter(o=>o.date.startsWith(today));
+    const today = new Date().toISOString().slice(0, 10);
+    const todayOrders = APP_STATE.orders.filter(o => o.date?.startsWith(today));
     const report = {
         date: today,
-        totalSales: todayOrders.reduce((s,o)=>s+Number(o.total),0),
-        cashTotal: todayOrders.filter(o=>o.paymentMethod==='cash').reduce((s,o)=>s+Number(o.total),0),
-        cardTotal: todayOrders.filter(o=>o.paymentMethod==='card').reduce((s,o)=>s+Number(o.total),0),
-        onlineTotal: todayOrders.filter(o=>o.paymentMethod==='online').reduce((s,o)=>s+Number(o.total),0),
+        totalSales: todayOrders.reduce((s, o) => s + Number(o.total), 0),
+        cashTotal: todayOrders.filter(o => o.paymentMethod === 'cash').reduce((s, o) => s + Number(o.total), 0),
+        cardTotal: todayOrders.filter(o => o.paymentMethod === 'card').reduce((s, o) => s + Number(o.total), 0),
+        onlineTotal: todayOrders.filter(o => o.paymentMethod === 'online').reduce((s, o) => s + Number(o.total), 0),
         orderCount: todayOrders.length,
-        discountTotal: todayOrders.reduce((s,o)=>s+(Number(o.discountApplied)||0),0),
+        discountTotal: todayOrders.reduce((s, o) => s + (Number(o.discountApplied) || 0), 0),
         closedBy: 'Cashier'
     };
-    await syncToGoogleSheets('saveDailyReport', report);
-    document.getElementById('reportModal').style.display='none';
+    
+    const { error } = await supabase.from('daily_reports').insert([report]);
+    if (error) console.error('Save daily report error:', error);
+    
+    document.getElementById('reportModal').style.display = 'none';
     showToast('✅ 今日账目已关闭并保存');
 }
 function closeReportModal(e) { if(e&&e.target!==document.getElementById('reportModal'))return; document.getElementById('reportModal').style.display='none'; }
@@ -1141,7 +1196,37 @@ document.getElementById('reportModal').addEventListener('click', function(e){ if
         }
     }
 }
+function updateUpgradeButton() {
+  const btn = document.getElementById('upgradeBtn');
+  if (btn) btn.style.display = APP_STATE.currentPlan !== 'pro' ? 'inline-block' : 'none';
+}
+	async function openSubscriptionPage() {
+  const plan = prompt('请输入要购买的套餐 (basic 或 pro)：');
+  if (!plan || !['basic', 'pro'].includes(plan)) return;
+  const billing = prompt('月付输入 monthly，年付输入 yearly：');
+  const priceId = getPriceId(plan, billing);
+  if (!priceId) { showToast('无效选择'); return; }
 
+  showToast('正在跳转支付...');
+  const { error } = await stripe.redirectToCheckout({
+    lineItems: [{ price: priceId, quantity: 1 }],
+    mode: 'subscription',
+    successUrl: window.location.origin + '?session_id={CHECKOUT_SESSION_ID}',
+    cancelUrl: window.location.origin,
+    customerEmail: APP_STATE.currentUser.email
+  });
+  if (error) showToast('支付跳转失败: ' + error.message);
+}
+
+function getPriceId(plan, billing) {
+  const prices = {
+    basic_monthly: 'prod_UUM8xO0vRPozgv',   // 替换为你的 Stripe 价格 ID
+    basic_yearly: 'prod_UUM9IZTHqnSIMy',
+    pro_monthly: 'prod_UUM92JCm0LJhPS',
+    pro_yearly: 'prod_UUMAGAhUJ8B7oV'
+  };
+  return prices[`${plan}_${billing}`];
+}
         // ==================== QR CODE ====================
         function updateQRCode() {
             const qrContainer = document.getElementById('qrcode');
@@ -1192,13 +1277,29 @@ function saveSettings() {
     localStorage.setItem('postUrl', APP_STATE.postUrl);
     localStorage.setItem('imgbbKey', APP_STATE.imgbbKey);
     document.getElementById('settingsModal').style.display = 'none';
+    
+    // 如果有 Supabase，也同步设置到 Supabase
+    if (typeof supabase !== 'undefined') {
+        const settingsToSave = [
+            { key: 'imgbbKey', value: APP_STATE.imgbbKey }
+        ];
+        supabase.from('settings').upsert(settingsToSave, { onConflict: 'key' }).then(({ error }) => {
+            if (error) console.error('Settings sync to Supabase failed:', error);
+        });
+    }
+    
+    showToast('✅ 设置已保存');
+    
+    // 重新加载数据
     if (APP_STATE.gasUrl) {
-        fetchFromGoogleSheets().then(() => showToast('✅ 設定已儲存並同步'))
-            .catch(() => showToast('⚠️ 網址已儲存但連接失敗'));
+        fetchFromGoogleSheets().then(() => showToast('✅ 设置已保存并同步'))
+            .catch(() => showToast('⚠️ URL已保存但连接失败'));
+    } else if (APP_STATE.supabaseReady) {
+        fetchAllData().then(() => showToast('✅ 数据已从 Supabase 加载'));
     } else {
         loadDemoData();
         renderAll();
-        showToast('✅ 已切換到本機演示模式');
+        showToast('✅ 已切换到本地演示模式');
     }
 }
         function closeSettingsModal(event) {
@@ -1365,41 +1466,6 @@ document.getElementById('addMemberModal').addEventListener('click', function(e) 
     if (e.target === this) this.style.display = 'none';
 });
 
-async function submitNewMember() {
-    const name = document.getElementById('newMemberName').value.trim();
-    const phone = document.getElementById('newMemberPhone').value.trim();
-    if (!name || !phone) {
-        showToast('⚠️ 请填写姓名和手机号');
-        return;
-    }
-    
-    const memberId = 'M' + Date.now().toString().slice(-6);
-    const newMember = {
-        id: memberId,
-        name: name,
-        phone: phone,
-        points: 0,
-        totalSpent: 0
-    };
-    
-    // 1. Add locally and close modal instantly
-    APP_STATE.members.push(newMember);
-    document.getElementById('addMemberModal').style.display = 'none';
-    document.getElementById('newMemberName').value = '';
-    document.getElementById('newMemberPhone').value = '';
-    showToast('✅ 会员已添加');
-    
-    // 2. Auto-select the new member
-    APP_STATE.currentMember = newMember;
-    document.getElementById('memberPhoneInput').value = newMember.phone;
-    updateMemberDisplay();
-    
-    // 3. Sync to Google Sheets in the background
-    if (APP_STATE.gasUrl) {
-        syncToGoogleSheets('addMember', newMember).catch(e => console.error('Background sync failed:', e));
-    }
-}
-
 // ==================== RENDERING HELPERS ====================
 function renderCustomerCategoryTabs() {
     document.getElementById('customerCategoryTabs').innerHTML = APP_STATE.categories.map(cat =>
@@ -1475,14 +1541,20 @@ async function updateOrderStatus(orderId, newStatus, callNumber = null) {
     }
     renderFulfillmentView();
 }
+	
 async function markReady(orderId) {
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
     APP_STATE.settings.callNumberCounter = callNum;
-    await syncToGoogleSheets('updateSetting', { key: 'callNumberCounter', value: String(callNum) });
+    
+    // 更新设置表中的 callNumberCounter
+    await supabase.from('settings').upsert(
+        { key: 'callNumberCounter', value: String(callNum) },
+        { onConflict: 'key' }
+    );
+    
     await updateOrderStatus(orderId, 'ready', String(callNum));
     showToast(`请取餐：${callNum}号`);
 }
-
 async function markCompleted(orderId) {
     await updateOrderStatus(orderId, 'completed');
     renderFulfillmentView();
@@ -1590,6 +1662,7 @@ function adjustCustomerCart(index, delta) {
 }
 
 function submitCustomerOrder() {
+	if (!checkOrderLimit()) return;
     const name = document.getElementById('customerNameInput').value.trim();
     if (!name) { showToast('⚠️ 请输入您的姓名'); return; }
     if (APP_STATE.customerCart.length === 0) { showToast('⚠️ 购物车是空的'); return; }
@@ -1688,16 +1761,28 @@ async function updateMenuItemField(id, field, value) {
     const item = APP_STATE.menu.find(i => i.id === id);
     if (!item) return;
     item[field] = value;
-    await syncToGoogleSheets('updateMenuItem', item);
+    const updateData = { [field]: value };
+    const { error } = await supabase.from('menu').update(updateData).eq('id', id);
+    if (error) console.error('Update field error:', error);
     showToast(`已更新${field}`);
 }
 
 async function deleteMenuItem(id) {
     if (!confirm('删除该菜品？')) return;
+    
+    const { error } = await supabase.from('menu').delete().eq('id', id);
+    if (error) {
+        console.error('Delete error:', error);
+        showToast('⚠️ 删除失败，请重试');
+        return;
+    }
+    
     APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== id);
-    await syncToGoogleSheets('deleteMenuItem', { id });
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     renderAdminMenuGrid();
-    if (APP_STATE.mode === 'cashier') renderMenuGrid();
+    renderMenuGrid();
+    if (APP_STATE.mode === 'customer') renderCustomerMenuGrid();
+    showToast('✅ 菜品已删除');
 }
 
 async function addNewMenuItem() {
@@ -1736,7 +1821,10 @@ function uploadLogo() {
         const logoUrl = e.target.result;
         APP_STATE.settings.logoUrl = logoUrl;
         document.querySelector('.header-brand img').src = logoUrl;
-        await syncToGoogleSheets('updateSetting', { key: 'logoUrl', value: logoUrl });
+        await supabase.from('settings').upsert(
+            { key: 'logoUrl', value: logoUrl },
+            { onConflict: 'key' }
+        );
     };
     reader.readAsDataURL(file);
 }
@@ -1746,7 +1834,12 @@ function editStoreName() {
     if (!newName) return;
     APP_STATE.settings.storeName = newName;
     document.querySelector('.header-brand span').textContent = newName;
-    syncToGoogleSheets('updateSetting', { key: 'storeName', value: newName });
+    supabase.from('settings').upsert(
+        { key: 'storeName', value: newName },
+        { onConflict: 'key' }
+    ).then(({ error }) => {
+        if (error) console.error('Update store name error:', error);
+    });
 }
 
 // ========== MENU EDIT MODAL ==========
@@ -1826,38 +1919,39 @@ async function saveMenuItem() {
         name: name,
         description: document.getElementById('editItemDesc').value.trim(),
         price: parseFloat(price) || 0,
-        originalPrice: parseFloat(document.getElementById('editItemOrigPrice').value) || '',
+        originalPrice: parseFloat(document.getElementById('editItemOrigPrice').value) || null,
         category: document.getElementById('editItemCategory').value || '其他',
         emoji: document.getElementById('editItemEmoji').value.trim(),
         imageUrl: document.getElementById('editItemImage').value.trim(),
         available: document.getElementById('editItemAvailable').checked
     };
     
-    // 1. Update local state instantly
-    if (id && APP_STATE.menu.some(i => i.id === id)) {
+    // 写入 Supabase (upsert: 存在则更新，不存在则插入)
+    const { error } = await supabase.from('menu').upsert([data], { onConflict: 'id' });
+    if (error) {
+        console.error('Menu save error:', error);
+        showToast('⚠️ 保存失败，请重试');
+        return;
+    }
+    
+    // 更新本地状态
+    if (id) {
         const idx = APP_STATE.menu.findIndex(i => i.id === id);
-        APP_STATE.menu[idx] = data;
+        if (idx >= 0) {
+            APP_STATE.menu[idx] = data;
+        }
     } else {
         APP_STATE.menu.push(data);
     }
     
-    // 2. Close modal and show success immediately
-    document.getElementById('menuEditModal').style.display = 'none';
-    showToast('✅ 菜品已保存');
-    
-    // 3. Refresh only the necessary views (no full renderAll)
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    
+    document.getElementById('menuEditModal').style.display = 'none';
     renderCategoryTabs();
     renderMenuGrid();
     if (APP_STATE.mode === 'customer') renderCustomerMenuGrid();
     if (APP_STATE.adminUnlocked) renderAdminMenuGrid();
-    
-    // 4. Sync to Google Sheets in the background (non-blocking)
-    if (APP_STATE.gasUrl) {
-        const action = id && APP_STATE.menu.some(i => i.id === id) ? 'updateMenuItem' : 'addMenuItem';
-        const { error } = await supabase.from('menu').upsert([data], { onConflict: 'id' });
-if (error) console.error('Menu save error:', error);
-    }
+    showToast('✅ 菜品已保存');
 }
 // Show/hide "删除" button
 function showMenuDeleteBtn(show) {
@@ -2043,9 +2137,11 @@ async function finalizeCustomerPayment() {
     const orderId = window.currentPayingOrderId;
     const order = APP_STATE.orders.find(o => o.id === orderId);
     if (!order) return;
+    
     const method = document.getElementById('paymentMethodSelect').value;
     const total = Number(order.total);
     let paymentDetails = { method };
+    
     if (method === 'cash') {
         const received = parseFloat(document.getElementById('cashReceived').value) || 0;
         if (received < total) { showToast('⚠️ 实收金额不足'); return; }
@@ -2059,18 +2155,31 @@ async function finalizeCustomerPayment() {
         paymentDetails.onlineType = document.getElementById('onlineType').value;
         paymentDetails.refNum = document.getElementById('onlineRefNum').value;
     }
-    // Update order
+    
+    // 更新订单
     order.status = 'pending';
     order.paymentMethod = method;
     order.paymentDetails = paymentDetails;
-    await syncToGoogleSheets('updateOrderStatus', { orderId, status: 'pending' });
-    // Also update member points if needed (similar to processPayment)
+    
+    const { error } = await supabase.from('orders').update({
+        status: 'pending',
+        paymentMethod: method,
+        paymentDetails: paymentDetails
+    }).eq('id', orderId);
+    
+    if (error) console.error('Payment update error:', error);
+    
+    // 更新会员积分
     const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
     if (member) {
         member.points += Math.floor(total);
         member.totalSpent += total;
-        await syncToGoogleSheets('addOrder', { order, updatedMember: member }); // this will also update member points
+        await supabase.from('members').update({
+            points: member.points,
+            totalSpent: member.totalSpent
+        }).eq('id', member.id);
     }
+    
     document.getElementById('paymentModal').style.display = 'none';
     window.currentPayingOrderId = null;
     renderFulfillmentView();
@@ -2114,11 +2223,19 @@ function renderMenuSheetTable() {
 // Add a smart delete button for menu sheet
 async function deleteMenuItemFromSheet(itemId) {
     if (!confirm('确定要删除该菜品吗？')) return;
+    
+    const { error } = await supabase.from('menu').delete().eq('id', itemId);
+    if (error) {
+        console.error('Delete error:', error);
+        showToast('⚠️ 删除失败');
+        return;
+    }
+    
     APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== itemId);
-    await syncToGoogleSheets('deleteMenuItem', {id: itemId});
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     renderMenuSheetTable();
-    showToast('菜品已删除');
     renderAll();
+    showToast('✅ 菜品已删除');
 }
 
 	function compressImage(file, maxSizeKB = 200) {
@@ -2238,6 +2355,10 @@ window.openMenuSheetModal = openMenuSheetModal;
 window.closeMenuSheetModal = closeMenuSheetModal;
 window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
 
+	// 页面加载时检查用户
+document.addEventListener('DOMContentLoaded', () => {
+  checkUser();
+});
     </script>
 	</div> <!-- 闭合 #mainApp -->
 </body>
