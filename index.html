@@ -1327,7 +1327,7 @@ async function checkUser() {
 }
 
 async function loadUserProfile() {
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseClient
     .from('profiles')
     .select('plan_id, subscription_status')
     .eq('id', APP_STATE.currentUser.id)
