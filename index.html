@@ -626,15 +626,8 @@ function checkOrderLimit() {
 }
 // ==================== INIT ====================
 async function init() {
-	await checkUser(); // 认证检查
-    if (!APP_STATE.gasUrl) {
-        loadDemoData();
-		APP_STATE.settings = { storeName: '柿柿润糖水', logoUrl: '', callNumberCounter: 0 };
-    } else {
-        try { await fetchFromGoogleSheets(); } catch(e) { loadDemoData(); }
-    }
-    renderAll();
-    updateQRCode();
+    await checkUser(); // checkUser 会自动调用 fetchAllData
+    // 不需要再单独加载数据
 }
 
 document.addEventListener('click', function(e) {
@@ -643,26 +636,7 @@ document.addEventListener('click', function(e) {
     if (dropdown) dropdown.style.display = 'none';
   }
 });
-function showLogin() {
-  document.getElementById('loginForm').style.display = 'block';
-  document.getElementById('registerForm').style.display = 'none';
-  document.getElementById('resetForm').style.display = 'none';
-  document.getElementById('authMessage').textContent = '';
-}
 
-function showRegister() {
-  document.getElementById('loginForm').style.display = 'none';
-  document.getElementById('registerForm').style.display = 'block';
-  document.getElementById('resetForm').style.display = 'none';
-  document.getElementById('authMessage').textContent = '';
-}
-
-function showReset() {
-  document.getElementById('loginForm').style.display = 'none';
-  document.getElementById('registerForm').style.display = 'none';
-  document.getElementById('resetForm').style.display = 'block';
-  document.getElementById('authMessage').textContent = '';
-}
 function loadDemoData() {
     APP_STATE.menu = getDemoMenu();
     APP_STATE.members = getDemoMembers();
@@ -1296,23 +1270,20 @@ function saveSettings() {
     localStorage.setItem('imgbbKey', APP_STATE.imgbbKey);
     document.getElementById('settingsModal').style.display = 'none';
     
-    // 如果有 Supabase，也同步设置到 Supabase
+    // 同步到 Supabase
     if (typeof supabase !== 'undefined') {
-        const settingsToSave = [
-            { key: 'imgbbKey', value: APP_STATE.imgbbKey }
-        ];
-        supabase.from('settings').upsert(settingsToSave, { onConflict: 'key' }).then(({ error }) => {
-            if (error) console.error('Settings sync to Supabase failed:', error);
+        supabase.from('settings').upsert(
+            { key: 'imgbbKey', value: APP_STATE.imgbbKey },
+            { onConflict: 'key' }
+        ).then(({ error }) => {
+            if (error) console.error('Settings sync failed:', error);
         });
     }
     
     showToast('✅ 设置已保存');
     
     // 重新加载数据
-    if (APP_STATE.gasUrl) {
-        fetchFromGoogleSheets().then(() => showToast('✅ 设置已保存并同步'))
-            .catch(() => showToast('⚠️ URL已保存但连接失败'));
-    } else if (APP_STATE.supabaseReady) {
+    if (APP_STATE.supabaseReady) {
         fetchAllData().then(() => showToast('✅ 数据已从 Supabase 加载'));
     } else {
         loadDemoData();
@@ -1819,7 +1790,11 @@ async function addNewMenuItem() {
         available: true
     };
     APP_STATE.menu.push(newItem);
-    await syncToGoogleSheets('addMenuItem', newItem);
+    
+    // 改为 Supabase
+    const { error } = await supabase.from('menu').insert([newItem]);
+    if (error) console.error('Add menu item error:', error);
+    
     renderAdminMenuGrid();
     showToast('菜品已添加');
 }
@@ -2067,13 +2042,17 @@ async function deleteCategory(cat) {
   APP_STATE.menu.forEach(item => {
     if (item.category === cat) item.category = '其他';
   });
-  await Promise.all(APP_STATE.menu.map(item => syncToGoogleSheets('updateMenuItem', item)));
+  
+  // 改为 Supabase 批量更新
+  await Promise.all(APP_STATE.menu.map(item => 
+    supabase.from('menu').update({ category: item.category }).eq('id', item.id)
+  ));
+  
   APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
   renderCategoryListModal();
   renderAll();
   showToast(`分类"${cat}"已删除`);
 }
-
 // Delegate the add category button inside modal
 async function addNewCategory() {
   const name = document.getElementById('newCategoryName').value.trim();
