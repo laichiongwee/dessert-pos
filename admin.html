@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>套餐管理 - 柿柿润糖水</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; background: #fff5ef; }
+        table { border-collapse: collapse; width: 100%; max-width: 800px; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #e8784a; color: white; }
+        select, button { padding: 6px 12px; border-radius: 8px; border: 1px solid #ddd; }
+        button { background: #e8784a; color: white; border: none; cursor: pointer; }
+        button:hover { opacity: 0.9; }
+        input[type="password"] { padding: 10px; width: 250px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ddd; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h2>🔐 套餐管理</h2>
+    <div id="loginSection">
+        <input type="password" id="adminPassword" placeholder="请输入管理密码">
+        <button onclick="login()">登录</button>
+    </div>
+
+    <div id="mainSection" class="hidden">
+        <button onclick="loadUsers()">刷新列表</button>
+        <table id="userTable">
+            <thead>
+                <tr>
+                    <th>邮箱</th>
+                    <th>当前套餐</th>
+                    <th>订阅状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        // ========== 配置 (必须替换) ==========
+        const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
+        const ADMIN_PASSWORD = 'mypassword123';   // ⚠️ 一定要修改为强密码！
+
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function login() {
+            const pwd = document.getElementById('adminPassword').value;
+            if (pwd !== ADMIN_PASSWORD) {
+                alert('密码错误');
+                return;
+            }
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('mainSection').classList.remove('hidden');
+            loadUsers();
+        }
+
+        async function loadUsers() {
+            const { data: profiles, error } = await supabaseClient
+                .from('profiles')
+                .select('id, plan_id, subscription_status');
+            if (error) {
+                console.error('Error loading users:', error);
+                return;
+            }
+            // 获取邮箱需要额外步骤：通过 auth.admin.listUsers() 查询，但 anon key 权限不足。
+            // 简便方法：只显示用户 ID 的部分信息，或要求用户输入邮箱手动修改。
+            // 如果你想显示邮箱，需要让这个页面以管理员身份登录，或使用 service_role key（不推荐在前端）。
+            // 这里提供一个简化版本：显示用户 ID 的前8位，并提供修改套餐。
+            const tbody = document.querySelector('#userTable tbody');
+            tbody.innerHTML = profiles.map(p => `
+                <tr>
+                    <td>${p.id.substring(0, 8)}...</td>
+                    <td>${p.plan_id}</td>
+                    <td>${p.subscription_status ?? 'active'}</td>
+                    <td>
+                        <select id="plan_${p.id}">
+                            <option value="free" ${p.plan_id === 'free' ? 'selected' : ''}>Free</option>
+                            <option value="basic" ${p.plan_id === 'basic' ? 'selected' : ''}>Basic</option>
+                            <option value="pro" ${p.plan_id === 'pro' ? 'selected' : ''}>Pro</option>
+                        </select>
+                        <button onclick="updatePlan('${p.id}')">更新</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function updatePlan(userId) {
+            const newPlan = document.getElementById(`plan_${userId}`).value;
+            const { error } = await supabaseClient
+                .from('profiles')
+                .update({ plan_id: newPlan })
+                .eq('id', userId);
+            if (error) {
+                alert('更新失败: ' + error.message);
+            } else {
+                alert('套餐已更新！用户需要重新登录或刷新页面。');
+                loadUsers();
+            }
+        }
+    </script>
+</body>
+</html>
