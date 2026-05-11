@@ -22,13 +22,13 @@
         .message { font-size: 0.95rem; margin-top: 12px; color: #6B4E4E; }
         button { background: #E8784A; color: white; border: none; border-radius: 20px; padding: 10px 24px; font-weight: bold; margin-top: 16px; cursor: pointer; width: 100%; }
         .lang-switch { position: absolute; top: 10px; right: 10px; background: #ffffff; border: 1px solid #E8784A; color: #E8784A; padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; }
+        #audioEnableBar { background:#FFF3E0; color:#E65100; padding:8px; text-align:center; font-size:0.9rem; }
     </style>
 </head>
 <body>
-    <!-- 声音启用提示条 -->
-    <div id="audioEnableBar" style="background:#FFF3E0; color:#E65100; padding:8px; text-align:center; font-size:0.9rem; display:block;">
-        <span data-i18n="enableSoundPrompt">点击下方按钮以启用声音和震动提醒 🔔</span>
-        <button onclick="enableAudio()" style="margin-left:8px; background:#E8784A; color:white; border:none; border-radius:8px; padding:4px 12px; font-weight:bold;" data-i18n="enable">启用</button>
+    <!-- 声音启用提示条（首次交互后自动消失） -->
+    <div id="audioEnableBar">
+        <span data-i18n="soundPrompt">点击任意位置以启用声音提醒 🔔</span>
     </div>
 
     <!-- 语言切换按钮 -->
@@ -47,12 +47,15 @@
     let lastStatus = null;
     let alertTriggered = false;
 
+    // 尝试恢复音频状态
     if (localStorage.getItem('audioEnabled') === 'true') {
         audioEnabled = true;
         document.getElementById('audioEnableBar').style.display = 'none';
     }
 
-    function enableAudio() {
+    // 在页面任意位置首次交互时自动启用音频上下文
+    function autoEnableAudio() {
+        if (audioEnabled) return;
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
@@ -62,7 +65,12 @@
         audioEnabled = true;
         localStorage.setItem('audioEnabled', 'true');
         document.getElementById('audioEnableBar').style.display = 'none';
+        // 移除事件监听，避免重复触发
+        document.body.removeEventListener('click', autoEnableAudio);
+        document.body.removeEventListener('touchstart', autoEnableAudio);
     }
+    document.body.addEventListener('click', autoEnableAudio);
+    document.body.addEventListener('touchstart', autoEnableAudio);
 
     function playNiceTone(duration = 8000) {
         if (!audioContext || !audioEnabled) return;
@@ -112,8 +120,7 @@
                 en: { translation: {
                     "orderStatusTitle": "🔍 Order Status",
                     "refreshStatus": "Refresh Status",
-                    "enableSoundPrompt": "Click the button below to enable sound and vibration 🔔",
-                    "enable": "Enable",
+                    "soundPrompt": "Tap anywhere to enable sound alerts 🔔",
                     "langSwitch": "🌐 中",
                     "missingOrder": "Missing order number",
                     "orderNotFound": "Order not found",
@@ -134,8 +141,7 @@
                 'zh-CN': { translation: {
                     "orderStatusTitle": "🔍 订单状态",
                     "refreshStatus": "刷新状态",
-                    "enableSoundPrompt": "点击下方按钮以启用声音和震动提醒 🔔",
-                    "enable": "启用",
+                    "soundPrompt": "点击任意位置以启用声音提醒 🔔",
                     "langSwitch": "🌐 EN",
                     "missingOrder": "缺少订单号",
                     "orderNotFound": "找不到该订单",
@@ -156,7 +162,6 @@
             },
             detection: { order: ['querystring', 'localStorage', 'navigator', 'htmlTag'], caches: ['localStorage'] }
         }, () => {
-            // 自动给静态元素添加 data-i18n 属性（基于中文翻译）
             autoAssignI18n();
             applyLanguage();
         });
@@ -202,8 +207,7 @@
         const newLang = i18n.language === 'zh-CN' ? 'en' : 'zh-CN';
         i18n.changeLanguage(newLang, () => {
             applyLanguage();
-            // 重新渲染动态内容并应用语言
-            fetchOrderStatus();
+            fetchOrderStatus(); // 重新渲染动态内容并应用语言
         });
     }
 
@@ -254,6 +258,7 @@
         const items = Array.isArray(order.items) ? order.items : [];
         let itemsHTML = items.map(i => `<li><span>${i.name} x${i.qty}</span><span>RM ${(i.price * i.qty).toFixed(2)}</span></li>`).join('');
 
+        // 渲染订单信息
         document.getElementById('orderInfo').innerHTML = `
             <p><strong data-i18n="orderNumber">${i18n.t('orderNumber')}</strong>${order.id}</p>
             ${order.memberName ? `
@@ -268,9 +273,9 @@
             <ul class="order-items">${itemsHTML}</ul>
             <p style="font-weight: bold;" data-i18n="total">${i18n.t('total')} RM ${Number(order.total).toFixed(2)}</p>
         `;
-        applyLanguage(); // 应用翻译到新生成的 DOM
+        applyLanguage();
 
-        // 声音和振动提醒
+        // 声音和振动提醒：状态变为 ready 且之前不是 ready
         if (status === 'ready' && lastStatus !== 'ready' && !alertTriggered) {
             alertTriggered = true;
             if (audioEnabled) playNiceTone(8000);
