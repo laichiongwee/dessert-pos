@@ -2526,7 +2526,14 @@ function addToPublicCart(itemId) {
 function updatePublicCartCount() {
     const count = APP_STATE.publicCart.reduce((s, e) => s + e.quantity, 0);
     const badge = document.getElementById('publicCartCount');
-    if (badge) badge.textContent = count;
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
 }
 function toggleCustomerCart() {
     if (APP_STATE.publicCart.length === 0) {
