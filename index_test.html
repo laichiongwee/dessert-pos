@@ -596,14 +596,12 @@
             <!-- 动态生成 -->
         </div>
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-    <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
-        <input type="radio" name="billingCycle" value="monthly" checked onchange="updatePlanPrices()" 
-    style="width:16px;height:16px;appearance:radio;-webkit-appearance:radio;display:inline-block;opacity:1;visibility:visible;"> 月付
-    </label>
-    <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
-        <input type="radio" name="billingCycle" value="yearly" onchange="updatePlanPrices()" 
-    style="width:16px;height:16px;appearance:radio;-webkit-appearance:radio;display:inline-block;opacity:1;visibility:visible;"> 年付（8折）
-    </label>
+    <button type="button" id="billingMonthly" class="btn btn-xs btn-outline" 
+        style="border:2px solid var(--persimmon);background:var(--persimmon);color:white;border-radius:20px;padding: 6px 16px;"
+        onclick="setBilling('monthly')">月付</button>
+    <button type="button" id="billingYearly" class="btn btn-xs btn-outline"
+        style="border:2px solid var(--border);background:transparent;color:var(--text-light);border-radius:20px;padding: 6px 16px;"
+        onclick="setBilling('yearly')">年付（8折）</button>
 </div>
         <p style="font-size:0.7rem;color:var(--text-lighter);margin-top:8px;">所有价格均已包含 SST（6%）。若选择年付，您将一次性支付全年费用。</p>
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()">取消</button>
@@ -1979,11 +1977,33 @@ const PLAN_DETAILS = {
     }
 };
 
+	// 当前选中的计费周期，默认为 monthly
+let selectedBilling = 'monthly';
+
+function setBilling(billing) {
+    selectedBilling = billing;
+    // 更新按钮样式
+    const monthlyBtn = document.getElementById('billingMonthly');
+    const yearlyBtn = document.getElementById('billingYearly');
+    if (billing === 'monthly') {
+        monthlyBtn.style.background = 'var(--persimmon)';
+        monthlyBtn.style.color = 'white';
+        monthlyBtn.style.borderColor = 'var(--persimmon)';
+        yearlyBtn.style.background = 'transparent';
+        yearlyBtn.style.color = 'var(--text-light)';
+        yearlyBtn.style.borderColor = 'var(--border)';
+    } else {
+        yearlyBtn.style.background = 'var(--persimmon)';
+        yearlyBtn.style.color = 'white';
+        yearlyBtn.style.borderColor = 'var(--persimmon)';
+        monthlyBtn.style.background = 'transparent';
+        monthlyBtn.style.color = 'var(--text-light)';
+        monthlyBtn.style.borderColor = 'var(--border)';
+    }
+    updatePlanPrices();  // 更新价格显示
+}
 function updatePlanPrices() {
-	const billingInput = document.querySelector('input[name="billingCycle"]:checked');
-    if (!billingInput) return;
-    const billing = billingInput.value;
-   
+    const billing = selectedBilling;  // 直接使用全局变量
     const monthlyBasic = 29;
     const yearlyBasic = 278.4;
     const monthlyPro = 69;
@@ -1991,7 +2011,6 @@ function updatePlanPrices() {
     
     document.querySelectorAll('#planCards .plan-price').forEach(el => {
         const plan = el.dataset.plan;
-        const currency = el.dataset.currency || 'RM';
         if (plan === 'basic') {
             el.textContent = billing === 'monthly' 
                 ? `RM ${monthlyBasic}` 
@@ -2052,18 +2071,12 @@ document.getElementById('pricingModal').addEventListener('click', function(e) {
 
 // 处理用户选择套餐，触发 Stripe Checkout
 function handlePlanSelection(planId) {
-    const billingInput = document.querySelector('input[name="billingCycle"]:checked');
-    if (!billingInput) {
-        showToast('请选择月付或年付');
-        return;
-    }
-    const billing = billingInput.value;
+    const billing = selectedBilling;  // 直接使用全局变量
     const priceId = getPriceId(planId, billing);
     if (!priceId) {
         showToast('支付配置错误，请联系管理员');
         return;
     }
-    // 关闭定价弹窗
     closePricingModal();
     openStripeCheckout(priceId);
 }
