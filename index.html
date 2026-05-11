@@ -605,25 +605,28 @@
   </div>
 </div>
 
-	<!-- 套餐升级模态框 -->
+<!-- 套餐升级模态框 -->
 <div class="modal-overlay" id="pricingModal" style="display:none;" onclick="closePricingModal(event)">
-    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:600px;">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:600px; padding: 24px;">
         <div class="modal-handle"></div>
-        <h3 style="text-align:center;margin-bottom:16px;">⭐ 升级套餐</h3>
-        <p style="text-align:center;font-size:0.85rem;color:var(--text-light);margin-bottom:16px;">当前套餐：<strong id="currentPlanLabel">免费版</strong></p>
+        <h3 style="text-align:center;margin-bottom:16px;" data-i18n="pricingTitle">⭐ 升级套餐</h3>
+        <p style="text-align:center;font-size:0.85rem;color:var(--text-light);margin-bottom:16px;">
+            <span data-i18n="currentPlanLabel">当前套餐：</span>
+            <strong id="currentPlanLabel" data-i18n="freePlan">免费版</strong>
+        </p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="planCards">
             <!-- 动态生成 -->
         </div>
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-    <button type="button" id="billingMonthly" class="btn btn-xs btn-outline" 
-        style="border:2px solid var(--persimmon);background:var(--persimmon);color:white;border-radius:20px;padding: 6px 16px;"
-        onclick="setBilling('monthly')">月付</button>
-    <button type="button" id="billingYearly" class="btn btn-xs btn-outline"
-        style="border:2px solid var(--border);background:transparent;color:var(--text-light);border-radius:20px;padding: 6px 16px;"
-        onclick="setBilling('yearly')">年付（8折）</button>
-</div>
-        <p style="font-size:0.7rem;color:var(--text-lighter);margin-top:8px;">所有价格均已包含 SST（6%）。若选择年付，您将一次性支付全年费用。</p>
-        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()">取消</button>
+            <button type="button" id="billingMonthly" class="btn btn-xs btn-outline"
+                style="border:2px solid var(--persimmon);background:var(--persimmon);color:white;border-radius:20px;padding:6px 16px;"
+                onclick="setBilling('monthly')" data-i18n="monthly">月付</button>
+            <button type="button" id="billingYearly" class="btn btn-xs btn-outline"
+                style="border:2px solid var(--border);background:transparent;color:var(--text-light);border-radius:20px;padding:6px 16px;"
+                onclick="setBilling('yearly')" data-i18n="yearly">年付（8折）</button>
+        </div>
+        <p style="font-size:0.7rem;color:var(--text-lighter);margin-top:8px;" data-i18n="sstIncluded">所有价格均已包含 SST（6%）。若选择年付，您将一次性支付全年费用。</p>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()" data-i18n="cancel">取消</button>
     </div>
 </div>
 	<!-- 收据模态框 -->
@@ -1214,7 +1217,11 @@ function toggleLanguage() {
         // 最后应用翻译（按钮文本会被自动更新）
         applyLanguage();
     });
+	if (document.getElementById('pricingModal').style.display === 'flex') {
+    openPricingModal();
 }
+}
+	
 document.addEventListener('DOMContentLoaded', () => {
     applyLanguage();
 });
@@ -2104,43 +2111,58 @@ function updatePlanPrices() {
 }
 
 function openPricingModal() {
+    // 1. 初始化账单周期为月付，并高亮按钮
+    if (typeof setBilling === 'function') {
+        setBilling('monthly');
+    } else {
+        selectedBilling = 'monthly';
+    }
+
     const currentPlan = APP_STATE.currentPlan || 'free';
+
+    // 2. 设置当前套餐翻译文本
     const label = document.getElementById('currentPlanLabel');
     if (label) {
-        label.textContent = 
-            currentPlan === 'free' ? '免费版' : (currentPlan === 'basic' ? 'Basic 标准版' : 'Pro 专业版');
+        // 翻译键：freePlan, basicPlan, proPlan
+        label.textContent = i18n.t(currentPlan + 'Plan');
     }
+
+    // 3. 生成套餐卡片
     const planCardsHTML = Object.keys(PLAN_DETAILS).map(planId => {
         const plan = PLAN_DETAILS[planId];
-        const billing = document.querySelector('input[name="billingCycle"]:checked')?.value || 'monthly';
-        const price = billing === 'monthly' 
+        const billing = selectedBilling;  // 使用全局变量
+        const price = billing === 'monthly'
             ? (planId === 'basic' ? 29 : 69)
             : (planId === 'basic' ? 278.4 : 662.4);
         const isCurrent = currentPlan === planId;
+
+        // 特性列表保持原样（因为这些是商家自定义的描述，不翻译）
+        const featuresList = plan.features.map(f => `<li style="padding:4px 0;">✅ ${f}</li>`).join('');
+
         return `
-            <div style="border:2px solid ${plan.color};...">
+        <div style="border:2px solid ${plan.color};border-radius:var(--radius-sm);padding:16px;text-align:center;background:white;display:flex;flex-direction:column;justify-content:space-between;">
             <div>
-                <h4 data-i18n="${planId}PlanName" style="color:${plan.color};...">${plan.name}</h4>
-                <div class="plan-price" ...>RM ${price}</div>
-                <div data-i18n="perMonth" style="...">${billing === 'monthly' ? '每月' : '每年'}</div>
-                <ul ...>
-                    ${plan.features.map(f => `<li data-i18n="feature_${planId}_${f}" ...>✅ ${f}</li>`).join('')}
+                <h4 style="color:${plan.color};margin-bottom:8px;">${plan.name}</h4>
+                <div class="plan-price" data-plan="${planId}" style="font-size:1.8rem;font-weight:800;">RM ${price}</div>
+                <div data-i18n="${billing === 'monthly' ? 'perMonth' : 'perYear'}" style="font-size:0.75rem;color:var(--text-lighter);">${i18n.t(billing === 'monthly' ? 'perMonth' : 'perYear')}</div>
+                <ul style="list-style:none;padding:0;margin:12px 0;text-align:left;font-size:0.8rem;">
+                    ${featuresList}
                 </ul>
             </div>
-            <button class="btn btn-primary btn-sm" 
+            <button class="btn btn-primary btn-sm"
                 onclick="handlePlanSelection('${planId}')"
                 ${isCurrent ? 'disabled' : ''}
-                ...>
+                style="margin-top:8px;background:${plan.color};box-shadow:none;border:none;color:white;">
                 ${isCurrent ? i18n.t('currentPlanLabel') : i18n.t('choosePlanLabel')}
             </button>
-        </div>
-        `;
+        </div>`;
     }).join('');
-    
+
     document.getElementById('planCards').innerHTML = planCardsHTML;
+    // 应用翻译到 data-i18n 元素（主要是周期文字）
+    applyLanguage();
     document.getElementById('pricingModal').style.display = 'flex';
 }
-
 function closePricingModal(event) {
     if (event && event.target !== document.getElementById('pricingModal')) return;
     document.getElementById('pricingModal').style.display = 'none';
