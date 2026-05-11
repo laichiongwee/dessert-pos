@@ -2134,7 +2134,7 @@ function updatePlanPrices() {
 }
 
 function openPricingModal() {
-    // 初始化账单周期为月付，并高亮按钮
+    // 初始化账单周期为月付
     if (typeof setBilling === 'function') {
         setBilling('monthly');
     } else {
@@ -2143,13 +2143,14 @@ function openPricingModal() {
 
     const currentPlan = APP_STATE.currentPlan || 'free';
 
-    // 设置当前套餐翻译文本
+    // 1. 设置当前套餐翻译文本
     const label = document.getElementById('currentPlanLabel');
     if (label) {
-        label.textContent = i18n.t(currentPlan + 'Plan'); // 如 'freePlan'、'basicPlan'
+        // 使用翻译函数，键为 'freePlan', 'basicPlan', 'proPlan'
+        label.textContent = i18n.t(currentPlan + 'Plan');
     }
 
-    // 生成套餐卡片
+    // 2. 生成套餐卡片
     const planCardsHTML = Object.keys(PLAN_DETAILS).map(planId => {
         const plan = PLAN_DETAILS[planId];
         const billing = selectedBilling;
@@ -2158,9 +2159,8 @@ function openPricingModal() {
             : (planId === 'basic' ? 278.4 : 662.4);
         const isCurrent = currentPlan === planId;
 
-        // 特性列表：现在使用 i18n 翻译
+        // 特性列表翻译
         const featuresList = plan.features.map(f => {
-            // 翻译键：假设已有 'feature_'+f（英/中），否则直接显示 f
             const translated = i18n.exists('feature_' + f) ? i18n.t('feature_' + f) : f;
             return `<li style="padding:4px 0;">✅ ${translated}</li>`;
         }).join('');
@@ -2185,7 +2185,7 @@ function openPricingModal() {
     }).join('');
 
     document.getElementById('planCards').innerHTML = planCardsHTML;
-    applyLanguage(); // 应用 data-i18n 的翻译
+    applyLanguage();
     document.getElementById('pricingModal').style.display = 'flex';
 }
 function closePricingModal(event) {
