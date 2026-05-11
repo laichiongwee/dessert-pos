@@ -865,6 +865,7 @@ i18n
   "featuresMultiShop": "Multi-shop",
   "featuresDataExport": "Data Export",
   "featuresCustomReceipt": "Custom Receipt Template",
+		  
 
 		  "basicPlanName": "Basic Standard",
   "proPlanName": "Pro Professional",
@@ -2111,7 +2112,7 @@ function updatePlanPrices() {
 }
 
 function openPricingModal() {
-    // 1. 初始化账单周期为月付，并高亮按钮
+    // 初始化账单周期为月付，并高亮按钮
     if (typeof setBilling === 'function') {
         setBilling('monthly');
     } else {
@@ -2120,24 +2121,27 @@ function openPricingModal() {
 
     const currentPlan = APP_STATE.currentPlan || 'free';
 
-    // 2. 设置当前套餐翻译文本
+    // 设置当前套餐翻译文本
     const label = document.getElementById('currentPlanLabel');
     if (label) {
-        // 翻译键：freePlan, basicPlan, proPlan
-        label.textContent = i18n.t(currentPlan + 'Plan');
+        label.textContent = i18n.t(currentPlan + 'Plan'); // 如 'freePlan'、'basicPlan'
     }
 
-    // 3. 生成套餐卡片
+    // 生成套餐卡片
     const planCardsHTML = Object.keys(PLAN_DETAILS).map(planId => {
         const plan = PLAN_DETAILS[planId];
-        const billing = selectedBilling;  // 使用全局变量
+        const billing = selectedBilling;
         const price = billing === 'monthly'
             ? (planId === 'basic' ? 29 : 69)
             : (planId === 'basic' ? 278.4 : 662.4);
         const isCurrent = currentPlan === planId;
 
-        // 特性列表保持原样（因为这些是商家自定义的描述，不翻译）
-        const featuresList = plan.features.map(f => `<li style="padding:4px 0;">✅ ${f}</li>`).join('');
+        // 特性列表：现在使用 i18n 翻译
+        const featuresList = plan.features.map(f => {
+            // 翻译键：假设已有 'feature_'+f（英/中），否则直接显示 f
+            const translated = i18n.exists('feature_' + f) ? i18n.t('feature_' + f) : f;
+            return `<li style="padding:4px 0;">✅ ${translated}</li>`;
+        }).join('');
 
         return `
         <div style="border:2px solid ${plan.color};border-radius:var(--radius-sm);padding:16px;text-align:center;background:white;display:flex;flex-direction:column;justify-content:space-between;">
@@ -2159,8 +2163,7 @@ function openPricingModal() {
     }).join('');
 
     document.getElementById('planCards').innerHTML = planCardsHTML;
-    // 应用翻译到 data-i18n 元素（主要是周期文字）
-    applyLanguage();
+    applyLanguage(); // 应用 data-i18n 的翻译
     document.getElementById('pricingModal').style.display = 'flex';
 }
 function closePricingModal(event) {
