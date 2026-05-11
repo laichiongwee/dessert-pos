@@ -788,6 +788,13 @@ i18n
   "statusCompleted": "Completed",
   "notYetPaid": "⏳ Not Paid",
 
+		  "receiptStoreName": "Persimmon Dessert",
+"callNumberLabel": "Call Number",
+"printReceipt": "Print Receipt",
+"paymentCash": "💰 Cash",
+"paymentCard": "💳 Credit/Debit Card",
+"paymentOnline": "📱 Online Payment",
+		  
   // 顾客端
   "customerTitle": "🍅 Persimmon Dessert",
   "customerSubtitle": "Scan to order · Delicious & fast",
@@ -909,6 +916,13 @@ i18n
 "clear": "清除",
 "addMember": "＋ 添加",
 
+		  "receiptStoreName": "柿柿润糖水",
+"callNumberLabel": "叫号号码",
+"printReceipt": "打印收据",
+"paymentCash": "💰 现金",
+"paymentCard": "💳 信用卡/借记卡",
+"paymentOnline": "📱 线上支付"
+	
   // 会员
   "memberSearch": "📞 搜索会员手机号...",
   "memberInfo": "会员信息",
@@ -1675,10 +1689,10 @@ async function processPayment(method, total, paymentDetails = {}) {
 function showOrderReceipt(order) {
     const receiptHTML = `
     <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
-        <h2 style="color:var(--persimmon);margin-bottom:4px;">🍅 柿柿润糖水</h2>
+        <h2 style="color:var(--persimmon);margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
         <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
         <div style="font-size:3rem;font-weight:800;color:var(--red);margin:12px 0;">🔔 ${order.callNumber}</div>
-        <div style="font-size:0.85rem;color:var(--text-light);">叫号号码</div>
+        <div style="font-size:0.85rem;color:var(--text-light);">${i18n.t('callNumberLabel')}</div>
         <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
         <table style="width:100%;font-size:0.8rem;text-align:left;border-collapse:collapse;">
             ${order.items.map(item => `
@@ -1690,17 +1704,17 @@ function showOrderReceipt(order) {
         </table>
         <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
         <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
-            <span>总计</span>
+            <span>${i18n.t('total')}</span>
             <span>RM ${order.total.toFixed(2)}</span>
         </div>
         <div style="font-size:0.8rem;color:var(--text-light);text-align:left;line-height:1.6;">
-            <div>支付方式：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
+            <div>${i18n.t('paymentMethod')}：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
             ${renderPaymentDetailsLine(order)}
         </div>
     </div>
     <div style="padding:0 16px 16px; display:flex; gap:8px;">
-        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="printReceipt('${order.id}')">🖨️ 打印收据</button>
-        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="closeReceiptModal()">关闭</button>
+        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="printReceipt('${order.id}')">🖨️ ${i18n.t('printReceipt')}</button>
+        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="closeReceiptModal()">${i18n.t('close')}</button>
     </div>`;
 
     const modal = document.getElementById('receiptModal');
@@ -1713,10 +1727,10 @@ function showOrderReceipt(order) {
     if (!order) return;
     const printContent = `
         <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
-            <h2 style="color:#E8784A;margin-bottom:4px;">🍅 柿柿润糖水</h2>
+            <h2 style="color:#E8784A;margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
             <div style="font-size:0.8rem;color:#6B4E4E;margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
             <div style="font-size:3rem;font-weight:800;color:#E85555;margin:12px 0;">🔔 ${order.callNumber}</div>
-            <div style="font-size:0.85rem;color:#6B4E4E;">叫号号码</div>
+            <div style="font-size:0.85rem;color:#6B4E4E;">${i18n.t('callNumberLabel')}</div>
             <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
             <table style="width:100%;font-size:0.8rem;text-align:left;border-collapse:collapse;">
                 ${order.items.map(item => `
@@ -1728,11 +1742,11 @@ function showOrderReceipt(order) {
             </table>
             <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
             <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
-                <span>总计</span>
+                <span>${i18n.t('total')}</span>
                 <span>RM ${order.total.toFixed(2)}</span>
             </div>
             <div style="font-size:0.8rem;color:#6B4E4E;text-align:left;line-height:1.6;">
-                <div>支付方式：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
+                <div>${i18n.t('paymentMethod')}：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
                 ${renderPaymentDetailsLine(order)}
             </div>
         </div>
@@ -1755,23 +1769,26 @@ function showOrderReceipt(order) {
 }
 	
 function getPaymentMethodLabel(method) {
-    const labels = { cash: '💰 现金', card: '💳 信用卡/借记卡', online: '📱 线上支付' };
+    const labels = {
+        cash: i18n.t('paymentCash'),
+        card: i18n.t('paymentCard'),
+        online: i18n.t('paymentOnline')
+    };
     return labels[method] || method;
 }
-
 function renderPaymentDetailsLine(order) {
     const details = order.paymentDetails || {};
     if (order.paymentMethod === 'cash' && details.amountTendered) {
-        return `<div>实收：RM ${details.amountTendered.toFixed(2)}</div>
-                <div>找零：RM ${details.change.toFixed(2)}</div>`;
+        return `<div>${i18n.t('amountReceived')}：RM ${details.amountTendered.toFixed(2)}</div>
+                <div>${i18n.t('change')}：RM ${details.change.toFixed(2)}</div>`;
     }
     if (order.paymentMethod === 'card' && details.cardLast4) {
-        return `<div>卡号末四位：**** ${details.cardLast4}</div>
-                <div>参考号：${details.refNum || ''}</div>`;
+        return `<div>${i18n.t('cardLast4')}：**** ${details.cardLast4}</div>
+                <div>${i18n.t('refNum')}：${details.refNum || ''}</div>`;
     }
     if (order.paymentMethod === 'online' && details.refNum) {
-        return `<div>平台：${details.onlineType || ''}</div>
-                <div>交易参考号：${details.refNum}</div>`;
+        return `<div>${i18n.t('onlinePlatform')}：${details.onlineType || ''}</div>
+                <div>${i18n.t('refNum')}：${details.refNum}</div>`;
     }
     return '';
 }
