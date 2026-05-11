@@ -476,12 +476,12 @@
         <div id="cardDetails" style="display:none;">
             <div class="payment-detail-row"><label data-i18n="cardType">卡类型：</label><select id="cardType"><option>Visa</option><option>Mastercard</option><option>Amex</option></select></div>
             <div class="payment-detail-row"><label data-i18n="cardLast4">卡号末四位：</label><input type="text" id="cardLast4" placeholder="1234" maxlength="4"></div>
-            <div class="payment-detail-row"><label data-i18n="refNum">参考号：</label><input type="text" id="cardRefNum" placeholder="可选"></div>
+            <div class="payment-detail-row"><label data-i18n="refNum">参考号：</label><input type="text" id="cardRefNum" data-i18n-placeholder="cardRefPlaceholder" placeholder="可选"></div>
         </div>
         <!-- Online details -->
         <div id="onlineDetails" style="display:none;">
             <div class="payment-detail-row"><label data-i18n="onlinePlatform">平台：</label><select id="onlineType"><option>Touch 'n Go</option><option>GrabPay</option><option>Boost</option><option>支付宝</option><option>微信支付</option><option>其他</option></select></div>
-            <div class="payment-detail-row"><label data-i18n="refNum">交易参考号：</label><input type="text" id="onlineRefNum" placeholder="输入参考号"></div>
+            <div class="payment-detail-row"><label data-i18n="refNum">交易参考号：</label><input type="text" id="onlineRefNum" data-i18n-placeholder="onlineRefPlaceholder" placeholder="输入参考号"></div>
         </div>
         <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="finalizePayment()" data-i18n="payNow">✅ 确认收款</button>
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closePaymentModal()" data-i18n="cancel">取消</button>
@@ -794,7 +794,9 @@ i18n
 "paymentCash": "💰 Cash",
 "paymentCard": "💳 Credit/Debit Card",
 "paymentOnline": "📱 Online Payment",
-		  
+"onlineRefPlaceholder": "Enter reference number",
+"cardRefPlaceholder": "Optional"
+	
   // 顾客端
   "customerTitle": "🍅 Persimmon Dessert",
   "customerSubtitle": "Scan to order · Delicious & fast",
@@ -922,7 +924,9 @@ i18n
 "paymentCash": "💰 现金",
 "paymentCard": "💳 信用卡/借记卡",
 "paymentOnline": "📱 线上支付",
-	
+"onlineRefPlaceholder": "输入参考号",
+"cardRefPlaceholder": "可选",
+		  
   // 会员
   "memberSearch": "📞 搜索会员手机号...",
   "memberInfo": "会员信息",
