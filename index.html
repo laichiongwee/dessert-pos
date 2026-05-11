@@ -2527,14 +2527,31 @@ function addToPublicCart(itemId) {
 
 function updatePublicCartCount() {
     const count = APP_STATE.publicCart.reduce((s, e) => s + e.quantity, 0);
-    const badge = document.getElementById('publicCartCount');
-    if (badge) {
-        if (count > 0) {
-            badge.textContent = count;
-            badge.style.display = 'inline-block';
-        } else {
-            badge.style.display = 'none';
-        }
+    let badge = document.getElementById('publicCartCount');
+    
+    // 如果气泡元素不存在，动态创建一个
+    if (!badge) {
+        const cartBtn = document.querySelector('#publicCustomerView .btn-outline.btn-sm[onclick*="toggleCustomerCart"]');
+        if (!cartBtn) return;
+        badge = document.createElement('span');
+        badge.id = 'publicCartCount';
+        badge.style.cssText = `
+            position:absolute; top:-6px; right:-8px;
+            background:#E85555; color:white;
+            font-size:0.7rem; font-weight:700;
+            min-width:18px; height:18px; line-height:18px;
+            border-radius:9px; text-align:center;
+            display:none;
+        `;
+        cartBtn.style.position = 'relative';
+        cartBtn.appendChild(badge);
+    }
+    
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
     }
 }
 function toggleCustomerCart() {
