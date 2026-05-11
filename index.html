@@ -2968,28 +2968,6 @@ function toggleAdminMode() {
     }
     if (APP_STATE.mode === 'fulfillment') renderAdminMenuGrid();
 }
-
-function renderAdminMenuGrid() {
-    const grid = document.getElementById('adminMenuGrid');
-    if (!grid) return;
-    const items = APP_STATE.menu;
-    grid.innerHTML = items.map(item => {
-        let imageOrEmojiHTML = '';
-        if (item.imageUrl && item.imageUrl.trim() !== '') {
-            imageOrEmojiHTML = `<img src="${item.imageUrl}" class="item-img" alt="${item.name}" loading="lazy">`;
-        } else {
-            imageOrEmojiHTML = `<span class="item-emoji">${item.emoji || '🍴'}</span>`;
-        }
-        
-        return `
-        <div class="menu-card admin-mode" onclick="openMenuEditModal('${item.id}')">
-            <span class="edit-icon" onclick="event.stopPropagation(); deleteMenuItem('${item.id}')">🗑️</span>
-            ${imageOrEmojiHTML}
-            <div class="item-name">${item.name}</div>
-            <div class="item-price">RM ${Number(item.price).toFixed(2)}</div>
-        </div>`;
-    }).join('');
-}
 	
 async function updateMenuItemField(id, field, value) {
     const item = APP_STATE.menu.find(i => i.id === id);
