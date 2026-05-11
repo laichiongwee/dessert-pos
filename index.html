@@ -1109,23 +1109,16 @@ function toggleLanguage() {
     const currentLang = i18n.language;
     const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
     i18n.changeLanguage(newLang, () => {
-        // 1. 重新渲染动态内容（如果是收银模式）
+        // 重新渲染动态内容
         if (APP_STATE.mode === 'cashier') {
-            renderOrderPanel();          // 内部已包含 data-i18n 属性
+            renderOrderPanel();
         } else if (APP_STATE.mode === 'fulfillment') {
             renderFulfillmentView();
         } else if (APP_STATE.mode === 'customer') {
             renderPublicMenu();
         }
-
-        // 2. 然后统一应用翻译
+        // 最后应用翻译（按钮文本会被自动更新）
         applyLanguage();
-
-        // 3. 更新切换按钮自身文字
-        const btn = document.getElementById('langToggle');
-        if (btn) {
-            btn.textContent = newLang === 'zh-CN' ? '🌐 中' : '🌐 EN';
-        }
     });
 }
 document.addEventListener('DOMContentLoaded', () => {
