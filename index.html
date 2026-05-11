@@ -635,34 +635,6 @@ i18n
     fallbackLng: 'en',
     debug: false,
     resources: {
-      en: { translation: { /* 你的英文翻译 */ } },
-      'zh-CN': { translation: { /* 你的中文翻译 */ } }
-    },
-    detection: {
-      // 只从 localStorage 和 URL 参数读取，不再自动检测浏览器语言
-      order: ['localStorage', 'querystring'],
-      caches: ['localStorage']
-    }
-  }, () => {
-    // 检查是否有已保存的语言设置
-    const hasStoredLang = localStorage.getItem('i18nextLng');
-    if (!hasStoredLang) {
-      // 首次访问：先自动绑定页面上的中文文本，再强制切换为英文
-      autoAssignI18n();
-      i18n.changeLanguage('en', () => {
-        applyLanguage();
-        const btn = document.getElementById('langToggle');
-        if (btn) btn.textContent = '🌐 中';
-      });
-    } else {
-      autoAssignI18n();
-      applyLanguage();
-    }
-  });
-  .init({
-    fallbackLng: 'en',
-    debug: false,
-    resources: {
       en: { translation: {
   // 通用
   "appName": "Dessert POS",
