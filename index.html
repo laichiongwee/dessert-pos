@@ -1680,12 +1680,12 @@ async function checkUser() {
         renderAll();
         updateQRCode();
 		updateUnpaidBadge();
-    } else if (mode === 'customer') {
-        // 🛒 未登录但明确请求顾客点餐模式（通过 QR 码）
+        } else if (mode === 'customer') {
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('publicCustomerView').style.display = 'block';
         document.getElementById('mainApp').style.display = 'none';
         await fetchPublicMenu();
+        await loadPublicSettings();   // ← 加载设置，确保读取到 autoAddMember
         renderPublicMenu();
     } else {
         // 🔐 默认显示登录界面
@@ -1826,7 +1826,29 @@ async function logout() {
         APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     }
 }
+async function loadPublicSettings() {
+    const { data: settingsRows, error } = await supabaseClient
+        .from('settings')
+        .select('*')
+        .in('key', ['autoAddMember']);  // 只取需要的设置，减少数据传输
 
+    if (error) {
+        console.error('Load public settings error:', error);
+        return;
+    }
+    if (settingsRows) {
+        settingsRows.forEach(row => {
+            APP_STATE.settings[row.key] = row.value;
+        });
+        // 统一处理布尔转换
+        if (APP_STATE.settings.autoAddMember !== undefined) {
+            APP_STATE.settings.autoAddMember = 
+                APP_STATE.settings.autoAddMember === 'true' || APP_STATE.settings.autoAddMember === true;
+        } else {
+            APP_STATE.settings.autoAddMember = true;  // 默认开启
+        }
+    }
+}
 function renderPublicMenu() {
     const activeCat = APP_STATE.activeCategory || '全部';
     const items = activeCat === '全部' 
