@@ -22,6 +22,10 @@
     </style>
 </head>
 <body>
+    <div id="audioEnableBar" style="background:#FFF3E0; color:#E65100; padding:8px; text-align:center; font-size:0.9rem; display:block;">
+    点击下方按钮以启用声音和震动提醒 🔔
+    <button onclick="enableAudio()" style="margin-left:8px; background:#E8784A; color:white; border:none; border-radius:8px; padding:4px 12px; font-weight:bold;">启用</button>
+</div>
 <div class="container">
     <h2>🔍 订单状态</h2>
     <div id="orderInfo">加载中...</div>
@@ -29,6 +33,84 @@
 </div>
 
 <script>
+    let audioContext = null;
+let audioEnabled = false;
+let lastStatus = null;          // 记录上次的状态
+let alertTriggered = false;    // 是否已触发本次提醒
+
+// 尝试恢复 localStorage 中的音频状态
+if (localStorage.getItem('audioEnabled') === 'true') {
+    audioEnabled = true;
+    document.getElementById('audioEnableBar').style.display = 'none';
+}
+
+function enableAudio() {
+    // 创建 AudioContext（必须由用户手势触发）
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+    audioEnabled = true;
+    localStorage.setItem('audioEnabled', 'true');
+    document.getElementById('audioEnableBar').style.display = 'none';
+}
+
+// 播放悦耳旋律（C大调琶音，8秒）
+function playNiceTone(duration = 8000) {
+    if (!audioContext || !audioEnabled) return;
+    
+    // 确保 AudioContext 处于可播放状态
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+
+    const now = audioContext.currentTime;
+    const gainNode = audioContext.createGain();
+    gainNode.connect(audioContext.destination);
+    gainNode.gain.value = 0.3; // 音量适中
+
+    // 音符频率 (C4, E4, G4, C5)
+    const notes = [261.6, 329.6, 392.0, 523.2];
+    const noteDuration = 0.4;   // 每个音符持续0.4秒
+    const gap = 0.1;            // 间隔0.1秒
+
+    // 循环播放直到 length 秒
+    let timeOffset = 0;
+    while (timeOffset < duration / 1000) {
+        notes.forEach(freq => {
+            if (timeOffset >= duration / 1000) return;
+            const osc = audioContext.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            osc.connect(gainNode);
+            osc.start(now + timeOffset);
+            osc.stop(now + timeOffset + noteDuration);
+            timeOffset += noteDuration + gap;
+        });
+    }
+
+    // 结束时稍微渐弱
+    gainNode.gain.setValueAtTime(0.3, now + duration / 1000 - 0.2);
+    gainNode.gain.linearRampToValueAtTime(0, now + duration / 1000);
+}
+
+// 启动振动（重复短震，总时长8秒）
+function startVibration(totalDuration = 8000) {
+    if (!navigator.vibrate) return;
+
+    const pattern = [500, 200]; // 震动500ms，暂停200ms
+    const singleCycle = pattern.reduce((a, b) => a + b, 0);
+    const cycles = Math.ceil(totalDuration / singleCycle);
+
+    // 构造完整振动模式数组
+    const fullPattern = [];
+    for (let i = 0; i < cycles; i++) {
+        fullPattern.push(...pattern);
+    }
+    navigator.vibrate(fullPattern);
+}
     const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -83,7 +165,22 @@
             <ul class="order-items">${itemsHTML}</ul>
             <p style="font-weight: bold;">总计：RM ${Number(order.total).toFixed(2)}</p>
         `;
+        // 检查状态是否变为 ready 且之前不是 ready，且尚未触发过
+    if (status === 'ready' && lastStatus !== 'ready' && !alertTriggered) {
+        alertTriggered = true;   // 避免每秒重复触发
+        if (audioEnabled) {
+            playNiceTone(8000);      // 播放8秒旋律
+        }
+        startVibration(8000);       // 振动8秒
     }
+
+    // 如果状态又变回非 ready（比如被重新标记），重置触发标记
+    if (status !== 'ready') {
+        alertTriggered = false;
+    }
+
+    lastStatus = status;
+}
 </script>
 </body>
 </html>
