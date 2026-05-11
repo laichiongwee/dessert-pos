@@ -1145,6 +1145,14 @@ function toggleLanguage() {
     const currentLang = i18n.language;
     const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
     i18n.changeLanguage(newLang, () => {
+		const receiptModal = document.getElementById('receiptModal');
+        if (receiptModal && receiptModal.style.display === 'flex') {
+            const lastOrderId = APP_STATE.orders.length > 0 ? APP_STATE.orders[0].id : null;
+            if (lastOrderId) {
+                const order = APP_STATE.orders.find(o => o.id === lastOrderId);
+                if (order) showOrderReceipt(order);
+            }
+        }
         // 重新渲染动态内容
         if (APP_STATE.mode === 'cashier') {
             renderOrderPanel();
