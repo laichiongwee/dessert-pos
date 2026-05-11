@@ -1071,27 +1071,20 @@ function toggleLanguage() {
     const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
     i18n.changeLanguage(newLang, () => {
         applyLanguage();
-        // 更新按钮本身显示的文字
         const btn = document.getElementById('langToggle');
         if (btn) {
-            // 你可以直接用 i18n.t 翻译，但我们这里简单切换
             btn.textContent = newLang === 'zh-CN' ? '🌐 中' : '🌐 EN';
         }
-        // 重新渲染动态内容（如当前页面模式）
-        if (APP_STATE.mode) {
-            // 如果是收银等模式，重新渲染界面
-            if (APP_STATE.mode === 'cashier') {
-                renderOrderPanel(); // 更新订单面板中的静态文本
-                // 也可以重新渲染整个视图，但可能影响性能
-            } else if (APP_STATE.mode === 'fulfillment') {
-                renderFulfillmentView();
-            } else if (APP_STATE.mode === 'customer') {
-                renderPublicMenu();
-            }
+        // 根据当前模式刷新界面（可选）
+        if (APP_STATE.mode === 'cashier') {
+            renderOrderPanel();
+        } else if (APP_STATE.mode === 'fulfillment') {
+            renderFulfillmentView();
+        } else if (APP_STATE.mode === 'customer') {
+            renderPublicMenu();
+            updatePublicCartCount();  // 更新顾客模式的购物车徽章
         }
     });
-    // 如果当前是顾客模式，重新渲染菜单上的按钮（如购物车按钮）
-    updateCartBadge();
 }
 
 // 初始化同步按钮文字
@@ -2382,9 +2375,9 @@ function addToPublicCart(itemId) {
 
 function updatePublicCartCount() {
     const count = APP_STATE.publicCart.reduce((s, e) => s + e.quantity, 0);
-    document.getElementById('publicCartCount').textContent = count;
+    const badge = document.getElementById('publicCartCount');
+    if (badge) badge.textContent = count;
 }
-
 function toggleCustomerCart() {
     if (APP_STATE.publicCart.length === 0) {
         showToast('🛒 購物車是空的');
@@ -2626,11 +2619,11 @@ async function markCompleted(orderId) {
 }
 function updateCartBadge() {
     const count = APP_STATE.customerCart.reduce((sum, e) => sum + e.quantity, 0);
-    document.getElementById('cartCountBadge').textContent = count;
+    const badge = document.getElementById('cartCountBadge');
+    if (badge) badge.textContent = count;
     const fab = document.getElementById('customerCartFab');
     if (fab) fab.style.opacity = count ? '1' : '0.6';
 }
-
 // ==================== ORDER ACTIONS ====================
 function addToOrder(itemId) {
     const item = APP_STATE.menu.find(m => m.id === itemId);
