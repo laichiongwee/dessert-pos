@@ -21,237 +21,264 @@
         .order-items li { list-style: none; padding: 4px 0; display: flex; justify-content: space-between; }
         .message { font-size: 0.95rem; margin-top: 12px; color: #6B4E4E; }
         button { background: #E8784A; color: white; border: none; border-radius: 20px; padding: 10px 24px; font-weight: bold; margin-top: 16px; cursor: pointer; width: 100%; }
-        .lang-toggle { position: fixed; top: 12px; right: 12px; background: white; color: #E8784A; border: 2px solid #E8784A; border-radius: 20px; padding: 5px 14px; font-size: 0.8rem; font-weight: 700; cursor: pointer; width: auto; margin: 0; z-index: 99; }
+        .lang-switch { position: absolute; top: 10px; right: 10px; background: #ffffff; border: 1px solid #E8784A; color: #E8784A; padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; }
     </style>
 </head>
 <body>
+    <!-- 声音启用提示条 -->
+    <div id="audioEnableBar" style="background:#FFF3E0; color:#E65100; padding:8px; text-align:center; font-size:0.9rem; display:block;">
+        <span data-i18n="enableSoundPrompt">点击下方按钮以启用声音和震动提醒 🔔</span>
+        <button onclick="enableAudio()" style="margin-left:8px; background:#E8784A; color:white; border:none; border-radius:8px; padding:4px 12px; font-weight:bold;" data-i18n="enable">启用</button>
+    </div>
 
-<!-- Language toggle button -->
-<button class="lang-toggle" id="langToggle" onclick="toggleLanguage()">🌐 EN</button>
+    <!-- 语言切换按钮 -->
+    <button class="lang-switch" onclick="toggleLanguage()" id="langToggle" data-i18n="langSwitch">🌐 EN</button>
 
-<!-- Audio enable bar -->
-<div id="audioEnableBar" style="background:#FFF3E0; color:#E65100; padding:8px; text-align:center; font-size:0.9rem; display:block;">
-    <span data-i18n="audioPrompt">点击下方按钮以启用声音和震动提醒 🔔</span>
-    <button onclick="enableAudio()" style="margin-left:8px; background:#E8784A; color:white; border:none; border-radius:8px; padding:4px 12px; font-weight:bold; width:auto; margin-top:0;" data-i18n="enableBtn">启用</button>
-</div>
-
-<div class="container">
-    <h2 data-i18n="pageTitle">🔍 订单状态</h2>
-    <div id="orderInfo"><span data-i18n="loading">加载中...</span></div>
-    <button onclick="window.location.reload()" data-i18n="refresh">刷新状态</button>
-</div>
+    <div class="container">
+        <h2 data-i18n="orderStatusTitle">🔍 订单状态</h2>
+        <div id="orderInfo">加载中...</div>
+        <button onclick="window.location.reload()" data-i18n="refreshStatus">刷新状态</button>
+    </div>
 
 <script>
-// ==================== i18n SETUP ====================
-const i18n = i18next.createInstance();
-i18n.use(i18nextBrowserLanguageDetector).init({
-    fallbackLng: 'zh-CN',
-    debug: false,
-    resources: {
-        en: { translation: {
-            pageTitle:        '🔍 Order Status',
-            loading:          'Loading...',
-            refresh:          'Refresh Status',
-            audioPrompt:      'Tap the button below to enable sound & vibration alerts 🔔',
-            enableBtn:        'Enable',
-            orderNo:          'Order No:',
-            customer:         '👤 Customer',
-            total:            'Total:',
-            missingOrder:     'Missing order number',
-            orderNotFound:    'Order not found',
-            statusLabels: {
-                pending_payment: 'Pending Payment',
-                pending:         'Paid / Queued',
-                preparing:       'Preparing',
-                ready:           'Ready for Pickup',
-                completed:       'Completed'
-            },
-            messages: {
-                pending_payment: 'Please proceed to the counter to pay',
-                pending:         'Payment received, please wait',
-                preparing:       'We are preparing your order',
-                ready:           'Your order is ready! Please collect at the counter',
-                completed:       'Order collected. Thank you!'
-            },
-            langSwitch: '🌐 中'
-        }},
-        'zh-CN': { translation: {
-            pageTitle:        '🔍 订单状态',
-            loading:          '加载中...',
-            refresh:          '刷新状态',
-            audioPrompt:      '点击下方按钮以启用声音和震动提醒 🔔',
-            enableBtn:        '启用',
-            orderNo:          '订单号：',
-            customer:         '👤 顾客',
-            total:            '总计：',
-            missingOrder:     '缺少订单号',
-            orderNotFound:    '找不到该订单',
-            statusLabels: {
-                pending_payment: '待付款',
-                pending:         '已付款 / 准备中',
-                preparing:       '制作中',
-                ready:           '可取餐',
-                completed:       '已取餐'
-            },
-            messages: {
-                pending_payment: '请前往柜台付款',
-                pending:         '已付款，请稍候',
-                preparing:       '正在为您准备',
-                ready:           '您的餐点已准备好，请柜台取餐',
-                completed:       '餐点已取走，谢谢惠顾'
-            },
-            langSwitch: '🌐 EN'
-        }}
-    },
-    detection: {
-        order: ['querystring', 'localStorage', 'navigator'],
-        caches: ['localStorage']
+    // ==================== 音频与振动逻辑 ====================
+    let audioContext = null;
+    let audioEnabled = false;
+    let lastStatus = null;
+    let alertTriggered = false;
+
+    if (localStorage.getItem('audioEnabled') === 'true') {
+        audioEnabled = true;
+        document.getElementById('audioEnableBar').style.display = 'none';
     }
-}, () => {
-    applyLanguage();
-});
 
-function applyLanguage() {
-    document.documentElement.lang = i18n.language;
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (key && i18n.exists(key)) el.textContent = i18n.t(key);
-    });
-    const langBtn = document.getElementById('langToggle');
-    if (langBtn) langBtn.textContent = i18n.t('langSwitch');
-    // Re-render order info if already loaded (to update status labels & messages)
-    if (typeof lastOrder !== 'undefined' && lastOrder) renderOrder(lastOrder);
-}
-
-function toggleLanguage() {
-    const newLang = i18n.language === 'zh-CN' ? 'en' : 'zh-CN';
-    i18n.changeLanguage(newLang, () => applyLanguage());
-}
-
-// ==================== AUDIO & VIBRATION ====================
-let audioContext = null;
-let audioEnabled = false;
-let lastStatus = null;
-let alertTriggered = false;
-let lastOrder = null;  // cache last fetched order for re-render on lang switch
-
-if (localStorage.getItem('audioEnabled') === 'true') {
-    audioEnabled = true;
-    document.getElementById('audioEnableBar').style.display = 'none';
-}
-
-function enableAudio() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    function enableAudio() {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        audioEnabled = true;
+        localStorage.setItem('audioEnabled', 'true');
+        document.getElementById('audioEnableBar').style.display = 'none';
     }
-    if (audioContext.state === 'suspended') audioContext.resume();
-    audioEnabled = true;
-    localStorage.setItem('audioEnabled', 'true');
-    document.getElementById('audioEnableBar').style.display = 'none';
-}
 
-function playNiceTone(duration = 8000) {
-    if (!audioContext || !audioEnabled) return;
-    if (audioContext.state === 'suspended') audioContext.resume();
-    const now = audioContext.currentTime;
-    const gainNode = audioContext.createGain();
-    gainNode.connect(audioContext.destination);
-    gainNode.gain.value = 0.3;
-    const notes = [261.6, 329.6, 392.0, 523.2];
-    const noteDuration = 0.4;
-    const gap = 0.1;
-    let timeOffset = 0;
-    while (timeOffset < duration / 1000) {
-        notes.forEach(freq => {
-            if (timeOffset >= duration / 1000) return;
-            const osc = audioContext.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            osc.connect(gainNode);
-            osc.start(now + timeOffset);
-            osc.stop(now + timeOffset + noteDuration);
-            timeOffset += noteDuration + gap;
+    function playNiceTone(duration = 8000) {
+        if (!audioContext || !audioEnabled) return;
+        if (audioContext.state === 'suspended') audioContext.resume();
+        const now = audioContext.currentTime;
+        const gainNode = audioContext.createGain();
+        gainNode.connect(audioContext.destination);
+        gainNode.gain.value = 0.3;
+        const notes = [261.6, 329.6, 392.0, 523.2];
+        const noteDuration = 0.4;
+        const gap = 0.1;
+        let timeOffset = 0;
+        while (timeOffset < duration / 1000) {
+            notes.forEach(freq => {
+                if (timeOffset >= duration / 1000) return;
+                const osc = audioContext.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                osc.connect(gainNode);
+                osc.start(now + timeOffset);
+                osc.stop(now + timeOffset + noteDuration);
+                timeOffset += noteDuration + gap;
+            });
+        }
+        gainNode.gain.setValueAtTime(0.3, now + duration / 1000 - 0.2);
+        gainNode.gain.linearRampToValueAtTime(0, now + duration / 1000);
+    }
+
+    function startVibration(totalDuration = 8000) {
+        if (!navigator.vibrate) return;
+        const pattern = [500, 200];
+        const singleCycle = pattern.reduce((a, b) => a + b, 0);
+        const cycles = Math.ceil(totalDuration / singleCycle);
+        const fullPattern = [];
+        for (let i = 0; i < cycles; i++) fullPattern.push(...pattern);
+        navigator.vibrate(fullPattern);
+    }
+
+    // ==================== i18n 初始化 ====================
+    const i18n = i18next.createInstance();
+    i18n
+        .use(i18nextBrowserLanguageDetector)
+        .init({
+            fallbackLng: 'zh-CN',
+            debug: false,
+            resources: {
+                en: { translation: {
+                    "orderStatusTitle": "🔍 Order Status",
+                    "refreshStatus": "Refresh Status",
+                    "enableSoundPrompt": "Click the button below to enable sound and vibration 🔔",
+                    "enable": "Enable",
+                    "langSwitch": "🌐 中",
+                    "missingOrder": "Missing order number",
+                    "orderNotFound": "Order not found",
+                    "orderNumber": "Order Number:",
+                    "customer": "👤 Customer",
+                    "total": "Total:",
+                    "statusPendingPayment": "Pending Payment",
+                    "statusPending": "Paid / Preparing",
+                    "statusPreparing": "Preparing",
+                    "statusReady": "Ready for Pickup",
+                    "statusCompleted": "Completed",
+                    "msgPendingPayment": "Please proceed to the counter to pay",
+                    "msgPending": "Paid, please wait",
+                    "msgPreparing": "Preparing your order",
+                    "msgReady": "Your order is ready, please pick up at counter",
+                    "msgCompleted": "Order picked up, thank you"
+                }},
+                'zh-CN': { translation: {
+                    "orderStatusTitle": "🔍 订单状态",
+                    "refreshStatus": "刷新状态",
+                    "enableSoundPrompt": "点击下方按钮以启用声音和震动提醒 🔔",
+                    "enable": "启用",
+                    "langSwitch": "🌐 EN",
+                    "missingOrder": "缺少订单号",
+                    "orderNotFound": "找不到该订单",
+                    "orderNumber": "订单号：",
+                    "customer": "👤 顾客",
+                    "total": "总计：",
+                    "statusPendingPayment": "待付款",
+                    "statusPending": "已付款 / 准备中",
+                    "statusPreparing": "制作中",
+                    "statusReady": "可取餐",
+                    "statusCompleted": "已取餐",
+                    "msgPendingPayment": "请前往柜台付款",
+                    "msgPending": "已付款，请稍候",
+                    "msgPreparing": "正在为您准备",
+                    "msgReady": "您的餐点已准备好，请柜台取餐",
+                    "msgCompleted": "餐点已取走，谢谢惠顾"
+                }}
+            },
+            detection: { order: ['querystring', 'localStorage', 'navigator', 'htmlTag'], caches: ['localStorage'] }
+        }, () => {
+            // 自动给静态元素添加 data-i18n 属性（基于中文翻译）
+            autoAssignI18n();
+            applyLanguage();
+        });
+
+    function applyLanguage() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (key && i18n.exists(key)) el.textContent = i18n.t(key);
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (key && i18n.exists(key)) el.placeholder = i18n.t(key);
         });
     }
-    gainNode.gain.setValueAtTime(0.3, now + duration / 1000 - 0.2);
-    gainNode.gain.linearRampToValueAtTime(0, now + duration / 1000);
-}
 
-function startVibration(totalDuration = 8000) {
-    if (!navigator.vibrate) return;
-    const pattern = [500, 200];
-    const singleCycle = pattern.reduce((a, b) => a + b, 0);
-    const cycles = Math.ceil(totalDuration / singleCycle);
-    const fullPattern = [];
-    for (let i = 0; i < cycles; i++) fullPattern.push(...pattern);
-    navigator.vibrate(fullPattern);
-}
-
-// ==================== SUPABASE ====================
-const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-const urlParams = new URLSearchParams(window.location.search);
-const orderId = urlParams.get('orderId');
-
-if (!orderId) {
-    document.getElementById('orderInfo').innerHTML = `<p style="color:red;">${i18n.t('missingOrder')}</p>`;
-} else {
-    fetchOrderStatus();
-    setInterval(fetchOrderStatus, 10000);
-}
-
-async function fetchOrderStatus() {
-    const { data: order, error } = await supabaseClient
-        .from('orders')
-        .select('*')
-        .eq('id', orderId)
-        .maybeSingle();
-
-    if (error || !order) {
-        document.getElementById('orderInfo').innerHTML = `<p style="color:red;">${i18n.t('orderNotFound')}</p>`;
-        return;
+    function autoAssignI18n() {
+        const defaultLang = 'zh-CN';
+        const translation = i18n.getResourceBundle(defaultLang, 'translation');
+        if (!translation) return;
+        const reverseDict = {};
+        for (const key in translation) {
+            const value = translation[key];
+            if (typeof value === 'string' && !reverseDict[value]) {
+                reverseDict[value] = key;
+            }
+        }
+        document.querySelectorAll('body *').forEach(el => {
+            if (el.hasAttribute('data-i18n')) return;
+            for (let i = 0; i < el.childNodes.length; i++) {
+                const node = el.childNodes[i];
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const text = node.textContent.trim();
+                    if (text && reverseDict[text]) {
+                        el.setAttribute('data-i18n', reverseDict[text]);
+                        break;
+                    }
+                }
+            }
+        });
     }
 
-    lastOrder = order;
-    renderOrder(order);
-}
-
-function renderOrder(order) {
-    const status = order.status || 'pending_payment';
-    const statusLabels = i18n.t('statusLabels', { returnObjects: true });
-    const messages   = i18n.t('messages',     { returnObjects: true });
-
-    const items = Array.isArray(order.items) ? order.items : [];
-    const itemsHTML = items.map(i =>
-        `<li><span>${i.name} x${i.qty}</span><span>RM ${(i.price * i.qty).toFixed(2)}</span></li>`
-    ).join('');
-
-    document.getElementById('orderInfo').innerHTML = `
-        <p><strong>${i18n.t('orderNo')}</strong> ${order.id}</p>
-        ${order.memberName ? `
-        <div style="background:#FDE8DF; border-radius:16px; padding:12px 16px; margin:12px 0; text-align:center;">
-            <div style="font-size:0.85rem; color:#6B4E4E; margin-bottom:4px;">${i18n.t('customer')}</div>
-            <div style="font-size:1.4rem; font-weight:800; color:#3D2020;">${order.memberName}</div>
-            ${order.memberPhone ? `<div style="font-size:1.1rem; font-weight:700; color:#E8784A; margin-top:4px;">📞 ${order.memberPhone}</div>` : ''}
-        </div>` : ''}
-        <p><span class="status-badge ${status}">${statusLabels[status] || status}</span></p>
-        ${order.callNumber ? `<p class="call-number">🔔 ${order.callNumber}</p>` : ''}
-        <p class="message">${messages[status] || ''}</p>
-        <ul class="order-items">${itemsHTML}</ul>
-        <p style="font-weight:bold;">${i18n.t('total')} RM ${Number(order.total).toFixed(2)}</p>
-    `;
-
-    // Alert on ready
-    if (status === 'ready' && lastStatus !== 'ready' && !alertTriggered) {
-        alertTriggered = true;
-        if (audioEnabled) playNiceTone(8000);
-        startVibration(8000);
+    function toggleLanguage() {
+        const newLang = i18n.language === 'zh-CN' ? 'en' : 'zh-CN';
+        i18n.changeLanguage(newLang, () => {
+            applyLanguage();
+            // 重新渲染动态内容并应用语言
+            fetchOrderStatus();
+        });
     }
-    if (status !== 'ready') alertTriggered = false;
-    lastStatus = status;
-}
+
+    // ==================== Supabase 订单跟踪 ====================
+    const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId');
+
+    if (!orderId) {
+        document.getElementById('orderInfo').innerHTML = `<p style="color:red;" data-i18n="missingOrder">${i18n.t('missingOrder')}</p>`;
+        applyLanguage();
+    } else {
+        fetchOrderStatus();
+        setInterval(fetchOrderStatus, 10000);
+    }
+
+    async function fetchOrderStatus() {
+        const { data: order, error } = await supabaseClient
+            .from('orders')
+            .select('*')
+            .eq('id', orderId)
+            .maybeSingle();
+
+        if (error || !order) {
+            document.getElementById('orderInfo').innerHTML = `<p style="color:red;" data-i18n="orderNotFound">${i18n.t('orderNotFound')}</p>`;
+            applyLanguage();
+            return;
+        }
+
+        const status = order.status || 'pending_payment';
+        const statusLabels = {
+            pending_payment: i18n.t('statusPendingPayment'),
+            pending: i18n.t('statusPending'),
+            preparing: i18n.t('statusPreparing'),
+            ready: i18n.t('statusReady'),
+            completed: i18n.t('statusCompleted')
+        };
+        const messages = {
+            pending_payment: i18n.t('msgPendingPayment'),
+            pending: i18n.t('msgPending'),
+            preparing: i18n.t('msgPreparing'),
+            ready: i18n.t('msgReady'),
+            completed: i18n.t('msgCompleted')
+        };
+
+        const items = Array.isArray(order.items) ? order.items : [];
+        let itemsHTML = items.map(i => `<li><span>${i.name} x${i.qty}</span><span>RM ${(i.price * i.qty).toFixed(2)}</span></li>`).join('');
+
+        document.getElementById('orderInfo').innerHTML = `
+            <p><strong data-i18n="orderNumber">${i18n.t('orderNumber')}</strong>${order.id}</p>
+            ${order.memberName ? `
+            <div style="background:#FDE8DF; border-radius:16px; padding:12px 16px; margin:12px 0; text-align:center;">
+                <div style="font-size:0.85rem; color:#6B4E4E; margin-bottom:4px;" data-i18n="customer">${i18n.t('customer')}</div>
+                <div style="font-size:1.4rem; font-weight:800; color:#3D2020;">${order.memberName}</div>
+                ${order.memberPhone ? `<div style="font-size:1.1rem; font-weight:700; color:#E8784A; margin-top:4px;">📞 ${order.memberPhone}</div>` : ''}
+            </div>` : ''}
+            <p><span class="status-badge ${status}">${statusLabels[status]}</span></p>
+            ${order.callNumber ? `<p class="call-number">🔔 ${order.callNumber}</p>` : ''}
+            <p class="message">${messages[status]}</p>
+            <ul class="order-items">${itemsHTML}</ul>
+            <p style="font-weight: bold;" data-i18n="total">${i18n.t('total')} RM ${Number(order.total).toFixed(2)}</p>
+        `;
+        applyLanguage(); // 应用翻译到新生成的 DOM
+
+        // 声音和振动提醒
+        if (status === 'ready' && lastStatus !== 'ready' && !alertTriggered) {
+            alertTriggered = true;
+            if (audioEnabled) playNiceTone(8000);
+            startVibration(8000);
+        }
+        if (status !== 'ready') alertTriggered = false;
+        lastStatus = status;
+    }
 </script>
 </body>
 </html>
