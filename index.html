@@ -8,6 +8,8 @@
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.0/i18next.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/i18next-browser-languagedetector@7.2.0/i18nextBrowserLanguageDetector.min.js"></script>
     <style>
         :root {
             --persimmon: #E8784A; --persimmon-light: #FDE8DF; --persimmon-dark: #C45A2E;
@@ -271,6 +273,7 @@
     <header class="header">
         <div class="header-brand"><span>🍅</span><span>柿柿润糖水</span></div>
         <div class="header-actions">
+			<button class="btn btn-xs btn-outline" onclick="toggleLanguage()" id="langToggle">🌐 EN</button>
             <button class="btn btn-outline btn-sm" onclick="toggleCustomerCart()">🛒 購物車 <span id="publicCartCount">0</span></button>
         </div>
     </header>
@@ -618,6 +621,423 @@
 </div>
 	
 <script>
+	const i18n = i18next.createInstance();
+i18n
+  .use(i18nextBrowserLanguageDetector)
+  .init({
+    fallbackLng: 'en',
+    debug: false,
+    resources: {
+      en: { translation: {
+  // 通用
+  "appName": "Dessert POS",
+  "storeName": "Persimmon Dessert",
+  "phone": "Tel: 017-8369622 / +6010-8476666",
+  "close": "Close",
+  "save": "Save",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "delete": "Delete",
+  "edit": "Edit",
+  "add": "Add",
+  "search": "Search",
+  "clear": "Clear",
+  "loading": "Loading...",
+  "noData": "No data",
+  "yes": "Yes",
+  "no": "No",
+  "on": "On",
+  "off": "Off",
+  "available": "Available",
+  "soldOut": "Sold Out",
+  "upload": "Upload",
+  "preview": "Preview",
+
+  // 模式切换
+  "cashierMode": "💰 Cashier",
+  "customerMode": "📱 Customer",
+  "fulfillmentMode": "📦 Kitchen",
+
+  // 按钮
+  "unpaidOrders": "💰 Unpaid",
+  "qrCode": "🔗 QR",
+  "report": "📊 Report",
+  "settings": "⚙️ Settings",
+  "logout": "🚪 Logout",
+  "checkout": "💳 Checkout",
+  "clearOrder": "🗑️ Clear",
+  "addMember": "＋ Add",
+  "upgradePlan": "⭐ Upgrade",
+
+  // 设置
+  "settingsTitle": "⚙️ Settings",
+  "dataSyncUrl": "Data Sync URL (GET)",
+  "imageUploadUrl": "Image Upload URL (POST) - optional",
+  "imgbbKey": "ImgBB API Key",
+  "saveSettings": "💾 Save Settings",
+  "loadDemo": "📦 Load Demo Data",
+
+  // 收银面板
+  "currentOrder": "🧾 Current Order",
+  "subtotal": "Subtotal",
+  "memberDiscount": "Member Discount",
+  "total": "Total",
+  "clearOrderConfirm": "Clear order?",
+
+  // 会员
+  "memberSearch": "📞 Search member phone...",
+  "memberInfo": "Member Info",
+  "points": "Points",
+  "totalSpent": "Total Spent",
+  "redeemDiscount": "🎉 Redeem discount",
+  "noMember": "No member linked",
+  "addMemberTitle": "🧑‍🤝‍🧑 Add Member",
+  "memberName": "Name",
+  "memberPhone": "Phone",
+
+  // 支付
+  "paymentTitle": "💳 Payment",
+  "paymentMethod": "Payment Method:",
+  "cash": "💰 Cash",
+  "card": "💳 Credit / Debit Card",
+  "online": "📱 Online Payment",
+  "amountDue": "Amount Due:",
+  "amountReceived": "Amount Received:",
+  "change": "Change:",
+  "cardType": "Card Type:",
+  "cardLast4": "Last 4 Digits:",
+  "refNum": "Reference No.:",
+  "onlinePlatform": "Platform:",
+  "payNow": "✅ Confirm Payment",
+
+  // 折扣规则
+  "discountRulesTitle": "🏷️ Discount Rules",
+  "ruleType": "Type (percentage/fixed)",
+  "ruleValue": "Value",
+  "ruleMinPoints": "Min Points",
+  "addRule": "＋ Add Rule",
+
+  // 日报
+  "dailyReportTitle": "📊 Daily Report",
+  "date": "Date",
+  "orderCount": "Order Count",
+  "totalSales": "Total Sales",
+  "cashTotal": "Cash Total",
+  "cardTotal": "Card Total",
+  "onlineTotal": "Online Total",
+  "discountTotal": "Discount Total",
+  "closeDay": "🔒 Close Day",
+
+  // 菜品编辑
+  "editItemTitle": "✏️ Edit Item",
+  "itemName": "Name",
+  "itemDesc": "Description",
+  "itemPrice": "Price",
+  "itemOriginalPrice": "Original Price",
+  "itemCategory": "Category",
+  "itemEmoji": "Emoji",
+  "itemImageUrl": "Image URL",
+  "itemUploadImage": "Upload Image",
+  "itemAvailable": "In Stock",
+  "saveItem": "💾 Save Item",
+  "deleteItem": "🗑️ Delete",
+  "deleteItemConfirm": "Delete this item?",
+
+  // 分类管理
+  "categoryTitle": "🏷️ Manage Categories",
+  "newCategory": "New Category",
+  "addCategory": "＋ Add Category",
+  "deleteCategoryConfirm": "Delete category? Items will be moved to 'Other'.",
+
+  // 出餐
+  "preparing": "⏳ Preparing",
+  "completed": "✅ Completed",
+  "noActiveOrders": "No active orders",
+  "noHistoryOrders": "No history orders",
+  "startPrep": "Start Preparing",
+  "foodReady": "Food Ready",
+  "pickedUp": "Customer Picked Up",
+
+  // 订单状态
+  "statusPendingPayment": "Pending Payment",
+  "statusPending": "Pending",
+  "statusPreparing": "Preparing",
+  "statusReady": "Ready for Pickup",
+  "statusCompleted": "Completed",
+  "notYetPaid": "⏳ Not Paid",
+
+  // 顾客端
+  "customerTitle": "🍅 Persimmon Dessert",
+  "customerSubtitle": "Scan to order · Delicious & fast",
+  "viewCart": "🛒 View Cart",
+  "cartTitle": "🛒 My Cart",
+  "customerName": "👤 Your Name",
+  "customerPhone": "📞 Phone (optional)",
+  "submitOrder": "✅ Submit Order",
+  "continueOrdering": "Continue Ordering",
+  "orderSubmitted": "Order submitted! Please wait for your number.",
+
+  // 套餐选择
+  "pricingTitle": "⭐ Upgrade Plan",
+  "currentPlan": "Current Plan:",
+  "freePlan": "Free",
+  "basicPlan": "Basic",
+  "proPlan": "Pro",
+  "monthly": "Monthly",
+  "yearly": "Yearly (20% off)",
+  "choosePlan": "Choose Plan",
+  "sstIncluded": "All prices include 6% SST",
+  "featuresUnlimitedOrders": "Unlimited Orders",
+  "featuresCloudSync": "Cloud Sync",
+  "featuresMultiDevice": "Multi-device",
+  "featuresBasicReport": "Basic Reports",
+  "featuresReceiptPrint": "Receipt Printing",
+  "featuresMemberDiscount": "Member Discount",
+  "featuresInventory": "Inventory Management",
+  "featuresStaffPermission": "Staff Permission",
+  "featuresMultiShop": "Multi-shop",
+  "featuresDataExport": "Data Export",
+  "featuresCustomReceipt": "Custom Receipt Template",
+
+  // 其他
+  "orderLimitReached": "🚫 Free plan daily order limit reached. Please upgrade.",
+  "imgCompressing": "Compressing image...",
+  "imgUploading": "Uploading image...",
+  "imgUploadSuccess": "✅ Image uploaded",
+  "imgUploadFailed": "Upload failed",
+  "memberAdded": "✅ Member added",
+  "orderCompleted": "✅ Order #{{orderId}} completed",
+  "orderPaid": "✅ Order #{{orderId}} paid",
+  "pickUpNumber": "🔔 Pick-up number: {{number}}"
+} },
+      'zh-CN': { translation: {
+  // 通用
+  "appName": "柿柿润糖水 POS 系统",
+  "storeName": "柿柿润糖水",
+  "phone": "📞 017-8369622 / +6010-8476666",
+  "close": "关闭",
+  "save": "保存",
+  "cancel": "取消",
+  "confirm": "确认",
+  "delete": "删除",
+  "edit": "编辑",
+  "add": "添加",
+  "search": "搜索",
+  "clear": "清除",
+  "loading": "加载中...",
+  "noData": "暂无数据",
+  "yes": "是",
+  "no": "否",
+  "on": "开",
+  "off": "关",
+  "available": "在售",
+  "soldOut": "售罄",
+  "upload": "上传",
+  "preview": "预览",
+
+  // 模式切换
+  "cashierMode": "💰 收银",
+  "customerMode": "📱 顾客",
+  "fulfillmentMode": "📦 出餐",
+
+  // 按钮
+  "unpaidOrders": "💰 待收款",
+  "qrCode": "🔗 二维码",
+  "report": "📊 报表",
+  "settings": "⚙️ 设置",
+  "logout": "🚪 登出",
+  "checkout": "💳 结算",
+  "clearOrder": "🗑️ 清空",
+  "addMember": "＋ 添加会员",
+  "upgradePlan": "⭐ 升级套餐",
+
+  // 设置
+  "settingsTitle": "⚙️ 系统设置",
+  "dataSyncUrl": "数据同步 URL (GET)",
+  "imageUploadUrl": "图片上传 URL (POST) - 可选",
+  "imgbbKey": "ImgBB API 密钥",
+  "saveSettings": "💾 保存设置",
+  "loadDemo": "📦 加载演示数据",
+
+  // 收银面板
+  "currentOrder": "🧾 当前订单",
+  "subtotal": "小计",
+  "memberDiscount": "会员折扣",
+  "total": "总计",
+  "clearOrderConfirm": "确定清空订单？",
+
+  // 会员
+  "memberSearch": "📞 搜索会员手机号...",
+  "memberInfo": "会员信息",
+  "points": "积分",
+  "totalSpent": "累计消费",
+  "redeemDiscount": "🎉 可兑换折扣",
+  "noMember": "未关联会员",
+  "addMemberTitle": "🧑‍🤝‍🧑 添加会员",
+  "memberName": "姓名",
+  "memberPhone": "手机号",
+
+  // 支付
+  "paymentTitle": "💳 结算",
+  "paymentMethod": "支付方式：",
+  "cash": "💰 现金",
+  "card": "💳 信用卡 / 借记卡",
+  "online": "📱 线上支付",
+  "amountDue": "应收：",
+  "amountReceived": "实收：",
+  "change": "找零：",
+  "cardType": "卡类型：",
+  "cardLast4": "卡号末四位：",
+  "refNum": "参考号：",
+  "onlinePlatform": "平台：",
+  "payNow": "✅ 确认收款",
+
+  // 折扣规则
+  "discountRulesTitle": "🏷️ 优惠规则",
+  "ruleType": "类型 (percentage/fixed)",
+  "ruleValue": "值",
+  "ruleMinPoints": "最低积分",
+  "addRule": "＋ 添加规则",
+
+  // 日报
+  "dailyReportTitle": "📊 今日报表",
+  "date": "日期",
+  "orderCount": "订单数",
+  "totalSales": "总销售额",
+  "cashTotal": "现金收款",
+  "cardTotal": "银行卡收款",
+  "onlineTotal": "线上收款",
+  "discountTotal": "折扣总额",
+  "closeDay": "🔒 关闭今日账目",
+
+  // 菜品编辑
+  "editItemTitle": "✏️ 编辑菜品",
+  "itemName": "名称",
+  "itemDesc": "描述",
+  "itemPrice": "价格",
+  "itemOriginalPrice": "原价",
+  "itemCategory": "分类",
+  "itemEmoji": "Emoji",
+  "itemImageUrl": "图片URL",
+  "itemUploadImage": "上传图片",
+  "itemAvailable": "在售",
+  "saveItem": "💾 保存菜品",
+  "deleteItem": "🗑️ 删除",
+  "deleteItemConfirm": "确定删除该菜品吗？",
+
+  // 分类管理
+  "categoryTitle": "🏷️ 管理分类",
+  "newCategory": "新分类名",
+  "addCategory": "＋ 添加分类",
+  "deleteCategoryConfirm": "删除此分类？该分类下的商品将移至“其他”。",
+
+  // 出餐
+  "preparing": "⏳ 制作中",
+  "completed": "✅ 已取餐",
+  "noActiveOrders": "无进行中订单",
+  "noHistoryOrders": "无历史订单",
+  "startPrep": "开始准备",
+  "foodReady": "餐已好",
+  "pickedUp": "客人取餐",
+
+  // 订单状态
+  "statusPendingPayment": "待付款",
+  "statusPending": "已付款",
+  "statusPreparing": "制作中",
+  "statusReady": "可取餐",
+  "statusCompleted": "已取餐",
+  "notYetPaid": "⏳ 尚未付款",
+
+  // 顾客端
+  "customerTitle": "🍅 柿柿润糖水",
+  "customerSubtitle": "扫码点餐 · 美味直达",
+  "viewCart": "🛒 查看购物车",
+  "cartTitle": "🛒 我的购物车",
+  "customerName": "👤 您的姓名",
+  "customerPhone": "📞 手机号（选填）",
+  "submitOrder": "✅ 提交订单",
+  "continueOrdering": "继续点餐",
+  "orderSubmitted": "订单已提交！请等待叫号。",
+
+  // 套餐选择
+  "pricingTitle": "⭐ 升级套餐",
+  "currentPlan": "当前套餐：",
+  "freePlan": "免费版",
+  "basicPlan": "标准版",
+  "proPlan": "专业版",
+  "monthly": "月付",
+  "yearly": "年付（8折）",
+  "choosePlan": "选择此套餐",
+  "sstIncluded": "所有价格已包含6% SST",
+  "featuresUnlimitedOrders": "无限订单",
+  "featuresCloudSync": "云数据同步",
+  "featuresMultiDevice": "多设备同时登录",
+  "featuresBasicReport": "基础报表",
+  "featuresReceiptPrint": "小票打印",
+  "featuresMemberDiscount": "会员折扣",
+  "featuresInventory": "库存原料管理",
+  "featuresStaffPermission": "员工权限管理",
+  "featuresMultiShop": "多门店管理",
+  "featuresDataExport": "数据导出 Excel/PDF",
+  "featuresCustomReceipt": "自定义小票模板",
+
+  // 其他
+  "orderLimitReached": "🚫 免费版每日订单已达上限，请升级套餐。",
+  "imgCompressing": "图片压缩中...",
+  "imgUploading": "图片上传中...",
+  "imgUploadSuccess": "✅ 图片已上传",
+  "imgUploadFailed": "上传失败",
+  "memberAdded": "✅ 会员已添加",
+  "orderCompleted": "✅ 订单 #{{orderId}} 已完成",
+  "orderPaid": "✅ 订单 #{{orderId}} 已付款",
+  "pickUpNumber": "🔔 请取餐：{{number}} 号"
+} }
+    },
+    detection: {
+      order: ['querystring', 'localStorage', 'navigator', 'htmlTag'],
+      caches: ['localStorage']
+    }
+  }, () => {
+    // 初始化完成后应用语言
+    applyLanguage();
+  });
+
+	function applyLanguage() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (key && i18n.exists(key)) {
+      el.textContent = i18n.t(key);
+    }
+  });
+  // 对于输入框的 placeholder，可以使用 data-i18n-placeholder
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (key && i18n.exists(key)) {
+      el.placeholder = i18n.t(key);
+    }
+  });
+  // 更新 toast 之类动态内容可根据需要调用
+}
+
+	function toggleLanguage() {
+  const currentLang = i18n.language;
+  const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
+  i18n.changeLanguage(newLang, () => {
+    applyLanguage();
+    // 如果当前有菜单渲染，重新渲染
+    renderAll();
+  });
+  // 更新按钮文字
+  document.getElementById('langToggle').textContent = newLang === 'zh-CN' ? '🌐 中' : '🌐 EN';
+}
+
+// 初始化同步按钮文字
+function updateLangToggleText() {
+  const btn = document.getElementById('langToggle');
+  if (btn) btn.textContent = i18n.language === 'zh-CN' ? '🌐 中' : '🌐 EN';
+}
+updateLangToggleText();
+	
 // ==================== SUPABASE & STRIPE CONFIG ====================
 const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
