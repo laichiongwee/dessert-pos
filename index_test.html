@@ -1955,6 +1955,7 @@ document.getElementById('reportModal').addEventListener('click', function(e){ if
         renderCategoryTabs();
         renderMenuGrid();
         renderOrderPanel();
+		applyLanguage(); 
     } else if (mode === 'fulfillment') {
         renderFulfillmentView();
         if (APP_STATE.adminUnlocked) {
