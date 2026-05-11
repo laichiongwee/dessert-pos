@@ -331,17 +331,17 @@
 </header>
 <!-- Admin bar 独立放置 -->
 <div class="admin-bar" id="adminBar" style="display:none;">
-    <span>🔓 管理模式</span>
+    <span data-i18n="adminModeLabel">🔓 管理模式</span>
     <input type="file" id="logoUpload" accept="image/*" style="display:none;" onchange="uploadLogo()">
-    <button class="btn btn-xs btn-outline" onclick="document.getElementById('logoUpload').click()">更换Logo</button>
-    <button class="btn btn-xs btn-outline" onclick="editStoreName()">改店名</button>
-    <button class="btn btn-xs btn-outline" onclick="openDiscountRulesModal()">🏷️ 优惠规则</button>
-    <button class="btn btn-xs btn-outline" onclick="openCategoryModal()">📂 管理分类</button>
-    <button class="btn btn-xs btn-outline" onclick="openMenuEditModal()">＋菜品</button>
-    <button class="btn btn-xs btn-outline" onclick="openMenuSheetModal()">📝 更新菜单</button>
-    <button class="btn btn-xs btn-danger" onclick="toggleAdminMode()">🔒 锁定编辑</button>
+    <button class="btn btn-xs btn-outline" data-i18n="changeLogo" onclick="document.getElementById('logoUpload').click()">更换Logo</button>
+    <button class="btn btn-xs btn-outline" data-i18n="editStoreName" onclick="editStoreName()">改店名</button>
+    <button class="btn btn-xs btn-outline" data-i18n="discountRules" onclick="openDiscountRulesModal()">🏷️ 优惠规则</button>
+    <button class="btn btn-xs btn-outline" data-i18n="manageCategory" onclick="openCategoryModal()">📂 管理分类</button>
+    <button class="btn btn-xs btn-outline" data-i18n="addMenuItem" onclick="openMenuEditModal()">＋菜品</button>
+    <button class="btn btn-xs btn-outline" data-i18n="updateMenu" onclick="openMenuSheetModal()">📝 更新菜单</button>
+    <button class="btn btn-xs btn-danger" data-i18n="lockEdit" onclick="toggleAdminMode()">🔒 锁定编辑</button>
 </div>
-<button class="btn btn-sm" onclick="toggleAdminMode()" id="unlockBtn" style="margin-bottom:8px;">🔓 解锁管理</button>
+<button class="btn btn-sm" onclick="toggleAdminMode()" id="unlockBtn" style="margin-bottom:8px;" data-i18n="unlockEdit">🔓 解锁管理</button>
 <div class="menu-grid" id="adminMenuGrid" style="display:none;"></div>
 <!-- CASHIER VIEW -->
 <div class="main-container active" id="cashierView">
@@ -352,16 +352,21 @@
         </div>
         <div class="order-panel" id="orderPanel">
             <h3>🧾 当前订单</h3>
-            <div class="order-items" id="orderItems"><div class="order-empty"><span class="icon">🛒</span>点击菜单添加商品</div></div>
-            <div class="member-section" id="memberSection">
-                <div class="member-search" style="position:relative;">
-                    <input type="tel" id="memberPhoneInput" placeholder="📞 会员手机号查找..." oninput="searchMemberSuggestions()" autocomplete="off">
-                    <div class="member-dropdown" id="memberDropdown"></div>
-                    <button class="btn btn-xs btn-outline" onclick="clearMember()">清除</button>
-                    <button class="btn btn-xs btn-primary" onclick="openAddMemberModal()">＋ 添加</button>
-                </div>
-                <div id="memberInfoDisplay" style="margin-top:6px;font-size:0.75rem;color:var(--text-light);"></div>
-            </div>
+            <div class="order-items" id="orderItems">
+    <div class="order-empty">
+        <span class="icon">🛒</span>
+        <span data-i18n="clickToAdd">点击菜单添加商品</span>
+    </div>
+</div>
+<div class="member-section" id="memberSection">
+    <div class="member-search" style="position:relative;">
+        <input type="tel" id="memberPhoneInput" data-i18n-placeholder="memberSearch" placeholder="📞 会员手机号查找..." oninput="searchMemberSuggestions()" autocomplete="off">
+        <div class="member-dropdown" id="memberDropdown"></div>
+        <button class="btn btn-xs btn-outline" onclick="clearMember()" data-i18n="clear">清除</button>
+        <button class="btn btn-xs btn-primary" onclick="openAddMemberModal()" data-i18n="addMember">＋ 添加</button>
+    </div>
+    <div id="memberInfoDisplay" style="margin-top:6px;font-size:0.75rem;color:var(--text-light);"></div>
+</div>
             <div class="order-summary">
                 <div style="display:flex;justify-content:space-between;"><span>小计</span><span id="subtotalDisplay">RM 0.00</span></div>
                 <div style="display:flex;justify-content:space-between;color:var(--green);" id="discountRow" hidden><span>会员折扣</span><span id="discountDisplay">-RM 0.00</span></div>
@@ -677,6 +682,15 @@ i18n
   "imgbbKey": "ImgBB API Key",
   "saveSettings": "💾 Save Settings",
   "loadDemo": "📦 Load Demo Data",
+		  "adminModeLabel": "🔓 Admin Mode",
+"changeLogo": "Change Logo",
+"editStoreName": "Edit Store Name",
+"discountRules": "🏷️ Discount Rules",
+"manageCategory": "📂 Manage Categories",
+"addMenuItem": "＋ Add Item",
+"updateMenu": "📝 Update Menu",
+"lockEdit": "🔒 Lock Edit",
+"unlockEdit": "🔓 Unlock Edit"，
 
   // 收银面板
   "currentOrder": "🧾 Current Order",
@@ -710,6 +724,10 @@ i18n
   "refNum": "Reference No.:",
   "onlinePlatform": "Platform:",
   "payNow": "✅ Confirm Payment",
+		  "clickToAdd": "Click menu to add item",
+"memberSearch": "📞 Search member phone...",
+"clear": "Clear",
+"addMember": "＋ Add"，
 
   // 折扣规则
   "discountRulesTitle": "🏷️ Discount Rules",
@@ -851,6 +869,15 @@ i18n
   "clearOrder": "🗑️ 清空",
   "addMember": "＋ 添加会员",
   "upgradePlan": "⭐ 升级套餐",
+		  "adminModeLabel": "🔓 管理模式",
+"changeLogo": "更换Logo",
+"editStoreName": "改店名",
+"discountRules": "🏷️ 优惠规则",
+"manageCategory": "📂 管理分类",
+"addMenuItem": "＋菜品",
+"updateMenu": "📝 更新菜单",
+"lockEdit": "🔒 锁定编辑",
+"unlockEdit": "🔓 解锁管理"，
 
   // 设置
   "settingsTitle": "⚙️ 系统设置",
@@ -866,6 +893,10 @@ i18n
   "memberDiscount": "会员折扣",
   "total": "总计",
   "clearOrderConfirm": "确定清空订单？",
+		  "clickToAdd": "点击菜单添加商品",
+"memberSearch": "📞 会员手机号查找...",
+"clear": "清除",
+"addMember": "＋ 添加"，
 
   // 会员
   "memberSearch": "📞 搜索会员手机号...",
