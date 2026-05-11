@@ -1984,9 +1984,11 @@ function updatePlanPrices() {
 
 function openPricingModal() {
     const currentPlan = APP_STATE.currentPlan || 'free';
-    document.getElementById('currentPlanLabel').textContent = 
-        currentPlan === 'free' ? '免费版' : (currentPlan === 'basic' ? 'Basic 标准版' : 'Pro 专业版');
-    
+    const label = document.getElementById('currentPlanLabel');
+    if (label) {
+        label.textContent = 
+            currentPlan === 'free' ? '免费版' : (currentPlan === 'basic' ? 'Basic 标准版' : 'Pro 专业版');
+    }
     const planCardsHTML = Object.keys(PLAN_DETAILS).map(planId => {
         const plan = PLAN_DETAILS[planId];
         const billing = document.querySelector('input[name="billingCycle"]:checked')?.value || 'monthly';
