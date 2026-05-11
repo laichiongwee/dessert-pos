@@ -1026,6 +1026,13 @@ function applyLanguage() {
             el.title = i18n.t(key);
         }
     });
+
+	setTimeout(() => {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (key && i18n.exists(key)) el.textContent = i18n.t(key);
+        });
+    }, 100);
 }
 
 	function autoAssignI18n() {
