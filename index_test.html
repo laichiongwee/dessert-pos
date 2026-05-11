@@ -820,6 +820,13 @@ i18n
   "featuresDataExport": "Data Export",
   "featuresCustomReceipt": "Custom Receipt Template",
 
+		  "basicPlanName": "Basic Standard",
+  "proPlanName": "Pro Professional",
+  "perMonth": "per month",
+  "perYear": "per year",
+  "currentPlanLabel": "Current Plan",
+  "choosePlanLabel": "Choose Plan",
+		  
   // 其他
   "orderLimitReached": "🚫 Free plan daily order limit reached. Please upgrade.",
   "imgCompressing": "Compressing image...",
@@ -927,6 +934,13 @@ i18n
   "onlinePlatform": "平台：",
   "payNow": "✅ 确认收款",
 
+		  "basicPlanName": "Basic 标准版",
+  "proPlanName": "Pro 专业版",
+  "perMonth": "每月",
+  "perYear": "每年",
+  "currentPlanLabel": "当前套餐",
+  "choosePlanLabel": "选择此套餐",
+	  
   // 折扣规则
   "discountRulesTitle": "🏷️ 优惠规则",
   "ruleType": "类型 (percentage/fixed)",
@@ -1016,6 +1030,8 @@ i18n
   "featuresDataExport": "数据导出 Excel/PDF",
   "featuresCustomReceipt": "自定义小票模板",
 
+	
+		  
   // 其他
   "orderLimitReached": "🚫 免费版每日订单已达上限，请升级套餐。",
   "imgCompressing": "图片压缩中...",
@@ -2000,22 +2016,22 @@ function openPricingModal() {
             : (planId === 'basic' ? 278.4 : 662.4);
         const isCurrent = currentPlan === planId;
         return `
-            <div style="border:2px solid ${plan.color};border-radius:var(--radius-sm);padding:16px;text-align:center;background:white;display:flex;flex-direction:column;justify-content:space-between;">
-                <div>
-                    <h4 style="color:${plan.color};margin-bottom:8px;">${plan.name}</h4>
-                    <div class="plan-price" data-plan="${planId}" data-currency="RM" style="font-size:1.8rem;font-weight:800;">RM ${price}</div>
-                    <div style="font-size:0.75rem;color:var(--text-lighter);">${billing === 'monthly' ? '每月' : '每年'}</div>
-                    <ul style="list-style:none;padding:0;margin:12px 0;text-align:left;font-size:0.8rem;">
-                        ${plan.features.map(f => `<li style="padding:4px 0;">✅ ${f}</li>`).join('')}
-                    </ul>
-                </div>
-                <button class="btn btn-primary btn-sm" 
-                    onclick="handlePlanSelection('${planId}')"
-                    ${isCurrent ? 'disabled' : ''}
-                    style="margin-top:8px;background:${plan.color};box-shadow:none;">
-                    ${isCurrent ? '当前套餐' : '选择此套餐'}
-                </button>
+            <div style="border:2px solid ${plan.color};...">
+            <div>
+                <h4 data-i18n="${planId}PlanName" style="color:${plan.color};...">${plan.name}</h4>
+                <div class="plan-price" ...>RM ${price}</div>
+                <div data-i18n="perMonth" style="...">${billing === 'monthly' ? '每月' : '每年'}</div>
+                <ul ...>
+                    ${plan.features.map(f => `<li data-i18n="feature_${planId}_${f}" ...>✅ ${f}</li>`).join('')}
+                </ul>
             </div>
+            <button class="btn btn-primary btn-sm" 
+                onclick="handlePlanSelection('${planId}')"
+                ${isCurrent ? 'disabled' : ''}
+                ...>
+                ${isCurrent ? i18n.t('currentPlanLabel') : i18n.t('choosePlanLabel')}
+            </button>
+        </div>
         `;
     }).join('');
     
