@@ -3224,7 +3224,7 @@ function renderAdminMenuGrid() {
     grid.innerHTML = APP_STATE.menu.map(item => {
         const availableText = item.available ? i18n.t('available') : i18n.t('soldOut');
         return `
-        <div class="menu-card admin-mode" style="position: relative;">
+        <div class="menu-card admin-mode" style="position: relative;" onclick="openMenuEditModal('${item.id}')">
             <span class="edit-icon" onclick="event.stopPropagation(); openMenuEditModal('${item.id}')">✏️</span>
             <span class="item-emoji">${item.emoji || ''}</span>
             <div class="item-name">${item.name}</div>
@@ -3238,7 +3238,6 @@ function renderAdminMenuGrid() {
             <div class="item-name" style="color:#e8784a">${i18n.t('addMenuItem')}</div>
         </div>`;
 
-    // 动态内容生成后需要应用一次翻译（针对 data-i18n 元素）
     applyLanguage();
 }
 
