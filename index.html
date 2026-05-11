@@ -495,8 +495,8 @@
         <div id="discountRulesList" style="max-height:200px;overflow-y:auto;margin-bottom:8px;"></div>
         <div class="discount-rule-row">
             <input type="text" id="newRuleType" placeholder="percentage/fixed" style="width:100px;">
-            <input type="number" id="newRuleValue" placeholder="值">
-            <input type="number" id="newRuleMinPoints" placeholder="最低积分">
+            <input type="number" id="newRuleValue" placeholder="value">
+            <input type="number" id="newRuleMinPoints" placeholder="min">
             <button class="btn btn-xs btn-primary" onclick="addDiscountRule()">＋</button>
         </div>
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeDiscountRulesModal()" data-i18n="close">关闭</button>
@@ -3391,6 +3391,7 @@ async function finalizeCustomerPayment() {
 function openMenuSheetModal() {
     document.getElementById('menuSheetModal').style.display = 'flex';
     renderMenuSheetTable();
+	applyLanguage(); 
 }
 
 function closeMenuSheetModal(event) {
@@ -3411,10 +3412,10 @@ function renderMenuSheetTable() {
         <td>${item.category}</td>
         <td>${item.emoji || ''}</td>
         <td>${item.image || ''}</td>
-        <td>${item.available ? '是' : '否'}</td>
+        <td>${item.available ? 'Y' : 'N'}</td>
         <td>
-          <button class="btn btn-xs btn-outline" onclick="openMenuEditModal('${item.id}')">编辑</button>
-          <button class="btn btn-xs btn-danger" style="margin-left:3px;" onclick="deleteMenuItemFromSheet('${item.id}')">删除</button>
+          <button class="btn btn-xs btn-outline" data-i18n="edit" onclick="openMenuEditModal('${item.id}')">编辑</button>
+          <button class="btn btn-xs btn-danger" style="margin-left:3px;" data-i18n="delete" onclick="deleteMenuItemFromSheet('${item.id}')">删除</button>
         </td>
       </tr>
     `).join('');
