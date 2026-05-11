@@ -238,31 +238,38 @@
 </head>
 <body>
 <!-- 登录界面 -->
-<div id="authContainer" style="max-width:400px;margin:60px auto;padding:20px;background:white;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);display:block;">
-  <h2 style="text-align:center;color:var(--persimmon);">🍅 柿柿润糖水</h2>
+<!-- 登录界面 -->
+<div id="authContainer" style="max-width:400px;margin:60px auto;padding:20px;background:white;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);display:block;position:relative;">
+  <!-- 语言切换按钮 -->
+  <button class="lang-switch" onclick="toggleLanguage()" id="langToggleLogin" 
+          style="position:absolute; top:10px; right:10px; background:#fff; border:1px solid #E8784A; color:#E8784A; padding:5px 12px; border-radius:15px; font-size:0.8rem; cursor:pointer; z-index:10;">
+    🌐 EN
+  </button>
+
+  <h2 style="text-align:center;color:var(--persimmon);">🍅 <span data-i18n="storeName">柿柿润糖水</span></h2>
   <div id="authForms">
     <form id="loginForm" onsubmit="handleLogin(event)" style="display:block;">
-      <input type="email" id="loginEmail" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
-      <input type="password" id="loginPassword" placeholder="密码" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
-      <button type="submit" class="btn btn-primary" style="width:100%;">🔐 登录</button>
+      <input type="email" id="loginEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="password" id="loginPassword" data-i18n-placeholder="passwordPlaceholder" placeholder="密码" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="login">🔐 登录</button>
       <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
-        <a href="#" onclick="showRegister()">注册新账号</a> |
-        <a href="#" onclick="showReset()">忘记密码？</a>
+        <a href="#" onclick="showRegister()" data-i18n="registerLink">注册新账号</a> |
+        <a href="#" onclick="showReset()" data-i18n="forgotPassword">忘记密码？</a>
       </p>
     </form>
     <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
-      <input type="email" id="registerEmail" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
-      <input type="password" id="registerPassword" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
-      <button type="submit" class="btn btn-primary" style="width:100%;">📝 注册</button>
+      <input type="email" id="registerEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="password" id="registerPassword" data-i18n-placeholder="passwordPlaceholderMin" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="register">📝 注册</button>
       <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
-        <a href="#" onclick="showLogin()">已有账号？登录</a>
+        <a href="#" onclick="showLogin()" data-i18n="alreadyHaveAccount">已有账号？登录</a>
       </p>
     </form>
     <form id="resetForm" onsubmit="handleResetPassword(event)" style="display:none;">
-      <input type="email" id="resetEmail" placeholder="注册邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
-      <button type="submit" class="btn btn-primary" style="width:100%;">📧 发送重置链接</button>
+      <input type="email" id="resetEmail" data-i18n-placeholder="registeredEmail" placeholder="注册邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="sendResetLink">📧 发送重置链接</button>
       <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
-        <a href="#" onclick="showLogin()">返回登录</a>
+        <a href="#" onclick="showLogin()" data-i18n="backToLogin">返回登录</a>
       </p>
     </form>
   </div>
@@ -275,7 +282,17 @@
         <div class="header-brand"><span>🍅</span><span data-i18n="storeName">柿柿润糖水</span></div>
         <div class="header-actions">
 			<button class="btn btn-xs btn-outline" onclick="toggleLanguage()" id="langToggle">🌐 EN</button>
-            <button class="btn btn-outline btn-sm" onclick="toggleCustomerCart()" data-i18n="viewCart">🛒 購物車 <span id="publicCartCount">0</span></button>
+            <button class="btn btn-outline btn-sm" onclick="toggleCustomerCart()" style="position:relative;" data-i18n="viewCart">
+    🛒 購物車
+    <span id="publicCartCount" style="
+        position:absolute; top:-6px; right:-8px;
+        background:var(--red); color:white;
+        font-size:0.7rem; font-weight:700;
+        min-width:18px; height:18px; line-height:18px;
+        border-radius:9px; text-align:center;
+        display:none;
+    ">0</span>
+</button>
         </div>
     </header>
     <div class="main-container active">
@@ -662,6 +679,19 @@ i18n
   "upload": "Upload",
   "preview": "Preview",
 
+		  "emailPlaceholder": "Email",
+"passwordPlaceholder": "Password",
+"passwordPlaceholderMin": "Password (at least 6 characters)",
+"login": "🔐 Login",
+"register": "📝 Register",
+"registerLink": "Register new account",
+"forgotPassword": "Forgot password?",
+"alreadyHaveAccount": "Already have an account? Login",
+"registeredEmail": "Registered Email",
+"sendResetLink": "📧 Send reset link",
+"backToLogin": "Back to login",
+
+	
   // 模式切换
   "cashierMode": "💰 Cashier",
   "customerMode": "📱 Customer",
@@ -875,6 +905,18 @@ i18n
   "upload": "上传",
   "preview": "预览",
 
+		  "emailPlaceholder": "电子邮箱",
+"passwordPlaceholder": "密码",
+"passwordPlaceholderMin": "密码（至少6位）",
+"login": "🔐 登录",
+"register": "📝 注册",
+"registerLink": "注册新账号",
+"forgotPassword": "忘记密码？",
+"alreadyHaveAccount": "已有账号？登录",
+"registeredEmail": "注册邮箱",
+"sendResetLink": "📧 发送重置链接",
+"backToLogin": "返回登录",
+		  
   // 模式切换
   "cashierMode": "💰 收银",
   "customerMode": "📱 顾客",
