@@ -595,13 +595,13 @@
             <!-- 动态生成 -->
         </div>
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-            <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
-                <input type="radio" name="billingCycle" value="monthly" checked onchange="updatePlanPrices()"> 月付
-            </label>
-            <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
-                <input type="radio" name="billingCycle" value="yearly" onchange="updatePlanPrices()"> 年付（8折）
-            </label>
-        </div>
+    <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
+        <input type="radio" name="billingCycle" value="monthly" checked onchange="updatePlanPrices()"> 月付
+    </label>
+    <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
+        <input type="radio" name="billingCycle" value="yearly" onchange="updatePlanPrices()"> 年付（8折）
+    </label>
+</div>
         <p style="font-size:0.7rem;color:var(--text-lighter);margin-top:8px;">所有价格均已包含 SST（6%）。若选择年付，您将一次性支付全年费用。</p>
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()">取消</button>
     </div>
@@ -1961,7 +1961,10 @@ const PLAN_DETAILS = {
 };
 
 function updatePlanPrices() {
-    const billing = document.querySelector('input[name="billingCycle"]:checked').value;
+	const billingInput = document.querySelector('input[name="billingCycle"]:checked');
+    if (!billingInput) return;
+    const billing = billingInput.value;
+   
     const monthlyBasic = 29;
     const yearlyBasic = 278.4;
     const monthlyPro = 69;
@@ -2030,7 +2033,12 @@ document.getElementById('pricingModal').addEventListener('click', function(e) {
 
 // 处理用户选择套餐，触发 Stripe Checkout
 function handlePlanSelection(planId) {
-    const billing = document.querySelector('input[name="billingCycle"]:checked').value;
+    const billingInput = document.querySelector('input[name="billingCycle"]:checked');
+    if (!billingInput) {
+        showToast('请选择月付或年付');
+        return;
+    }
+    const billing = billingInput.value;
     const priceId = getPriceId(planId, billing);
     if (!priceId) {
         showToast('支付配置错误，请联系管理员');
