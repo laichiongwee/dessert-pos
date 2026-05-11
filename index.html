@@ -2315,6 +2315,7 @@ async function checkUser() {
         await fetchPublicMenu();
         await loadPublicSettings();   // ← 加载设置，确保读取到 autoAddMember
         renderPublicMenu();
+		updatePublicCartCount(); 
     } else {
         // 🔐 默认显示登录界面
         document.getElementById('authContainer').style.display = 'block';
@@ -2570,7 +2571,7 @@ function adjustPublicCart(index, delta) {
         document.getElementById('publicCartModal').style.display = 'none';
     }
     renderPublicCart();
-    updatePublicCartCount();
+    updatePublicCartCount();   // 确保气泡更新
 }
 
 function closePublicCartModal(event) {
