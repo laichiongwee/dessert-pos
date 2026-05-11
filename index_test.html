@@ -1,8 +1,10 @@
-<html lang="zh-CN"><head>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🍅 柿柿润糖水 - POS System</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -235,12 +237,12 @@
 </head>
 <body>
 <!-- 登录界面 -->
-<div id="authContainer" style="max-width: 400px; margin: 60px auto; padding: 20px; background: white; border-radius: 16px; box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 24px; display: none;">
-  <h2 style="text-align:center;color:var(--persimmon);" data-i18n="customerTitle">🍅 柿柿润糖水</h2>
+<div id="authContainer" style="max-width:400px;margin:60px auto;padding:20px;background:white;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);display:block;">
+  <h2 style="text-align:center;color:var(--persimmon);">🍅 柿柿润糖水</h2>
   <div id="authForms">
     <form id="loginForm" onsubmit="handleLogin(event)" style="display:block;">
-      <input type="email" id="loginEmail" placeholder="电子邮箱" required="" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
-      <input type="password" id="loginPassword" placeholder="密码" required="" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="email" id="loginEmail" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="password" id="loginPassword" placeholder="密码" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
       <button type="submit" class="btn btn-primary" style="width:100%;">🔐 登录</button>
       <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
         <a href="#" onclick="showRegister()">注册新账号</a> |
@@ -248,15 +250,15 @@
       </p>
     </form>
     <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
-      <input type="email" id="registerEmail" placeholder="电子邮箱" required="" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
-      <input type="password" id="registerPassword" placeholder="密码（至少6位）" required="" minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="email" id="registerEmail" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="password" id="registerPassword" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
       <button type="submit" class="btn btn-primary" style="width:100%;">📝 注册</button>
       <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
         <a href="#" onclick="showLogin()">已有账号？登录</a>
       </p>
     </form>
     <form id="resetForm" onsubmit="handleResetPassword(event)" style="display:none;">
-      <input type="email" id="resetEmail" placeholder="注册邮箱" required="" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="email" id="resetEmail" placeholder="注册邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
       <button type="submit" class="btn btn-primary" style="width:100%;">📧 发送重置链接</button>
       <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
         <a href="#" onclick="showLogin()">返回登录</a>
@@ -271,8 +273,8 @@
     <header class="header">
         <div class="header-brand"><span>🍅</span><span data-i18n="storeName">柿柿润糖水</span></div>
         <div class="header-actions">
-			<button class="btn btn-xs btn-outline" onclick="toggleLanguage()" id="langToggle" data-i18n="langSwitch">🌐 中</button>
-            <button class="btn btn-outline btn-sm" onclick="toggleCustomerCart()">🛒 購物車 <span id="publicCartCount">0</span></button>
+			<button class="btn btn-xs btn-outline" onclick="toggleLanguage()" id="langToggle">🌐 EN</button>
+            <button class="btn btn-outline btn-sm" onclick="toggleCustomerCart()" data-i18n="viewCart">🛒 購物車 <span id="publicCartCount">0</span></button>
         </div>
     </header>
     <div class="main-container active">
@@ -282,23 +284,23 @@
     <!-- 購物車彈窗 -->
     <div id="publicCartModal" class="modal-overlay" style="display:none;" onclick="closePublicCartModal(event)">
         <div class="modal-sheet" onclick="event.stopPropagation()">
-            <h3>🛒 我的購物車</h3>
+            <h3 data-i18n="cartTitle">🛒 我的購物車</h3>
             <div id="publicCartItems"></div>
             <div style="border-top:2px solid #F0D8C8; padding-top:10px; margin-top:8px;">
                 <div style="display:flex; justify-content:space-between; font-weight:800;">
-                    <span>總計</span><span id="publicCartTotal">RM 0.00</span>
+                    <span data-i18n="total">總計</span><span id="publicCartTotal">RM 0.00</span>
                 </div>
-                <input type="text" id="publicCustomerName" placeholder="👤 姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:8px;">
-                <input type="tel" id="publicCustomerPhone" placeholder="📞 手機號碼（選填）" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:6px;">
-                <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="submitPublicOrder()">✅ 送出訂單</button>
-                <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closePublicCartModal()">繼續點餐</button>
+                <input type="text" id="publicCustomerName" data-i18n-placeholder="customerName" placeholder="👤 姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:8px;">
+                <input type="tel" id="publicCustomerPhone" data-i18n-placeholder="customerPhone" placeholder="📞 手機號碼（選填）" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:6px;">
+                <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="submitPublicOrder()" data-i18n="submitOrder">✅ 送出訂單</button>
+                <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closePublicCartModal()" data-i18n="continueOrdering">繼續點餐</button>
             </div>
         </div>
     </div>
 </div>
 	
 <!-- 主应用（默认隐藏） -->
-<div id="mainApp" style="display: block;">
+<div id="mainApp" style="display:none;">
 	
 <!-- HEADER -->
 <header class="header">
@@ -308,11 +310,21 @@
     <button data-mode="cashier" class="active" onclick="switchMode('cashier')" data-i18n="cashierMode">💰 收银</button>
     <button data-mode="fulfillment" onclick="switchMode('fulfillment')" data-i18n="fulfillmentMode">📦 出餐</button>
 </div>
-        <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()" style="position:relative;" data-i18n="unpaidOrders">💰 待收款</button>
-		<button class="btn btn-xs btn-outline" onclick="openPricingModal()" id="upgradeBtn" style="display: inline-block;" data-i18n="upgradePlan">⭐ 升级套餐</button>
-		<button class="btn btn-outline btn-sm" onclick="openQRModal()">🔗 QR</button>
+        <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()" style="position:relative;" data-i18n="unpaidOrders">
+    💰 待收款
+    <span id="unpaidBadge" style="
+        position:absolute; top:-6px; right:-8px;
+        background:var(--red); color:white;
+        font-size:0.7rem; font-weight:700;
+        min-width:18px; height:18px; line-height:18px;
+        border-radius:9px; text-align:center;
+        display:none;
+    ">0</span>
+</button>
+		<button class="btn btn-xs btn-outline" onclick="openPricingModal()" id="upgradeBtn" style="display:none;" data-i18n="upgradePlan">⭐ 升级套餐</button>
+		<button class="btn btn-outline btn-sm" onclick="openQRModal()" data-i18n="qrCode">🔗 QR</button>
         <button class="btn btn-ghost btn-sm" onclick="openReportModal()" data-i18n="report">📊 报表</button>
-        <button class="btn btn-ghost btn-sm" onclick="openSettings()">⚙️</button>
+        <button class="btn btn-ghost btn-sm" onclick="openSettings()" data-i18n="settings">⚙️</button>
 		<button class="btn btn-xs btn-outline" onclick="toggleLanguage()" id="langToggle" data-i18n="langSwitch">🌐 EN</button>
 		<button class="btn btn-xs btn-outline" onclick="logout()" data-i18n="logout">🚪 登出</button>
     </div>
@@ -335,178 +347,29 @@
 <div class="main-container active" id="cashierView">
     <div class="cashier-layout">
         <div class="menu-panel">
-            <div class="category-tabs" id="categoryTabs"><button class="cat-tab active" onclick="setCategory('全部')">全部</button><button class="cat-tab" onclick="setCategory('糖水')">糖水</button><button class="cat-tab" onclick="setCategory('麻薯')">麻薯</button><button class="cat-tab" onclick="setCategory('芋圆')">芋圆</button><button class="cat-tab" onclick="setCategory('冰品')">冰品</button><button class="cat-tab" onclick="setCategory('特色')">特色</button><button class="cat-tab" onclick="setCategory('零食')">零食</button><button class="cat-tab" onclick="setCategory('套餐')">套餐</button></div>
-            <div class="menu-grid" id="menuGrid">
-        <div class="menu-card" onclick="addToOrder('01')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🍅</span>
-            <div class="item-name" data-i18n="storeName">柿柿润糖水</div>
-            <div class="item-desc">招牌糖水 · 清甜滋润</div>
-            <div class="item-price">
-                RM 10.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('02')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🥛</span>
-            <div class="item-name">Milk Mochi</div>
-            <div class="item-desc">Milk, Mochi, Riceball</div>
-            <div class="item-price">
-                RM 7.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('03')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🥭</span>
-            <div class="item-name">Mango Mochi</div>
-            <div class="item-desc">Mango, Milk, Mochi, Riceball</div>
-            <div class="item-price">
-                RM 12.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('04')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🍠</span>
-            <div class="item-name">芋泥圆麻薯</div>
-            <div class="item-desc">Taro, Mochi, Taroball, Riceball</div>
-            <div class="item-price">
-                RM 13.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('05')">
-            
-            <img src="https://i.ibb.co/B232Jczf/Meet-fresh-Taro-Balls-Dessert-5.jpg" class="item-img" alt="芋圆大盒" loading="lazy" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <span class="item-emoji" style="font-size:2.5rem;display:none;">🟣</span>
-            <div class="item-name">芋圆大盒</div>
-            <div class="item-desc"></div>
-            <div class="item-price">
-                RM 10.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('06')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🍧</span>
-            <div class="item-name">Fruit Ice with Rice Ball</div>
-            <div class="item-desc">Watermelon, Mango, Peach, Longan, Jelly</div>
-            <div class="item-price">
-                RM 8.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('07')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🫘</span>
-            <div class="item-name">Taroball Original Addon Green Jelly</div>
-            <div class="item-desc">Taroball, RedBean, BlackJelly &amp; GreenJelly</div>
-            <div class="item-price">
-                RM 7.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('08')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">⚫</span>
-            <div class="item-name">Original Taroball</div>
-            <div class="item-desc">Taroball, BlackJelly &amp; RedBean</div>
-            <div class="item-price">
-                RM 6.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('09')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🍣</span>
-            <div class="item-name">No Rice Sushi 无米寿司</div>
-            <div class="item-desc">创新无米寿司</div>
-            <div class="item-price">
-                RM 12.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('10')">
-            <span class="badge-sale">优惠</span>
-            <img src="https://i.ibb.co/QZ1Tfxw/images.jpg" class="item-img" alt="红糖绿仙草" loading="lazy" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <span class="item-emoji" style="font-size:2.5rem;display:none;">🌿</span>
-            <div class="item-name">红糖绿仙草</div>
-            <div class="item-desc"></div>
-            <div class="item-price">
-                RM 6.00
-                <span class="original">RM 7.00</span>
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('11')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">💜</span>
-            <div class="item-name">芋泥娜娜</div>
-            <div class="item-desc">芋泥，麻薯，仙草</div>
-            <div class="item-price">
-                RM 8.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('12')">
-            <span class="badge-sale">优惠</span>
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🍓</span>
-            <div class="item-name">大粒又甜的草莓干</div>
-            <div class="item-desc">大粒草莓干 · 超甜</div>
-            <div class="item-price">
-                RM 18.00
-                <span class="original">RM 28.00</span>
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('13')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🎀</span>
-            <div class="item-name">Set A</div>
-            <div class="item-desc">超值套餐A</div>
-            <div class="item-price">
-                RM 30.00
-                
-            </div>
-        </div>
-        <div class="menu-card" onclick="addToOrder('14')">
-            
-            
-            <span class="item-emoji" style="font-size:2.5rem;display:block;">🎁</span>
-            <div class="item-name">Set B</div>
-            <div class="item-desc">豪华套餐B</div>
-            <div class="item-price">
-                RM 55.00
-                
-            </div>
-        </div></div>
+            <div class="category-tabs" id="categoryTabs"></div>
+            <div class="menu-grid" id="menuGrid"></div>
         </div>
         <div class="order-panel" id="orderPanel">
             <h3 data-i18n="currentOrder">🧾 当前订单</h3>
-            <div class="order-items" id="orderItems"><div class="order-empty"><span class="icon">🛒</span><span data-i18n="clickToAdd">点击菜单添加商品</span></div></div>
+            <div class="order-items" id="orderItems">
+    <div class="order-empty">
+        <span class="icon">🛒</span>
+        <span data-i18n="clickToAdd">点击菜单添加商品</span>
+    </div>
+</div>
 <div class="member-section" id="memberSection">
     <div class="member-search" style="position:relative;">
-        <input type="tel" id="memberPhoneInput" data-i18n-placeholder="memberSearch" placeholder="📞 搜索会员手机号..." oninput="searchMemberSuggestions()" autocomplete="off">
+        <input type="tel" id="memberPhoneInput" data-i18n-placeholder="memberSearch" placeholder="📞 会员手机号查找..." oninput="searchMemberSuggestions()" autocomplete="off">
         <div class="member-dropdown" id="memberDropdown"></div>
         <button class="btn btn-xs btn-outline" onclick="clearMember()" data-i18n="clear">清除</button>
         <button class="btn btn-xs btn-primary" onclick="openAddMemberModal()" data-i18n="addMember">＋ 添加</button>
     </div>
-    <div id="memberInfoDisplay" style="margin-top:6px;font-size:0.75rem;color:var(--text-light);"><span style="color:#C0A0A0;" data-i18n="noMember">未关联会员</span></div>
+    <div id="memberInfoDisplay" style="margin-top:6px;font-size:0.75rem;color:var(--text-light);"></div>
 </div>
             <div class="order-summary">
                 <div style="display:flex;justify-content:space-between;"><span data-i18n="subtotal">小计</span><span id="subtotalDisplay">RM 0.00</span></div>
-                <div style="display:flex;justify-content:space-between;color:var(--green);" id="discountRow" hidden=""><span data-i18n="memberDiscount">会员折扣</span><span id="discountDisplay">-RM 0.00</span></div>
+                <div style="display:flex;justify-content:space-between;color:var(--green);" id="discountRow" hidden><span data-i18n="memberDiscount">会员折扣</span><span id="discountDisplay">-RM 0.00</span></div>
                 <div class="total-row"><span data-i18n="total">总计</span><span id="totalDisplay">RM 0.00</span></div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
@@ -538,20 +401,20 @@
 <!-- QR Modal -->
 <div class="modal-overlay" id="qrModal" style="display:none;" onclick="closeQRModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
-        <h3>📱 顾客扫码点餐</h3><div id="qrcode" title="https://laichiongwee.github.io/dessert-pos/?mode=customer"><canvas width="180" height="180" style="display: none;"></canvas><img src="data:image/png;base64,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" style="display: block;"></div><p class="qr-url" id="qrUrlDisplay">https://laichiongwee.github.io/dessert-pos/?mode=customer</p>
+        <h3>📱 顾客扫码点餐</h3><div id="qrcode"></div><p class="qr-url" id="qrUrlDisplay"></p>
     </div>
 </div>
 
 <!-- Customer Cart Modal -->
 <div class="modal-overlay" id="customerCartModal" style="display:none;" onclick="closeCustomerCartModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
-        <h3 data-i18n="cartTitle">🛒 我的购物车</h3><div id="customerCartItems"></div>
+        <h3>🛒 我的购物车</h3><div id="customerCartItems"></div>
         <div style="border-top:2px solid #F0D8C8;padding-top:10px;margin-top:8px;">
-            <div style="display:flex;justify-content:space-between;font-weight:800;"><span data-i18n="total">总计</span><span id="customerCartTotal">RM 0.00</span></div>
+            <div style="display:flex;justify-content:space-between;font-weight:800;"><span>总计</span><span id="customerCartTotal">RM 0.00</span></div>
             <input type="text" id="customerNameInput" placeholder="👤 您的姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:8px;font-family:inherit;">
             <input type="tel" id="customerPhoneInput" placeholder="📞 手机号" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:6px;font-family:inherit;">
-            <button class="btn btn-primary" style="width:100%;margin-top:10px;justify-content:center;" onclick="submitCustomerOrder()" data-i18n="submitOrder">✅ 提交订单</button>
-            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeCustomerCartModal()" data-i18n="continueOrdering">继续点餐</button>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;justify-content:center;" onclick="submitCustomerOrder()">✅ 提交订单</button>
+            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeCustomerCartModal()">继续点餐</button>
         </div>
     </div>
 </div>
@@ -562,13 +425,13 @@
         <div class="modal-handle"></div>
         <h3 data-i18n="settingsTitle">⚙️ 系统设置</h3>
         <label style="font-size:0.75rem;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-    <input type="checkbox" id="autoAddMemberToggle" checked="">
+    <input type="checkbox" id="autoAddMemberToggle" checked>
     顾客下单自动添加会员
 </label>
         <label style="font-size:0.75rem;" data-i18n="dataSyncUrl">数据同步 URL (GET)</label>
         <input type="url" id="gasUrlInput" placeholder="Apps Script URL for data" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
         
-        <label style="font-size:0.75rem;">图片上传 URL (POST) - 可留空</label>
+        <label style="font-size:0.75rem;" data-i18n="imageUploadUrl">图片上传 URL (POST) - 可留空</label>
         <input type="url" id="postUrlInput" placeholder="Apps Script POST URL (optional)" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
         
         <label style="font-size:0.75rem;" data-i18n="imgbbKey">ImgBB API 密钥</label>
@@ -583,9 +446,9 @@
 <div class="modal-overlay" id="addMemberModal" style="display:none;" onclick="closeAddMemberModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
         <h3 data-i18n="addMemberTitle">🧑‍🤝‍🧑 添加会员</h3>
-        <input type="text" id="newMemberName" placeholder="姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:8px;font-family:inherit;">
-        <input type="tel" id="newMemberPhone" placeholder="手机号" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:12px;font-family:inherit;">
-        <button class="btn btn-primary" style="width:100%;" onclick="submitNewMember()">💾 保存</button>
+        <input type="text" id="newMemberName" data-i18n-placeholder="memberName" placeholder="姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:8px;font-family:inherit;">
+        <input type="tel" id="newMemberPhone" data-i18n-placeholder="memberPhone" placeholder="手机号" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:12px;font-family:inherit;">
+        <button class="btn btn-primary" style="width:100%;" onclick="submitNewMember()" data-i18n="save">💾 保存</button>
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeAddMemberModal()" data-i18n="cancel">取消</button>
     </div>
 </div>
@@ -593,7 +456,7 @@
 <!-- NEW: Payment Modal -->
 <div class="modal-overlay" id="paymentModal" style="display:none;" onclick="closePaymentModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
-        <h3 data-i18n="checkout">💳 结算</h3>
+        <h3 data-i18n="paymentTitle">💳 结算</h3>
         <div id="paymentMethodSelector" style="margin-bottom:12px;">
             <label style="font-weight:700;" data-i18n="paymentMethod">支付方式：</label>
             <select id="paymentMethodSelect" onchange="showPaymentDetails()" style="width:100%;padding:10px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;">
@@ -617,7 +480,7 @@
         <!-- Online details -->
         <div id="onlineDetails" style="display:none;">
             <div class="payment-detail-row"><label data-i18n="onlinePlatform">平台：</label><select id="onlineType"><option>Touch 'n Go</option><option>GrabPay</option><option>Boost</option><option>支付宝</option><option>微信支付</option><option>其他</option></select></div>
-            <div class="payment-detail-row"><label>交易参考号：</label><input type="text" id="onlineRefNum" placeholder="输入参考号"></div>
+            <div class="payment-detail-row"><label data-i18n="refNum">交易参考号：</label><input type="text" id="onlineRefNum" placeholder="输入参考号"></div>
         </div>
         <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="finalizePayment()" data-i18n="payNow">✅ 确认收款</button>
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closePaymentModal()" data-i18n="cancel">取消</button>
@@ -627,7 +490,7 @@
 <!-- NEW: Discount Rules Modal -->
 <div class="modal-overlay" id="discountRulesModal" style="display:none;" onclick="closeDiscountRulesModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
-        <h3>🏷️ 优惠规则管理</h3>
+        <h3 data-i18n="discountRulesTitle">🏷️ 优惠规则管理</h3>
         <div id="discountRulesList" style="max-height:200px;overflow-y:auto;margin-bottom:8px;"></div>
         <div class="discount-rule-row">
             <input type="text" id="newRuleType" placeholder="percentage/fixed" style="width:100px;">
@@ -672,9 +535,9 @@
     <button class="btn btn-xs btn-outline" onclick="uploadMenuImage()" type="button" data-i18n="upload">上传</button>
 </div>
 <img id="menuImagePreview" style="max-width:100px;margin-top:4px;display:none;">
-    <div class="payment-detail-row"><label data-i18n="available">在售</label><input type="checkbox" id="editItemAvailable" style="width:auto;"></div>
+    <div class="payment-detail-row"><label data-i18n="itemAvailable">在售</label><input type="checkbox" id="editItemAvailable" style="width:auto;"></div>
     <div style="display:flex;gap:8px;margin-top:12px;">
-      <button class="btn btn-primary btn-sm" onclick="saveMenuItem()" style="flex:1;">💾 保存</button>
+      <button class="btn btn-primary btn-sm" onclick="saveMenuItem()" style="flex:1;" data-i18n="saveItem">💾 保存</button>
       <button class="btn btn-outline btn-sm" onclick="closeMenuEditModal()" style="flex:1;" data-i18n="cancel">取消</button>
     </div>
   </div>
@@ -687,8 +550,8 @@
     <h3 data-i18n="categoryTitle">🏷️ 管理分类</h3>
     <ul id="categoryListUl" style="max-height:200px;overflow-y:auto;margin-bottom:8px;"></ul>
     <div style="display:flex;gap:6px;">
-      <input id="newCategoryName" placeholder="新分类名" style="flex:1;padding:8px;border-radius:16px;border:1.5px solid var(--border);">
-      <button class="btn btn-xs btn-primary" onclick="addNewCategory()" data-i18n="addMember">＋ 添加</button>
+      <input id="newCategoryName" data-i18n-placeholder="newCategory" placeholder="新分类名" style="flex:1;padding:8px;border-radius:16px;border:1.5px solid var(--border);">
+      <button class="btn btn-xs btn-primary" onclick="addNewCategory()" data-i18n="addCategory">＋ 添加</button>
     </div>
     <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;" onclick="closeCategoryModal()" data-i18n="close">关闭</button>
   </div>
@@ -697,7 +560,7 @@
 <div class="modal-overlay" id="unpaidOrdersModal" style="display:none;" onclick="closeUnpaidOrdersModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-handle"></div>
-        <h3>💰 待付款订单</h3>
+        <h3 data-i18n="unpaidOrders">💰 待付款订单</h3>
         <div id="unpaidOrdersList" style="max-height:60vh;overflow-y:auto;"></div>
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;" onclick="closeUnpaidOrdersModal()" data-i18n="close">关闭</button>
     </div>
@@ -706,17 +569,17 @@
 <div class="modal-overlay" id="menuSheetModal" style="display:none;" onclick="closeMenuSheetModal(event)">
   <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:700px;">
     <div class="modal-handle"></div>
-    <h3 style="margin-bottom:12px;">📝 菜单管理</h3>
+    <h3 style="margin-bottom:12px;" data-i18n="updateMenu">📝 菜单管理</h3>
     <div style="overflow-x:auto">
       <table id="menuSheetTable" class="daily-report-table">
         <thead>
           <tr>
-            <th>#</th><th data-i18n="itemName">名称</th><th data-i18n="itemDesc">描述</th><th>售价</th><th data-i18n="itemOriginalPrice">原价</th><th data-i18n="itemCategory">分类</th><th data-i18n="itemEmoji">Emoji</th><th>图片</th><th data-i18n="available">在售</th><th>操作</th>
+            <th>#</th><th data-i18n="itemName">名称</th><th data-i18n="itemDesc">描述</th><th data-i18n="itemPrice">售价</th><th data-i18n="itemOriginalPrice">原价</th><th data-i18n="itemCategory">分类</th><th>Emoji</th><th data-i18n="itemImageUrl">图片</th><th data-i18n="itemAvailable">在售</th><th data-i18n="edit">操作</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
-      <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openMenuEditModal()">＋ 添加新菜品</button>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openMenuEditModal()" data-i18n="addMenuItem">＋ 添加新菜品</button>
     </div>
     <button class="btn btn-outline btn-sm" style="width:100%;margin-top:10px;" onclick="closeMenuSheetModal()" data-i18n="close">关闭</button>
   </div>
@@ -726,17 +589,21 @@
 <div class="modal-overlay" id="pricingModal" style="display:none;" onclick="closePricingModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:600px;">
         <div class="modal-handle"></div>
-        <h3 style="text-align:center;margin-bottom:16px;" data-i18n="upgradePlan">⭐ 升级套餐</h3>
-        <p style="text-align:center;font-size:0.85rem;color:var(--text-light);margin-bottom:16px;" data-i18n="currentPlan">当前套餐：</p>
+        <h3 style="text-align:center;margin-bottom:16px;">⭐ 升级套餐</h3>
+        <p style="text-align:center;font-size:0.85rem;color:var(--text-light);margin-bottom:16px;">当前套餐：<strong id="currentPlanLabel">免费版</strong></p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="planCards">
             <!-- 动态生成 -->
         </div>
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-            <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;" data-i18n="monthly">月付</label>
-            <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;" data-i18n="yearly">年付（8折）</label>
+            <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
+                <input type="radio" name="billingCycle" value="monthly" checked onchange="updatePlanPrices()"> 月付
+            </label>
+            <label style="font-size:0.8rem;display:flex;align-items:center;gap:4px;">
+                <input type="radio" name="billingCycle" value="yearly" onchange="updatePlanPrices()"> 年付（8折）
+            </label>
         </div>
         <p style="font-size:0.7rem;color:var(--text-lighter);margin-top:8px;">所有价格均已包含 SST（6%）。若选择年付，您将一次性支付全年费用。</p>
-        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()" data-i18n="cancel">取消</button>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()">取消</button>
     </div>
 </div>
 	<!-- 收据模态框 -->
@@ -755,7 +622,7 @@
             请前往柜台付款
         </p>
         <a id="publicTrackLink" href="#" target="_blank" style="display:inline-block;margin-top:12px;color:var(--persimmon);font-weight:600;">查看订单状态 →</a>
-        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:16px;" onclick="closePublicOrderSuccessModal()" data-i18n="close">关闭</button>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:16px;" onclick="closePublicOrderSuccessModal()">关闭</button>
     </div>
 </div>
 	
@@ -1172,6 +1039,9 @@ i18n
   });
 
 function applyLanguage() {
+    // Update html lang attribute
+    document.documentElement.lang = i18n.language;
+
     // 处理带有 data-i18n 的元素（直接设置 textContent）
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
@@ -1196,8 +1066,10 @@ function applyLanguage() {
         }
     });
 
-    // 特殊处理：如果元素内部包含文本节点和图标（如 🛒 + 文字），强制替换整个文本
-    // 可以通过选择器匹配已知的元素，但这不够通用，我们可以依靠上面的 data-i18n 方案。
+    // Update all lang toggle buttons (there may be two: one in mainApp, one in publicCustomerView)
+    document.querySelectorAll('#langToggle').forEach(btn => {
+        btn.textContent = i18n.language === 'zh-CN' ? '🌐 EN' : '🌐 中';
+    });
 }
 
 	function autoAssignI18n() {
@@ -1255,8 +1127,7 @@ function toggleLanguage() {
     });
 }
 document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('langToggle');
-    if (btn) btn.textContent = i18n.language === 'zh-CN' ? '🌐 中' : '🌐 EN';
+    applyLanguage();
 });
 	
 	
@@ -3631,7 +3502,6 @@ function closePublicOrderSuccessModal() {
 }
 	
     </script>
-	</div><iframe name="__privateStripeController5161" frameborder="0" allowtransparency="true" scrolling="no" role="presentation" allow="payment *" src="https://js.stripe.com/v3/controller-with-preconnect-d6f301f5db2ee5e4f4e49fadaa5fa80c.html#__shared_params__[version]=v3&amp;__shared_params__[light_experiment_assignments]=%7B%22token%22%3A%22356de6d6-ecd2-4507-a6ac-aff787223654%22%2C%22assignments%22%3A%7B%22link_ewcs_prewarm_experiment_v2%22%3A%22control%22%7D%7D&amp;apiKey=pk_test_51TVNNWGaRTxvbl03MtFuj3oMYc8mfFD8rOs6el6tVc2ppw9RMG3HXik9gOgIzaquz3mqWUM3bEKJ6PjAu7JI8Tyx00XZKfqIe4&amp;stripeJsId=356de6d6-ecd2-4507-a6ac-aff787223654&amp;stripeObjId=sobj-1c33dc6f-1791-460a-9ac8-db9f1b8fafa5&amp;firstStripeInstanceCreatedLatency=68&amp;controllerCount=1&amp;isCheckout=false&amp;stripeJsLoadTime=1778485658415&amp;manualBrowserDeprecationRollout=false&amp;mids[guid]=NA&amp;mids[muid]=b35d7b1a-045f-4895-84e2-74b3bad96c3b70a0aa&amp;mids[sid]=442de1f1-bbab-4710-a192-b6ab8e85abf9e0f402&amp;referrer=https%3A%2F%2Flaichiongwee.github.io%2Fdessert-pos%2F%3F&amp;controllerId=__privateStripeController5161" aria-hidden="true" tabindex="-1" style="border-width: medium !important; border-style: none !important; border-color: currentcolor !important; border-image: initial !important; margin: 0px !important; padding: 0px !important; width: 1px !important; min-width: 100% !important; overflow: hidden !important; display: block !important; visibility: hidden !important; position: fixed !important; height: 1px !important; pointer-events: none !important; user-select: none !important;"></iframe> <!-- 闭合 #mainApp -->
-
-
-<iframe name="__privateStripeMetricsController5160" frameborder="0" allowtransparency="true" scrolling="no" role="presentation" allow="payment *" src="https://js.stripe.com/v3/m-outer-3437aaddcdf6922d623e172c2d6f9278.html#url=https%3A%2F%2Flaichiongwee.github.io%2Fdessert-pos%2F%3F&amp;title=%F0%9F%8D%85%20%E6%9F%BF%E6%9F%BF%E6%B6%A6%E7%B3%96%E6%B0%B4%20-%20POS%20System&amp;referrer=https%3A%2F%2Flaichiongwee.github.io%2Fdessert-pos%2F&amp;muid=b35d7b1a-045f-4895-84e2-74b3bad96c3b70a0aa&amp;sid=442de1f1-bbab-4710-a192-b6ab8e85abf9e0f402&amp;version=6&amp;preview=false&amp;__shared_params__[version]=v3" aria-hidden="true" tabindex="-1" style="border-width: medium !important; border-style: none !important; border-color: currentcolor !important; border-image: initial !important; margin: 0px !important; padding: 0px !important; width: 1px !important; min-width: 100% !important; overflow: hidden !important; display: block !important; visibility: hidden !important; position: fixed !important; height: 1px !important; pointer-events: none !important; user-select: none !important;"></iframe></body></html>
+	</div> <!-- 闭合 #mainApp -->
+</body>
+</html>
