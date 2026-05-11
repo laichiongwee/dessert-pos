@@ -2504,6 +2504,7 @@ function renderPublicMenu() {
             <div class="item-price">RM ${Number(item.price).toFixed(2)}</div>
         </div>`;
     }).join('');
+	updatePublicCartCount();
 }
 
 function setPublicCategory(cat) {
