@@ -1608,48 +1608,38 @@ function getPriceId(plan, billing) {
     document.getElementById('settingsModal').style.display = 'flex';
 }
 
-function saveSettings() {
+async function saveSettings() {   // 注意这里要改为 async
     APP_STATE.gasUrl = document.getElementById('gasUrlInput').value.trim();
     APP_STATE.postUrl = document.getElementById('postUrlInput').value.trim();
     APP_STATE.imgbbKey = document.getElementById('imgbbKeyInput').value.trim();
     localStorage.setItem('gasUrl', APP_STATE.gasUrl);
     localStorage.setItem('postUrl', APP_STATE.postUrl);
     localStorage.setItem('imgbbKey', APP_STATE.imgbbKey);
-	// ✅ 保存自动添加会员设置
+
+    // 保存自动添加会员设置
     const autoAdd = document.getElementById('autoAddMemberToggle').checked;
     APP_STATE.settings.autoAddMember = autoAdd;
-    // 同步到 Supabase
+
+    // 一次性同步所有设置到 Supabase
     if (typeof supabaseClient !== 'undefined') {
-        supabaseClient.from('settings').upsert(
+        const settingsToUpsert = [
             { key: 'autoAddMember', value: autoAdd ? 'true' : 'false' },
-            { onConflict: 'key' }
-        ).then(({ error }) => {
-            if (error) console.error('Settings sync failed:', error);
-        });
+            { key: 'imgbbKey', value: APP_STATE.imgbbKey }
+        ];
+        await supabaseClient.from('settings').upsert(settingsToUpsert, { onConflict: 'key' });
     }
-	
+
     document.getElementById('settingsModal').style.display = 'none';
-    
-    // 同步到 Supabase
-    if (typeof supabase !== 'undefined') {
-        supabaseClient.from('settings').upsert(
-            { key: 'imgbbKey', value: APP_STATE.imgbbKey },
-            { onConflict: 'key' }
-        ).then(({ error }) => {
-            if (error) console.error('Settings sync failed:', error);
-        });
-    }
-    
     showToast('✅ 设置已保存');
-    
-    // 重新加载数据
-    if (APP_STATE.supabaseReady) {
-        fetchAllData().then(() => showToast('✅ 数据已从 Supabase 加载'));
-    } else {
-        loadDemoData();
-        renderAll();
-        showToast('✅ 已切换到本地演示模式');
-    }
+
+    // 因为本地状态已经更新，不需要重新加载数据
+    // 如果希望从数据库重新获取（非必须），可以保留以下代码，但要确保数据库写入完成
+    // if (APP_STATE.supabaseReady) {
+    //     await fetchAllData();
+    // } else {
+    //     loadDemoData();
+    //     renderAll();
+    // }
 }
         function closeSettingsModal(event) {
             if (event && event.target !== document.getElementById('settingsModal')) return;
