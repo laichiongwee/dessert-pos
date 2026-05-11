@@ -1106,36 +1106,30 @@ function toggleLanguage() {
     const currentLang = i18n.language;
     const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
     i18n.changeLanguage(newLang, () => {
-        applyLanguage();
-        // 更新切换按钮自身文字
-        const btn = document.getElementById('langToggle');
-        if (btn) {
-            btn.textContent = newLang === 'zh-CN' ? '🌐 中' : '🌐 EN';
-        }
-        // 可选：根据当前页面模式刷新动态内容
+        // 1. 重新渲染动态内容（如果是收银模式）
         if (APP_STATE.mode === 'cashier') {
-            renderOrderPanel();
+            renderOrderPanel();          // 内部已包含 data-i18n 属性
         } else if (APP_STATE.mode === 'fulfillment') {
             renderFulfillmentView();
         } else if (APP_STATE.mode === 'customer') {
             renderPublicMenu();
         }
+
+        // 2. 然后统一应用翻译
+        applyLanguage();
+
+        // 3. 更新切换按钮自身文字
+        const btn = document.getElementById('langToggle');
+        if (btn) {
+            btn.textContent = newLang === 'zh-CN' ? '🌐 中' : '🌐 EN';
+        }
     });
 }
-
-	document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('langToggle');
     if (btn) btn.textContent = i18n.language === 'zh-CN' ? '🌐 中' : '🌐 EN';
 });
 	
-// 初始化同步按钮文字
-function updateLangToggleText() {
-  const langBtn = document.getElementById('langToggle');
-if (langBtn) {
-    langBtn.textContent = i18n.language === 'zh-CN' ? '🌐 中' : '🌐 EN';
-}
-}
-updateLangToggleText();
 	
 // ==================== SUPABASE & STRIPE CONFIG ====================
 const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
@@ -1390,7 +1384,7 @@ function renderCustomerMenuGrid() {
 function renderOrderPanel() {
     const container = document.getElementById('orderItems');
     if (APP_STATE.cashierOrder.length === 0) {
-        container.innerHTML = '<div class="order-empty"><span class="icon">🛒</span>点击菜单添加商品</div>';
+        container.innerHTML = `<div class="order-empty"><span class="icon">🛒</span><span data-i18n="clickToAdd">点击菜单添加商品</span></div>`;
     } else {
         container.innerHTML = APP_STATE.cashierOrder.map((entry, idx) => `
         <div class="order-item-row">
