@@ -612,7 +612,7 @@
         <h3 style="text-align:center;margin-bottom:16px;" data-i18n="pricingTitle">⭐ 升级套餐</h3>
         <p style="text-align:center;font-size:0.85rem;color:var(--text-light);margin-bottom:16px;">
             <span data-i18n="currentPlanLabel">当前套餐：</span>
-            <strong id="currentPlanLabel" data-i18n="freePlan">免费版</strong>
+            <strong id="currentPlanLabel"></strong>
         </p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="planCards">
             <!-- 动态生成 -->
@@ -1221,7 +1221,8 @@ function toggleLanguage() {
     const currentLang = i18n.language;
     const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
     i18n.changeLanguage(newLang, () => {
-		const receiptModal = document.getElementById('receiptModal');
+        // 如果收据模态框打开，用新语言重新渲染
+        const receiptModal = document.getElementById('receiptModal');
         if (receiptModal && receiptModal.style.display === 'flex') {
             const lastOrderId = APP_STATE.orders.length > 0 ? APP_STATE.orders[0].id : null;
             if (lastOrderId) {
@@ -1229,7 +1230,8 @@ function toggleLanguage() {
                 if (order) showOrderReceipt(order);
             }
         }
-        // 重新渲染动态内容
+
+        // 根据当前模式刷新动态内容
         if (APP_STATE.mode === 'cashier') {
             renderOrderPanel();
         } else if (APP_STATE.mode === 'fulfillment') {
@@ -1237,14 +1239,18 @@ function toggleLanguage() {
         } else if (APP_STATE.mode === 'customer') {
             renderPublicMenu();
         }
-        // 最后应用翻译（按钮文本会被自动更新）
+
+        // 如果定价模态框打开，用新语言重新渲染
+        if (document.getElementById('pricingModal').style.display === 'flex') {
+            openPricingModal();
+        }
+
+        // 最后应用所有 data-i18n 翻译
         applyLanguage();
     });
-	if (document.getElementById('pricingModal').style.display === 'flex') {
-    openPricingModal();
 }
-}
-	
+
+// 初始化时应用语言
 document.addEventListener('DOMContentLoaded', () => {
     applyLanguage();
 });
