@@ -157,14 +157,21 @@ function startVibration(totalDuration = 8000) {
         const items = Array.isArray(order.items) ? order.items : [];
         let itemsHTML = items.map(i => `<li><span>${i.name} x${i.qty}</span><span>RM ${(i.price * i.qty).toFixed(2)}</span></li>`).join('');
 
-        document.getElementById('orderInfo').innerHTML = `
-            <p><strong>订单号：</strong>${order.id}</p>
-            <p><span class="status-badge ${status}">${statusLabels[status]}</span></p>
-            ${order.callNumber ? `<p class="call-number">🔔 ${order.callNumber}</p>` : ''}
-            <p class="message">${messages[status]}</p>
-            <ul class="order-items">${itemsHTML}</ul>
-            <p style="font-weight: bold;">总计：RM ${Number(order.total).toFixed(2)}</p>
-        `;
+        // 原有代码中，在订单号 <p> 之后、状态之前，插入以下 HTML
+document.getElementById('orderInfo').innerHTML = `
+    <p><strong>订单号：</strong>${order.id}</p>
+    ${order.memberName ? `
+    <div style="background:#FDE8DF; border-radius:16px; padding:12px 16px; margin:12px 0; text-align:center;">
+        <div style="font-size:0.85rem; color:#6B4E4E; margin-bottom:4px;">👤 顾客</div>
+        <div style="font-size:1.4rem; font-weight:800; color:#3D2020;">${order.memberName}</div>
+        ${order.memberPhone ? `<div style="font-size:1.1rem; font-weight:700; color:#E8784A; margin-top:4px;">📞 ${order.memberPhone}</div>` : ''}
+    </div>` : ''}
+    <p><span class="status-badge ${status}">${statusLabels[status]}</span></p>
+    ${order.callNumber ? `<p class="call-number">🔔 ${order.callNumber}</p>` : ''}
+    <p class="message">${messages[status]}</p>
+    <ul class="order-items">${itemsHTML}</ul>
+    <p style="font-weight: bold;">总计：RM ${Number(order.total).toFixed(2)}</p>
+`;
         // 检查状态是否变为 ready 且之前不是 ready，且尚未触发过
     if (status === 'ready' && lastStatus !== 'ready' && !alertTriggered) {
         alertTriggered = true;   // 避免每秒重复触发
