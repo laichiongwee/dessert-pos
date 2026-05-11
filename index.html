@@ -678,6 +678,7 @@ i18n
   "soldOut": "Sold Out",
   "upload": "Upload",
   "preview": "Preview",
+		  "allCategories": "All",
 
 		  "emailPlaceholder": "Email",
 "passwordPlaceholder": "Password",
@@ -904,6 +905,7 @@ i18n
   "soldOut": "售罄",
   "upload": "上传",
   "preview": "预览",
+		  "allCategories": "全部",
 
 		  "emailPlaceholder": "电子邮箱",
 "passwordPlaceholder": "密码",
@@ -1396,7 +1398,12 @@ function renderAll() {
         updateCartBadge();
     }
 }
-function renderCategoryTabs() { document.getElementById('categoryTabs').innerHTML = APP_STATE.categories.map(cat=>`<button class="cat-tab${cat===APP_STATE.activeCategory?' active':''}" onclick="setCategory('${cat}')">${cat}</button>`).join(''); }
+function renderCategoryTabs() {
+    document.getElementById('categoryTabs').innerHTML = APP_STATE.categories.map(cat => {
+        const displayText = cat === '全部' ? i18n.t('allCategories') : cat;
+        return `<button class="cat-tab${cat === APP_STATE.activeCategory ? ' active' : ''}" onclick="setCategory('${cat}')">${displayText}</button>`;
+    }).join('');
+}
 function setCategory(cat) { APP_STATE.activeCategory = cat; renderAll(); }
 function getFilteredMenu() {
   // Only show available items in menu:
@@ -2484,9 +2491,10 @@ function renderPublicMenu() {
         ? APP_STATE.menu.filter(i => i.available) 
         : APP_STATE.menu.filter(i => i.available && i.category === activeCat);
 
-    document.getElementById('publicCategoryTabs').innerHTML = APP_STATE.categories.map(cat =>
-        `<button class="cat-tab${cat === activeCat ? ' active' : ''}" onclick="setPublicCategory('${cat}')">${cat}</button>`
-    ).join('');
+    document.getElementById('publicCategoryTabs').innerHTML = APP_STATE.categories.map(cat => {
+    const displayText = cat === '全部' ? i18n.t('allCategories') : cat;
+    return `<button class="cat-tab${cat === activeCat ? ' active' : ''}" onclick="setPublicCategory('${cat}')">${displayText}</button>`;
+}).join('');
 
     document.getElementById('publicMenuGrid').innerHTML = items.map(item => {
         const imageUrl = item.imageUrl || item.image || '';
@@ -2709,9 +2717,10 @@ document.getElementById('addMemberModal').addEventListener('click', function(e) 
 
 // ==================== RENDERING HELPERS ====================
 function renderCustomerCategoryTabs() {
-    document.getElementById('customerCategoryTabs').innerHTML = APP_STATE.categories.map(cat =>
-        `<button class="cat-tab${cat === APP_STATE.activeCategory ? ' active' : ''}" onclick="setCategory('${cat}')">${cat}</button>`
-    ).join('');
+    document.getElementById('customerCategoryTabs').innerHTML = APP_STATE.categories.map(cat => {
+        const displayText = cat === '全部' ? i18n.t('allCategories') : cat;
+        return `<button class="cat-tab${cat === APP_STATE.activeCategory ? ' active' : ''}" onclick="setCategory('${cat}')">${displayText}</button>`;
+    }).join('');
 }
 	
 
