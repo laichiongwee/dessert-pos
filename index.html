@@ -415,7 +415,10 @@
     <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-handle"></div>
         <h3>⚙️ 系统设置</h3>
-        
+        <label style="font-size:0.75rem;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+    <input type="checkbox" id="autoAddMemberToggle" checked>
+    顾客下单自动添加会员
+</label>
         <label style="font-size:0.75rem;">数据同步 URL (GET)</label>
         <input type="url" id="gasUrlInput" placeholder="Apps Script URL for data" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
         
@@ -761,7 +764,18 @@ async function fetchAllData() {
     APP_STATE.orders = orders || [];
     APP_STATE.discountRules = discountRules || [];
     APP_STATE.settings = {};
-    if (settingsRows) settingsRows.forEach(row => { APP_STATE.settings[row.key] = row.value; });
+    if (settingsRows) {
+    settingsRows.forEach(row => {
+        APP_STATE.settings[row.key] = row.value;
+    });
+    // ✅ 确保 autoAddMember 默认值为 true 如果数据库中不存在
+    if (APP_STATE.settings.autoAddMember === undefined) {
+        APP_STATE.settings.autoAddMember = true;
+    } else {
+        APP_STATE.settings.autoAddMember = APP_STATE.settings.autoAddMember === 'true' || APP_STATE.settings.autoAddMember === true;
+    }
+}
+
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     APP_STATE.supabaseReady = true;
   } catch (e) {
@@ -1589,6 +1603,8 @@ function getPriceId(plan, billing) {
     document.getElementById('gasUrlInput').value = APP_STATE.gasUrl;
     document.getElementById('postUrlInput').value = APP_STATE.postUrl || '';
     document.getElementById('imgbbKeyInput').value = APP_STATE.imgbbKey || '';
+    // ✅ 读取自动添加会员设置
+    document.getElementById('autoAddMemberToggle').checked = APP_STATE.settings.autoAddMember !== false;
     document.getElementById('settingsModal').style.display = 'flex';
 }
 
@@ -1599,6 +1615,19 @@ function saveSettings() {
     localStorage.setItem('gasUrl', APP_STATE.gasUrl);
     localStorage.setItem('postUrl', APP_STATE.postUrl);
     localStorage.setItem('imgbbKey', APP_STATE.imgbbKey);
+	// ✅ 保存自动添加会员设置
+    const autoAdd = document.getElementById('autoAddMemberToggle').checked;
+    APP_STATE.settings.autoAddMember = autoAdd;
+    // 同步到 Supabase
+    if (typeof supabaseClient !== 'undefined') {
+        supabaseClient.from('settings').upsert(
+            { key: 'autoAddMember', value: autoAdd ? 'true' : 'false' },
+            { onConflict: 'key' }
+        ).then(({ error }) => {
+            if (error) console.error('Settings sync failed:', error);
+        });
+    }
+	
     document.getElementById('settingsModal').style.display = 'none';
     
     // 同步到 Supabase
@@ -1920,7 +1949,7 @@ async function submitPublicOrder() {
         paymentDetails: {},
         discountApplied: 0,
         status: 'pending_payment',
-        callNumber: '' // 柜台付款后分配叫号
+        callNumber: ''
     };
     const { error } = await supabaseClient.from('orders').insert([order]);
     if (error) {
@@ -1928,13 +1957,37 @@ async function submitPublicOrder() {
         showToast('送出失败，请稍后再试');
         return;
     }
+
+    // ==================== 自动添加会员（新增）====================
+    // 条件：设置了自动添加（默认为 true）、填写了电话、该电话尚未注册为会员
+    const autoAdd = APP_STATE.settings.autoAddMember !== false; // 默认为 true
+    if (autoAdd && phone) {
+        const existingMember = APP_STATE.members.find(m => String(m.phone) === phone);
+        if (!existingMember) {
+            const newMember = {
+                id: 'M' + Date.now().toString().slice(-6),
+                name: name,
+                phone: phone,
+                points: 0,
+                totalSpent: 0
+            };
+            // 本地添加，以便收银端立即能搜索到
+            APP_STATE.members.push(newMember);
+            // 异步写入 Supabase，不阻塞跳转
+            supabaseClient.from('members').insert([newMember]).then(({ error: e2 }) => {
+                if (e2) console.error('自动添加会员失败:', e2);
+            });
+        }
+    }
+    // ============================================================
+
     APP_STATE.publicCart = [];
     document.getElementById('publicCartModal').style.display = 'none';
     document.getElementById('publicCustomerName').value = '';
     document.getElementById('publicCustomerPhone').value = '';
     updatePublicCartCount();
 
-    // ✅ 跳转到订单状态页面，而不是弹窗
+    // 跳转到订单状态页面
     window.location.href = 'order-status.html?orderId=' + orderId;
 }
 	
