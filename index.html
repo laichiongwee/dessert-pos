@@ -2862,12 +2862,12 @@ function renderFulfillmentView() {
     const completedOrders = APP_STATE.orders.filter(o => o.status === 'completed');
     
     document.getElementById('activeOrders').innerHTML = activeOrders.length === 0 
-        ? '<p style="color:var(--text-lighter);padding:20px;">i18n.t('noActiveOrders')</p>' 
-        : activeOrders.map(order => renderOrderCard(order)).join('');
-    
-    document.getElementById('completedOrders').innerHTML = completedOrders.length === 0 
-        ? '<p style="color:var(--text-lighter);padding:20px;">i18n.t('noHistoryOrders')</p>'
-        : completedOrders.slice(-20).reverse().map(order => renderOrderCard(order)).join('');
+    ? `<p style="color:var(--text-lighter);padding:20px;">${i18n.t('noActiveOrders')}</p>`
+    : activeOrders.map(order => renderOrderCard(order)).join('');
+
+document.getElementById('completedOrders').innerHTML = completedOrders.length === 0 
+    ? `<p style="color:var(--text-lighter);padding:20px;">${i18n.t('noHistoryOrders')}</p>`
+    : completedOrders.slice(-20).reverse().map(order => renderOrderCard(order)).join('');
 }
 
 function renderOrderCard(order) {
@@ -3707,11 +3707,11 @@ async function uploadMenuImage() {
     const file = input.files[0];
     const apiKey = APP_STATE.imgbbKey;
     if (!apiKey) {
-        showToast('❌ 请先在设置中填入 ImgBB API 密钥');
+        showToast('imgbbKeyMissing');
         return;
     }
     
-    showToast('图片压缩并上传中…');
+    showToast('imgCompressing');
     
     try {
         // Compress image to ~200KB before upload
@@ -3728,7 +3728,7 @@ async function uploadMenuImage() {
         const json = await resp.json();
         if (json.success) {
             const imageUrl = json.data.url;
-            showToast('✅ 图片已上传');
+            showToast('imgUploadSuccess');
             document.getElementById('editItemImage').value = imageUrl;
             // Show preview
             let prev = document.getElementById('menuImagePreview');
@@ -3743,10 +3743,10 @@ async function uploadMenuImage() {
             prev.src = imageUrl;
             prev.style.display = 'block';
         } else {
-            showToast('上传失败: ' + (json.error?.message || '未知错误'));
+            showToast('imgUploadFailed' + (json.error?.message || '未知错误'));
         }
     } catch (err) {
-        showToast('上传错误: ' + err.message);
+        showToast('imgUploadFailed' + err.message);
         console.error('Upload error:', err);
     }
 }
