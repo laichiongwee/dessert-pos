@@ -444,7 +444,7 @@
         <h3 data-i18n="settingsTitle">⚙️ 系统设置</h3>
         <label style="font-size:0.75rem;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
     <input type="checkbox" id="autoAddMemberToggle" checked>
-    顾客下单自动添加会员
+    <span data-i18n="autoAddMemberLabel">顾客下单自动添加会员</span>
 </label>
         <label style="font-size:0.75rem;" data-i18n="dataSyncUrl">数据同步 URL (GET)</label>
         <input type="url" id="gasUrlInput" placeholder="Apps Script URL for data" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
@@ -511,9 +511,9 @@
         <h3 data-i18n="discountRulesTitle">🏷️ 优惠规则管理</h3>
         <div id="discountRulesList" style="max-height:200px;overflow-y:auto;margin-bottom:8px;"></div>
         <div class="discount-rule-row">
-            <input type="text" id="newRuleType" placeholder="percentage/fixed" style="width:100px;">
-            <input type="number" id="newRuleValue" placeholder="value">
-            <input type="number" id="newRuleMinPoints" placeholder="min">
+            <input type="text" id="newRuleType" data-i18n-placeholder="ruleType" placeholder="percentage/fixed" style="width:100px;">
+            <input type="number" id="newRuleValue" data-i18n-placeholder="ruleValue" placeholder="value">
+            <input type="number" id="newRuleMinPoints" data-i18n-placeholder="ruleMinPoints" placeholder="min">
             <button class="btn btn-xs btn-primary" onclick="addDiscountRule()">＋</button>
         </div>
         <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeDiscountRulesModal()" data-i18n="close">关闭</button>
@@ -895,6 +895,11 @@ i18n
 "collectPayment": "Collect",
 	
   // 其他
+		  "qrCodeTitle": "📱 Scan to Order",
+"autoAddMemberLabel": "Auto add member for customer orders",
+"orderNumberLabel": "Order No.",
+"pleasePayCounter": "Please pay at the counter",
+"viewOrderStatus": "View order status →",
   "orderLimitReached": "🚫 Free plan daily order limit reached. Please upgrade.",
   "imgCompressing": "Compressing image...",
   "imgUploading": "Uploading image...",
@@ -1137,7 +1142,11 @@ i18n
 "feature_dataExport": "数据导出 Excel/PDF",
 "feature_customReceipt": "自定义小票模板",
 "feature_foodOrdering": "线上点餐",
-	
+	"qrCodeTitle": "📱 顾客扫码点餐",
+"autoAddMemberLabel": "顾客下单自动添加会员",
+"orderNumberLabel": "订单号",
+"pleasePayCounter": "请前往柜台付款",
+"viewOrderStatus": "查看订单状态 →",
 		  
   // 其他
   "orderLimitReached": "🚫 免费版每日订单已达上限，请升级套餐。",
@@ -2017,13 +2026,13 @@ function openReportModal() {
     const discountTotal = todayOrders.reduce((s,o)=>s+(Number(o.discountApplied)||0),0);
     document.getElementById('dailyReportContent').innerHTML = `
         <table class="daily-report-table">
-            <tr><td>日期</td><td>${today}</td></tr>
-            <tr><td>订单数</td><td>${todayOrders.length}</td></tr>
-            <tr><td>总销售额</td><td>RM ${totalSales.toFixed(2)}</td></tr>
-            <tr><td>现金</td><td>RM ${cashTotal.toFixed(2)}</td></tr>
-            <tr><td>信用卡</td><td>RM ${cardTotal.toFixed(2)}</td></tr>
-            <tr><td>线上支付</td><td>RM ${onlineTotal.toFixed(2)}</td></tr>
-            <tr><td>折扣总额</td><td>RM ${discountTotal.toFixed(2)}</td></tr>
+            <tr><td>${i18n.t('date')}</td><td>${today}</td></tr>
+        <tr><td>${i18n.t('orderCount')}</td><td>${todayOrders.length}</td></tr>
+        <tr><td>${i18n.t('totalSales')}</td><td>RM ${totalSales.toFixed(2)}</td></tr>
+        <tr><td>${i18n.t('cashTotal')}</td><td>RM ${cashTotal.toFixed(2)}</td></tr>
+        <tr><td>${i18n.t('cardTotal')}</td><td>RM ${cardTotal.toFixed(2)}</td></tr>
+        <tr><td>${i18n.t('onlineTotal')}</td><td>RM ${onlineTotal.toFixed(2)}</td></tr>
+        <tr><td>${i18n.t('discountTotal')}</td><td>RM ${discountTotal.toFixed(2)}</td></tr>
         </table>`;
 }
 async function closeDay() {
@@ -3710,9 +3719,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	function showPublicOrderSuccessModal(orderId) {
     const modal = document.getElementById('publicOrderSuccessModal');
     // 更新订单号和链接
-    modal.querySelector('p').innerHTML = `订单号：<strong>${orderId}</strong><br>请前往柜台付款`;
-    modal.querySelector('#publicTrackLink').href = `track.html?orderId=${orderId}`;
-    modal.style.display = 'flex';
+    modal.querySelector('h3').textContent = i18n.t('orderSubmitted');
+modal.querySelector('p').innerHTML = `${i18n.t('orderNumberLabel')}: <strong>${orderId}</strong><br>${i18n.t('pleasePayCounter')}`;
+modal.querySelector('a').textContent = i18n.t('viewOrderStatus');
+modal.querySelector('button').textContent = i18n.t('close');
 }
 
 function closePublicOrderSuccessModal() {
