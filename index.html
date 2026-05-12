@@ -659,7 +659,7 @@
     </div>
 </div>
 
-	<!-- 注册成功提示模态框 -->
+<!-- 注册成功提示模态框 -->
 <div class="modal-overlay" id="registerSuccessModal" style="display:none;" onclick="closeRegisterSuccessModal()">
     <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:420px;text-align:center;padding:32px 24px;">
         <div style="font-size:3rem;margin-bottom:16px;">📧</div>
@@ -2639,12 +2639,11 @@ async function handleRegister(e) {
   if (error) {
     document.getElementById('authMessage').textContent = error.message;
   } else {
-    // 隐藏登录/注册表单区，显示成功弹窗
     document.getElementById('authMessage').textContent = '';
+    // 显示成功弹窗
     document.getElementById('registerSuccessModal').style.display = 'flex';
   }
 }
-
 	function closeRegisterSuccessModal() {
     document.getElementById('registerSuccessModal').style.display = 'none';
     // 可选：关闭后显示登录表单，方便用户完成验证后直接登录
