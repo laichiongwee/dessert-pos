@@ -2388,6 +2388,18 @@ async function checkUser() {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
 
+    // ✅ 如果明确请求顾客点餐模式，无论是否登录，都进入顾客页面
+    if (mode === 'customer') {
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('publicCustomerView').style.display = 'block';
+        document.getElementById('mainApp').style.display = 'none';
+        await fetchPublicMenu();
+        await loadPublicSettings();
+        renderPublicMenu();
+        updatePublicCartCount();
+        return; // 直接返回，不再继续
+    }
+
     if (session) {
         // ✅ 已登录 → 进入管理后台
         APP_STATE.currentUser = session.user;
@@ -2396,21 +2408,13 @@ async function checkUser() {
         document.getElementById('publicCustomerView').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         await fetchAllData();
-    if (!realtimeSubscription) {
-        initRealtime();
-    }  // 启动实时监听
+        if (!realtimeSubscription) {
+            initRealtime();
+        }
         renderAll();
-		applyLanguage();
+        applyLanguage();
         updateQRCode();
-		updateUnpaidBadge();
-        } else if (mode === 'customer') {
-        document.getElementById('authContainer').style.display = 'none';
-        document.getElementById('publicCustomerView').style.display = 'block';
-        document.getElementById('mainApp').style.display = 'none';
-        await fetchPublicMenu();
-        await loadPublicSettings();   // ← 加载设置，确保读取到 autoAddMember
-        renderPublicMenu();
-		updatePublicCartCount(); 
+        updateUnpaidBadge();
     } else {
         // 🔐 默认显示登录界面
         document.getElementById('authContainer').style.display = 'block';
