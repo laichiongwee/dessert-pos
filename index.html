@@ -2943,7 +2943,7 @@ function addToCustomerCart(itemId) {
         APP_STATE.customerCart.push({ menuItem: item, quantity: 1 });
     }
     updateCartBadge();
-    showToast(`已添加: ${item.name}`);
+    showToast(i18n.t('addedItem', { name: item.name }));
 }
 
 function openCustomerCart() {
