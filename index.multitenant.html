@@ -1,0 +1,3821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🍅 柿柿润糖水 - POS System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/i18next@23.7.0/i18next.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/i18next-browser-languagedetector@7.2.0/i18nextBrowserLanguageDetector.min.js"></script>
+    <style>
+        :root {
+            --persimmon: #E8784A; --persimmon-light: #FDE8DF; --persimmon-dark: #C45A2E;
+            --cream: #FFF8F3; --white: #FFFFFF; --text: #3D2020; --text-light: #6B4E4E;
+            --text-lighter: #9B7E7E; --border: #F0E0D6; --shadow: 0 2px 16px rgba(232, 120, 74, 0.08);
+            --shadow-lg: 0 8px 32px rgba(232, 120, 74, 0.12); --radius: 16px; --radius-sm: 10px;
+            --radius-xs: 8px; --green: #4CAF84; --green-light: #E8F6EF; --red: #E85555;
+            --red-light: #FDE8E8; --gold: #F0A855; --gold-light: #FFF6EB;
+            --bottom-nav-height: 64px; --header-height: 56px; --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Nunito', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #FFF5EF; color: var(--text); min-height: 100vh; min-height: 100dvh;
+            -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased;
+            user-select: none; -webkit-user-select: none; overflow-x: hidden;
+        }
+        /* HEADER */
+        .header {
+    position: sticky; top: 0; z-index: 100; background: var(--white);
+    padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+    height: auto; /* 改为 auto，允许换行 */
+    gap: 10px;
+    flex-wrap: wrap; /* 新增：允许换行 */
+}
+		.header-actions {
+    display: flex;
+    flex-wrap: wrap; /* 允许按钮换行 */
+    gap: 6px;
+    align-items: center;
+}
+        .header-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.1rem; color: var(--persimmon); }
+        .btn {
+            padding: 9px 16px; border-radius: 24px; border: none; cursor: pointer; font-weight: 700;
+            font-size: 0.85rem; font-family: inherit; transition: var(--transition); white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 5px; touch-action: manipulation;
+        }
+        .btn:active { transform: scale(0.95); transition: 0.1s; }
+        .btn-primary { background: var(--persimmon); color: white; box-shadow: 0 2px 8px rgba(232,120,74,0.3); }
+        .btn-outline { background: var(--white); color: var(--persimmon); border: 2px solid var(--persimmon); }
+        .btn-sm { padding: 6px 12px; font-size: 0.78rem; border-radius: 18px; }
+        .btn-xs { padding: 4px 10px; font-size: 0.7rem; border-radius: 14px; font-weight: 600; }
+        .mode-switch {
+    display: flex; background: #F5E8E0; border-radius: 24px; padding: 3px; gap: 2px;
+    flex-shrink: 0; /* 防止被压缩 */
+}
+        .mode-switch button {
+            padding: 7px 14px; border-radius: 22px; border: none; cursor: pointer; font-weight: 700;
+            font-size: 0.78rem; font-family: inherit; transition: var(--transition); background: transparent;
+            color: var(--text-light);
+        }
+        .mode-switch button.active { background: var(--white); color: var(--persimmon); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+        .main-container { max-width: 900px; margin: 0 auto; padding: 12px 12px 100px; display: none; }
+        .main-container.active { display: block; animation: fadeSlideIn 0.35s ease; }
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .cashier-layout { display: flex; gap: 12px; flex-wrap: wrap; }
+        .menu-panel { flex: 1 1 320px; min-width: 280px; }
+        .order-panel {
+            flex: 0 0 340px; background: var(--white); border-radius: var(--radius);
+            box-shadow: var(--shadow-lg); padding: 16px; position: sticky; top: 72px;
+            align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto;
+            display: flex; flex-direction: column;
+        }
+        @media (max-width: 768px) {
+            .cashier-layout { flex-direction: column; }
+            .order-panel { flex: 0 0 auto; position: static; max-height: none; order: -1; margin-bottom: 8px; }
+        }
+        .category-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 12px; scrollbar-width: none; }
+        .category-tabs::-webkit-scrollbar { display: none; }
+        .cat-tab {
+            padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--border); cursor: pointer;
+            font-weight: 600; font-size: 0.8rem; white-space: nowrap; transition: var(--transition);
+            background: var(--white); color: var(--text-light); flex-shrink: 0; font-family: inherit;
+        }
+        .cat-tab.active { background: var(--persimmon); color: white; border-color: var(--persimmon); }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .menu-card {
+            background: var(--white); border-radius: var(--radius-sm); padding: 10px; cursor: pointer;
+            transition: var(--transition); border: 2px solid transparent; box-shadow: var(--shadow);
+            text-align: center; position: relative; overflow: hidden; touch-action: manipulation;
+        }
+        .menu-card:active { transform: scale(0.96); border-color: var(--persimmon); }
+        .menu-card .item-emoji { font-size: 2.5rem; display: block; margin-bottom: 4px; }
+        .menu-card .item-name { font-weight: 700; font-size: 0.82rem; color: var(--text); line-height: 1.2; margin-bottom: 2px; }
+        .menu-card .item-price { font-weight: 800; font-size: 0.95rem; color: var(--persimmon); }
+        .member-section { background: var(--gold-light); border-radius: var(--radius-xs); padding: 10px 12px; margin: 8px 0; font-size: 0.78rem; border: 1px solid #F5E0C0; }
+        .member-search { position: relative; display: flex; gap: 6px; align-items: center; }
+        .member-search input { flex: 1; padding: 8px 12px; border-radius: 20px; border: 1.5px solid var(--border); font-family: inherit; font-size: 0.8rem; background: var(--white); }
+        .member-search input:focus { outline: none; border-color: var(--persimmon); }
+        .member-dropdown {
+            position: absolute; top: 100%; left: 0; right: 0; background: white;
+            border: 1px solid var(--border); border-radius: var(--radius-xs); max-height: 150px;
+            overflow-y: auto; z-index: 20; box-shadow: var(--shadow-lg); display: none;
+        }
+        .member-dropdown-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #FBF0E8; font-size: 0.8rem; }
+        .member-dropdown-item:hover { background: var(--persimmon-light); }
+        .order-items { flex: 1; overflow-y: auto; max-height: 280px; margin-bottom: 8px; }
+        .order-item-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #FBF0E8; font-size: 0.8rem; }
+        .order-item-row .oi-name { flex: 1; font-weight: 600; font-size: 0.78rem; }
+        .order-item-row .oi-qty { display: flex; align-items: center; gap: 4px; }
+        .order-item-row .oi-qty button { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; font-weight: 700; }
+        .order-summary { border-top: 2px solid #F0D8C8; padding-top: 10px; font-weight: 700; font-size: 0.9rem; }
+        .order-summary .total-row { display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; color: var(--persimmon); margin: 4px 0; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s ease; }
+        .modal-sheet { background: var(--white); border-radius: 20px 20px 0 0; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; padding: 20px 16px 28px; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-handle { width: 40px; height: 4px; background: #D0C0B8; border-radius: 2px; margin: 0 auto 12px; }
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #3D2020; color: white; padding: 10px 20px; border-radius: 24px;
+            font-weight: 600; font-size: 0.85rem; z-index: 300; animation: toastIn 0.3s ease;
+            pointer-events: none; white-space: nowrap;
+        }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        .payment-detail-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+        .payment-detail-row label { font-size: 0.8rem; white-space: nowrap; }
+        .payment-detail-row input, .payment-detail-row select { flex: 1; padding: 8px 10px; border-radius: 16px; border: 1.5px solid var(--border); font-family: inherit; font-size: 0.8rem; }
+        .discount-rule-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+        .discount-rule-row input { width: 70px; padding: 6px; border-radius: 12px; border: 1.5px solid var(--border); font-family: inherit; font-size: 0.7rem; }
+        .daily-report-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; }
+        .daily-report-table td, .daily-report-table th { padding: 6px 4px; border-bottom: 1px solid #F0D8C8; text-align: left; }
+		/* ---------- FULFILLMENT QUEUE ---------- */
+.fulfillment-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+@media (max-width: 600px) {
+    .fulfillment-layout { grid-template-columns: 1fr; }
+}
+.order-queue, .order-history {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 12px;
+    box-shadow: var(--shadow);
+}
+.order-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+    transition: var(--transition);
+}
+.order-card.ready { border-left: 4px solid var(--green); }
+.order-card.completed { background: #F8F8F8; opacity: 0.8; }
+.order-card .flex-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
+.call-number { font-weight: 800; font-size: 1.2rem; color: var(--persimmon); }
+.status-badge { padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+.status-pending { background: #FFF3E0; color: #E65100; }
+.status-preparing { background: #E3F2FD; color: #1565C0; }
+.status-ready { background: var(--green-light); color: var(--green); }
+.status-completed { background: #F3E5F5; color: #7B1FA2; }
+/* ---------- ADMIN UNLOCK ---------- */
+.admin-bar {
+    background: var(--gold-light);
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap; /* 允许换行 */
+}
+.editable-field { border: 1px dashed var(--persimmon); padding: 2px 4px; border-radius: 4px; }
+.editable-field:hover { background: #FFF0E0; }
+/* inline edit in menu cards */
+.menu-card .edit-icon {
+    position: absolute; top: 4px; left: 4px;
+    background: rgba(255,255,255,0.8); border-radius: 50%; padding: 2px;
+    font-size: 0.6rem; cursor: pointer; display: none;
+}
+.menu-card.admin-mode .edit-icon { display: block; }
+.member-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 50;               /* ensure it's above other elements */
+    box-shadow: var(--shadow-lg);
+    display: none;
+    list-style: none;
+    padding: 0;
+    margin-top: 4px;
+}
+.member-dropdown-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #FBF0E8;
+    font-size: 0.8rem;
+}
+.member-dropdown-item:active {
+    background: var(--persimmon-light);
+}
+
+#menuEditModal.modal-overlay {
+  z-index: 999 !important;
+}
+#menuEditModal .modal-sheet {
+  z-index: 1000 !important;
+}
+	.menu-card .item-img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 6px;
+}
+
+.menu-card .item-emoji {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 4px;
+    line-height: 1;
+}
+
+    </style>
+</head>
+<body>
+<!-- 登录界面 -->
+<!-- 登录界面 -->
+<div id="authContainer" style="max-width:400px;margin:60px auto;padding:20px;background:white;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);display:block;position:relative;">
+  <!-- 语言切换按钮 -->
+  <button class="lang-switch" onclick="toggleLanguage()" id="langToggleLogin" 
+          style="position:absolute; top:10px; right:10px; background:#fff; border:1px solid #E8784A; color:#E8784A; padding:5px 12px; border-radius:15px; font-size:0.8rem; cursor:pointer; z-index:10;">
+    🌐 EN
+  </button>
+
+  <h2 style="text-align:center;color:var(--persimmon);">🍅 <span data-i18n="storeName">柿柿润糖水</span></h2>
+  <div id="authForms">
+    <form id="loginForm" onsubmit="handleLogin(event)" style="display:block;">
+      <input type="email" id="loginEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="password" id="loginPassword" data-i18n-placeholder="passwordPlaceholder" placeholder="密码" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="login">🔐 登录</button>
+      <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
+        <a href="#" onclick="showRegister()" data-i18n="registerLink">注册新账号</a> |
+        <a href="#" onclick="showReset()" data-i18n="forgotPassword">忘记密码？</a>
+      </p>
+    </form>
+    <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
+      <input type="email" id="registerEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <input type="password" id="registerPassword" data-i18n-placeholder="passwordPlaceholderMin" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="register">📝 注册</button>
+      <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
+        <a href="#" onclick="showLogin()" data-i18n="alreadyHaveAccount">已有账号？登录</a>
+      </p>
+    </form>
+    <form id="resetForm" onsubmit="handleResetPassword(event)" style="display:none;">
+      <input type="email" id="resetEmail" data-i18n-placeholder="registeredEmail" placeholder="注册邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+      <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="sendResetLink">📧 发送重置链接</button>
+      <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
+        <a href="#" onclick="showLogin()" data-i18n="backToLogin">返回登录</a>
+      </p>
+    </form>
+  </div>
+  <div id="authMessage" style="color:red;text-align:center;margin-top:8px;font-size:0.8rem;"></div>
+</div>
+
+	<!-- 公開顧客點餐區（未登入時顯示） -->
+<div id="publicCustomerView" style="display:none;">
+    <header class="header">
+        <div class="header-brand"><span>🍅</span><span data-i18n="storeName">柿柿润糖水</span></div>
+        <div class="header-actions">
+			<button class="btn btn-xs btn-outline" onclick="toggleLanguage()" id="langToggle">🌐 EN</button>
+            <button class="btn btn-outline btn-sm" onclick="toggleCustomerCart()" style="position:relative;" data-i18n="viewCart">
+    🛒 購物車
+    <span id="publicCartCount" style="
+    position:absolute; top:-6px; right:-8px;
+    background:#E85555; color:white;
+    font-size:0.9rem; font-weight:700;
+    min-width:25px; height:25px; line-height:25px;
+    border-radius:9px; text-align:center;
+    display:none;
+">0</span>
+</button>
+        </div>
+    </header>
+    <div class="main-container active">
+        <div class="category-tabs" id="publicCategoryTabs"></div>
+        <div class="menu-grid" id="publicMenuGrid"></div>
+    </div>
+    <!-- 購物車彈窗 -->
+    <div id="publicCartModal" class="modal-overlay" style="display:none;" onclick="closePublicCartModal(event)">
+        <div class="modal-sheet" onclick="event.stopPropagation()">
+            <h3 data-i18n="cartTitle">🛒 我的購物車</h3>
+            <div id="publicCartItems"></div>
+            <div style="border-top:2px solid #F0D8C8; padding-top:10px; margin-top:8px;">
+                <div style="display:flex; justify-content:space-between; font-weight:800;">
+                    <span data-i18n="total">總計</span><span id="publicCartTotal">RM 0.00</span>
+                </div>
+                <input type="text" id="publicCustomerName" data-i18n-placeholder="customerName" placeholder="👤 姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:8px;">
+                <input type="tel" id="publicCustomerPhone" data-i18n-placeholder="customerPhone" placeholder="📞 手機號碼（選填）" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:6px;">
+                <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="submitPublicOrder()" data-i18n="submitOrder">✅ 送出訂單</button>
+                <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closePublicCartModal()" data-i18n="continueOrdering">繼續點餐</button>
+            </div>
+        </div>
+    </div>
+</div>
+	
+<!-- 主应用（默认隐藏） -->
+<div id="mainApp" style="display:none;">
+	
+<!-- HEADER -->
+<header class="header">
+    <div class="header-brand"><span>🍅</span><span data-i18n="storeName">柿柿润糖水</span></div>
+    <div class="header-actions">
+        <div class="mode-switch" id="modeSwitcher">
+    <button data-mode="cashier" class="active" onclick="switchMode('cashier')" data-i18n="cashierMode">💰 收银</button>
+    <button data-mode="fulfillment" onclick="switchMode('fulfillment')" data-i18n="fulfillmentMode">📦 出餐</button>
+</div>
+        <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()" style="position:relative;" data-i18n="unpaidOrders">
+    💰 待收款
+    <span id="unpaidBadge" style="
+        position:absolute; top:-6px; right:-8px;
+        background:var(--red); color:white;
+        font-size:0.7rem; font-weight:700;
+        min-width:18px; height:18px; line-height:18px;
+        border-radius:9px; text-align:center;
+        display:none;
+    ">0</span>
+</button>
+		<button class="btn btn-xs btn-outline" onclick="openPricingModal()" id="upgradeBtn" style="display:none;" data-i18n="upgradePlan">⭐ 升级套餐</button>
+		<button class="btn btn-outline btn-sm" onclick="openQRModal()" data-i18n="qrCode">🔗 QR</button>
+        <button class="btn btn-ghost btn-sm" onclick="openReportModal()" data-i18n="report">📊 报表</button>
+        <button class="btn btn-ghost btn-sm" onclick="openSettings()" data-i18n="settings">⚙️</button>
+		<button class="btn btn-xs btn-outline" onclick="toggleLanguage()" id="langToggle" data-i18n="langSwitch">🌐 EN</button>
+		<button class="btn btn-xs btn-outline" onclick="logout()" data-i18n="logout">🚪 登出</button>
+    </div>
+</header>
+<!-- Admin bar 独立放置 -->
+<div class="admin-bar" id="adminBar" style="display:none;">
+    <span data-i18n="adminModeLabel">🔓 管理模式</span>
+    <input type="file" id="logoUpload" accept="image/*" style="display:none;" onchange="uploadLogo()">
+    <button class="btn btn-xs btn-outline" data-i18n="changeLogo" onclick="document.getElementById('logoUpload').click()">更换Logo</button>
+    <button class="btn btn-xs btn-outline" data-i18n="editStoreName" onclick="editStoreName()">改店名</button>
+    <button class="btn btn-xs btn-outline" data-i18n="discountRules" onclick="openDiscountRulesModal()">🏷️ 优惠规则</button>
+    <button class="btn btn-xs btn-outline" data-i18n="manageCategory" onclick="openCategoryModal()">📂 管理分类</button>
+    <button class="btn btn-xs btn-outline" data-i18n="addMenuItem" onclick="openMenuEditModal()">＋菜品</button>
+    <button class="btn btn-xs btn-outline" data-i18n="updateMenu" onclick="openMenuSheetModal()">📝 更新菜单</button>
+    <button class="btn btn-xs btn-danger" data-i18n="lockEdit" onclick="toggleAdminMode()">🔒 锁定编辑</button>
+</div>
+<button class="btn btn-sm" onclick="toggleAdminMode()" id="unlockBtn" style="margin-bottom:8px;" data-i18n="unlockEdit">🔓 解锁管理</button>
+<div class="menu-grid" id="adminMenuGrid" style="display:none;"></div>
+<!-- CASHIER VIEW -->
+<div class="main-container active" id="cashierView">
+    <div class="cashier-layout">
+        <div class="menu-panel">
+            <div class="category-tabs" id="categoryTabs"></div>
+            <div class="menu-grid" id="menuGrid"></div>
+        </div>
+        <div class="order-panel" id="orderPanel">
+            <h3 data-i18n="currentOrder">🧾 当前订单</h3>
+            <div class="order-items" id="orderItems">
+    <div class="order-empty">
+        <span class="icon">🛒</span>
+        <span data-i18n="clickToAdd">点击菜单添加商品</span>
+    </div>
+</div>
+<div class="member-section" id="memberSection">
+    <div class="member-search" style="position:relative;">
+        <input type="tel" id="memberPhoneInput" data-i18n-placeholder="memberSearch" placeholder="📞 会员手机号查找..." oninput="searchMemberSuggestions()" autocomplete="off">
+        <div class="member-dropdown" id="memberDropdown"></div>
+        <button class="btn btn-xs btn-outline" onclick="clearMember()" data-i18n="clear">清除</button>
+        <button class="btn btn-xs btn-primary" onclick="openAddMemberModal()" data-i18n="addMember">＋ 添加</button>
+    </div>
+    <div id="memberInfoDisplay" style="margin-top:6px;font-size:0.75rem;color:var(--text-light);"></div>
+</div>
+            <div class="order-summary">
+                <div style="display:flex;justify-content:space-between;"><span data-i18n="subtotal">小计</span><span id="subtotalDisplay">RM 0.00</span></div>
+                <div style="display:flex;justify-content:space-between;color:var(--green);" id="discountRow" hidden><span data-i18n="memberDiscount">会员折扣</span><span id="discountDisplay">-RM 0.00</span></div>
+                <div class="total-row"><span data-i18n="total">总计</span><span id="totalDisplay">RM 0.00</span></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                <button class="btn btn-outline btn-sm" onclick="clearOrder()" style="flex:1;" data-i18n="clearOrder">🗑️ 清空</button>
+                <button class="btn btn-primary btn-sm" onclick="openPaymentModal()" style="flex:2;" data-i18n="checkout">💳 结算</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- FULFILLMENT VIEW -->
+<div class="main-container" id="fulfillmentView">
+    <div class="menu-grid" id="adminMenuGrid" style="margin-bottom:16px;"></div>
+
+	<div class="fulfillment-layout">
+        <div class="order-queue">
+            <h3 style="margin-bottom:8px;" data-i18n="preparing">⏳ 制作中</h3>
+            <div id="activeOrders"></div>
+        </div>
+        <div class="order-history">
+            <h3 style="margin-bottom:8px;" data-i18n="completed">✅ 已取餐</h3>
+            <div id="completedOrders"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+<!-- QR Modal -->
+<div class="modal-overlay" id="qrModal" style="display:none;" onclick="closeQRModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
+        <h3>📱 顾客扫码点餐</h3><div id="qrcode"></div><p class="qr-url" id="qrUrlDisplay"></p>
+    </div>
+</div>
+
+<!-- Customer Cart Modal -->
+<div class="modal-overlay" id="customerCartModal" style="display:none;" onclick="closeCustomerCartModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
+        <h3>🛒 我的购物车</h3><div id="customerCartItems"></div>
+        <div style="border-top:2px solid #F0D8C8;padding-top:10px;margin-top:8px;">
+            <div style="display:flex;justify-content:space-between;font-weight:800;"><span>总计</span><span id="customerCartTotal">RM 0.00</span></div>
+            <input type="text" id="customerNameInput" placeholder="👤 您的姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:8px;font-family:inherit;">
+            <input type="tel" id="customerPhoneInput" placeholder="📞 手机号" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:6px;font-family:inherit;">
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;justify-content:center;" onclick="submitCustomerOrder()">✅ 提交订单</button>
+            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeCustomerCartModal()">继续点餐</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal" style="display:none;" onclick="closeSettingsModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-handle"></div>
+        <h3 data-i18n="settingsTitle">⚙️ 系统设置</h3>
+        <label style="font-size:0.75rem;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+    <input type="checkbox" id="autoAddMemberToggle" checked>
+    顾客下单自动添加会员
+</label>
+        <label style="font-size:0.75rem;" data-i18n="dataSyncUrl">数据同步 URL (GET)</label>
+        <input type="url" id="gasUrlInput" placeholder="Apps Script URL for data" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
+        
+        <label style="font-size:0.75rem;" data-i18n="imageUploadUrl">图片上传 URL (POST) - 可留空</label>
+        <input type="url" id="postUrlInput" placeholder="Apps Script POST URL (optional)" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
+        
+        <label style="font-size:0.75rem;" data-i18n="imgbbKey">ImgBB API 密钥</label>
+        <input type="text" id="imgbbKeyInput" placeholder="貼上 ImgBB API key" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
+        
+        <button class="btn btn-primary btn-sm" onclick="saveSettings()" style="margin-top:8px;width:100%;" data-i18n="saveSettings">💾 保存设置</button>
+        <button class="btn btn-outline btn-sm" onclick="loadDemoData()" style="width:100%;margin-top:4px;" data-i18n="loadDemo">📦 加载演示数据</button>
+    </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal-overlay" id="addMemberModal" style="display:none;" onclick="closeAddMemberModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
+        <h3 data-i18n="addMemberTitle">🧑‍🤝‍🧑 添加会员</h3>
+        <input type="text" id="newMemberName" data-i18n-placeholder="memberName" placeholder="姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:8px;font-family:inherit;">
+        <input type="tel" id="newMemberPhone" data-i18n-placeholder="memberPhone" placeholder="手机号" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:12px;font-family:inherit;">
+        <button class="btn btn-primary" style="width:100%;" onclick="submitNewMember()" data-i18n="save">💾 保存</button>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeAddMemberModal()" data-i18n="cancel">取消</button>
+    </div>
+</div>
+
+<!-- NEW: Payment Modal -->
+<div class="modal-overlay" id="paymentModal" style="display:none;" onclick="closePaymentModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
+        <h3 data-i18n="paymentTitle">💳 结算</h3>
+        <div id="paymentMethodSelector" style="margin-bottom:12px;">
+            <label style="font-weight:700;" data-i18n="paymentMethod">支付方式：</label>
+            <select id="paymentMethodSelect" onchange="showPaymentDetails()" style="width:100%;padding:10px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;">
+                <option value="cash" data-i18n="cash">💰 现金</option>
+                <option value="card" data-i18n="card">💳 信用卡 / 借记卡</option>
+                <option value="online" data-i18n="online">📱 线上支付</option>
+            </select>
+        </div>
+        <!-- Cash details -->
+        <div id="cashDetails" style="display:block;">
+            <div class="payment-detail-row"><label data-i18n="amountDue">应收：</label><span id="payTotalDisplay" style="font-weight:800;"></span></div>
+            <div class="payment-detail-row"><label data-i18n="amountReceived">实收：</label><input type="number" id="cashReceived" placeholder="0.00" step="0.01" oninput="calculateChange()"></div>
+            <div class="payment-detail-row"><label data-i18n="change">找零：</label><span id="changeDisplay" style="font-weight:800;">RM 0.00</span></div>
+        </div>
+        <!-- Card details -->
+        <div id="cardDetails" style="display:none;">
+            <div class="payment-detail-row"><label data-i18n="cardType">卡类型：</label><select id="cardType"><option>Visa</option><option>Mastercard</option><option>Amex</option></select></div>
+            <div class="payment-detail-row"><label data-i18n="cardLast4">卡号末四位：</label><input type="text" id="cardLast4" placeholder="1234" maxlength="4"></div>
+            <div class="payment-detail-row"><label data-i18n="refNum">参考号：</label><input type="text" id="cardRefNum" data-i18n-placeholder="cardRefPlaceholder" placeholder="可选"></div>
+        </div>
+        <!-- Online details -->
+        <div id="onlineDetails" style="display:none;">
+            <div class="payment-detail-row"><label data-i18n="onlinePlatform">平台：</label><select id="onlineType"><option>Touch 'n Go</option><option>GrabPay</option><option>Boost</option><option>支付宝</option><option>微信支付</option><option>其他</option></select></div>
+            <div class="payment-detail-row"><label data-i18n="refNum">交易参考号：</label><input type="text" id="onlineRefNum" data-i18n-placeholder="onlineRefPlaceholder" placeholder="输入参考号"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="finalizePayment()" data-i18n="payNow">✅ 确认收款</button>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closePaymentModal()" data-i18n="cancel">取消</button>
+    </div>
+</div>
+
+<!-- NEW: Discount Rules Modal -->
+<div class="modal-overlay" id="discountRulesModal" style="display:none;" onclick="closeDiscountRulesModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
+        <h3 data-i18n="discountRulesTitle">🏷️ 优惠规则管理</h3>
+        <div id="discountRulesList" style="max-height:200px;overflow-y:auto;margin-bottom:8px;"></div>
+        <div class="discount-rule-row">
+            <input type="text" id="newRuleType" placeholder="percentage/fixed" style="width:100px;">
+            <input type="number" id="newRuleValue" placeholder="value">
+            <input type="number" id="newRuleMinPoints" placeholder="min">
+            <button class="btn btn-xs btn-primary" onclick="addDiscountRule()">＋</button>
+        </div>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeDiscountRulesModal()" data-i18n="close">关闭</button>
+    </div>
+</div>
+
+<!-- NEW: Daily Report Modal -->
+<div class="modal-overlay" id="reportModal" style="display:none;" onclick="closeReportModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
+        <h3 data-i18n="dailyReportTitle">📊 今日报表</h3>
+        <div id="dailyReportContent"></div>
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:10px;" onclick="closeDay()" data-i18n="closeDay">🔒 关闭今日账目</button>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeReportModal()" data-i18n="close">关闭</button>
+    </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<!-- Menu Edit Modal -->
+<div class="modal-overlay" id="menuEditModal" style="display:none;" onclick="closeMenuEditModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:12px;" data-i18n="editItemTitle">✏️ 编辑菜品</h3>
+    <input type="hidden" id="editItemId">
+    <div class="payment-detail-row"><label data-i18n="itemName">名称</label><input id="editItemName" style="flex:1;padding:8px;border-radius:16px;border:1.5px solid var(--border);"></div>
+    <div class="payment-detail-row"><label data-i18n="itemDesc">描述</label><input id="editItemDesc" style="flex:1;"></div>
+    <div class="payment-detail-row"><label data-i18n="itemPrice">价格</label><input type="number" id="editItemPrice" step="0.01" style="flex:1;"></div>
+    <div class="payment-detail-row"><label data-i18n="itemOriginalPrice">原价</label><input type="number" id="editItemOrigPrice" step="0.01" style="flex:1;"></div>
+    <div class="payment-detail-row"><label data-i18n="itemCategory">分类</label>
+  <select id="editItemCategory" style="flex:1;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;"></select>
+</div>
+    <div class="payment-detail-row"><label data-i18n="itemEmoji">Emoji</label><input id="editItemEmoji" style="flex:1;"></div>
+    <div class="payment-detail-row"><label data-i18n="itemImageUrl">图片URL</label><input id="editItemImage" style="flex:1;"></div>
+	<div class="payment-detail-row">
+    <label data-i18n="itemUploadImage">上传图片</label>
+    <input type="file" id="editItemImageUpload" accept="image/*" style="flex:1;">
+    <button class="btn btn-xs btn-outline" onclick="uploadMenuImage()" type="button" data-i18n="upload">上传</button>
+</div>
+<img id="menuImagePreview" style="max-width:100px;margin-top:4px;display:none;">
+    <div class="payment-detail-row"><label data-i18n="itemAvailable">在售</label><input type="checkbox" id="editItemAvailable" style="width:auto;"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-primary btn-sm" onclick="saveMenuItem()" style="flex:1;" data-i18n="saveItem">💾 保存</button>
+      <button class="btn btn-outline btn-sm" onclick="closeMenuEditModal()" style="flex:1;" data-i18n="cancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal-overlay" id="categoryModal" style="display:none;" onclick="closeCategoryModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="categoryTitle">🏷️ 管理分类</h3>
+    <ul id="categoryListUl" style="max-height:200px;overflow-y:auto;margin-bottom:8px;"></ul>
+    <div style="display:flex;gap:6px;">
+      <input id="newCategoryName" data-i18n-placeholder="newCategory" placeholder="新分类名" style="flex:1;padding:8px;border-radius:16px;border:1.5px solid var(--border);">
+      <button class="btn btn-xs btn-primary" onclick="addNewCategory()" data-i18n="addCategory">＋ 添加</button>
+    </div>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;" onclick="closeCategoryModal()" data-i18n="close">关闭</button>
+  </div>
+</div>
+<!-- Unpaid Orders Modal -->
+<div class="modal-overlay" id="unpaidOrdersModal" style="display:none;" onclick="closeUnpaidOrdersModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-handle"></div>
+        <h3 data-i18n="unpaidOrders">💰 待付款订单</h3>
+        <div id="unpaidOrdersList" style="max-height:60vh;overflow-y:auto;"></div>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;" onclick="closeUnpaidOrdersModal()" data-i18n="close">关闭</button>
+    </div>
+</div>
+	<!-- Menu Sheet Modal -->
+<div class="modal-overlay" id="menuSheetModal" style="display:none;" onclick="closeMenuSheetModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:700px;">
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:12px;" data-i18n="updateMenu">📝 菜单管理</h3>
+    <div style="overflow-x:auto">
+      <table id="menuSheetTable" class="daily-report-table">
+        <thead>
+          <tr>
+            <th>#</th><th data-i18n="itemName">名称</th><th data-i18n="itemDesc">描述</th><th data-i18n="itemPrice">售价</th><th data-i18n="itemOriginalPrice">原价</th><th data-i18n="itemCategory">分类</th><th>Emoji</th><th data-i18n="itemImageUrl">图片</th><th data-i18n="itemAvailable">在售</th><th data-i18n="edit">操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openMenuEditModal()" data-i18n="addMenuItem">
+    ${i18n.t('addMenuItem')}
+</button>
+    </div>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-top:10px;" onclick="closeMenuSheetModal()" data-i18n="close">关闭</button>
+  </div>
+</div>
+
+<!-- 套餐升级模态框 -->
+<div class="modal-overlay" id="pricingModal" style="display:none;" onclick="closePricingModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:600px; padding: 24px;">
+        <div class="modal-handle"></div>
+        <h3 style="text-align:center;margin-bottom:16px;" data-i18n="pricingTitle">⭐ 升级套餐</h3>
+        <p style="text-align:center;font-size:0.85rem;color:var(--text-light);margin-bottom:16px;">
+            <span data-i18n="currentPlanLabel">当前套餐：</span>
+            <strong id="currentPlanLabel"></strong>
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="planCards">
+            <!-- 动态生成 -->
+        </div>
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" id="billingMonthly" class="btn btn-xs btn-outline"
+                style="border:2px solid var(--persimmon);background:var(--persimmon);color:white;border-radius:20px;padding:6px 16px;"
+                onclick="setBilling('monthly')" data-i18n="monthly">月付</button>
+            <button type="button" id="billingYearly" class="btn btn-xs btn-outline"
+                style="border:2px solid var(--border);background:transparent;color:var(--text-light);border-radius:20px;padding:6px 16px;"
+                onclick="setBilling('yearly')" data-i18n="yearly">年付（8折）</button>
+        </div>
+        <p style="font-size:0.7rem;color:var(--text-lighter);margin-top:8px;" data-i18n="sstIncluded">所有价格均已包含 SST（6%）。若选择年付，您将一次性支付全年费用。</p>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()" data-i18n="cancel">取消</button>
+    </div>
+</div>
+	<!-- 收据模态框 -->
+<div class="modal-overlay" id="receiptModal" style="display:none;" onclick="closeReceiptModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px;padding:0;">
+        <!-- 内容由 JS 动态填充 -->
+    </div>
+</div>
+
+	<!-- 公开订单成功模态框 -->
+<div class="modal-overlay" id="publicOrderSuccessModal" style="display:none;" onclick="closePublicOrderSuccessModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px;text-align:center;padding:24px;">
+        <h3>✅ 订单已提交</h3>
+        <p style="font-size:0.9rem;color:var(--text-light);margin-top:8px;">
+            订单号：<strong>${orderId}</strong><br>
+            请前往柜台付款
+        </p>
+        <a id="publicTrackLink" href="#" target="_blank" style="display:inline-block;margin-top:12px;color:var(--persimmon);font-weight:600;">查看订单状态 →</a>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:16px;" onclick="closePublicOrderSuccessModal()">关闭</button>
+    </div>
+</div>
+	
+<script>
+	const i18n = i18next.createInstance();
+i18n
+  .use(i18nextBrowserLanguageDetector)
+.init({
+    fallbackLng: 'en',
+    debug: false,
+    resources: {
+      en: { translation: {
+  // 通用
+  "appName": "Dessert POS",
+  "storeName": "Persimmon Dessert",
+  "phone": "Tel: 017-8369622 / +6010-8476666",
+  "close": "Close",
+  "save": "Save",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "delete": "Delete",
+  "edit": "Edit",
+  "add": "Add",
+  "search": "Search",
+  "clear": "Clear",
+  "loading": "Loading...",
+  "noData": "No data",
+  "yes": "Yes",
+  "no": "No",
+  "on": "On",
+  "off": "Off",
+  "available": "Available",
+  "soldOut": "Sold Out",
+  "upload": "Upload",
+  "preview": "Preview",
+		  "allCategories": "All",
+
+		  "emailPlaceholder": "Email",
+"passwordPlaceholder": "Password",
+"passwordPlaceholderMin": "Password (at least 6 characters)",
+"login": "🔐 Login",
+"register": "📝 Register",
+"registerLink": "Register new account",
+"forgotPassword": "Forgot password?",
+"alreadyHaveAccount": "Already have an account? Login",
+"registeredEmail": "Registered Email",
+"sendResetLink": "📧 Send reset link",
+"backToLogin": "Back to login",
+
+	
+  // 模式切换
+  "cashierMode": "💰 Cashier",
+  "customerMode": "📱 Customer",
+  "fulfillmentMode": "📦 Kitchen",
+
+  // 按钮
+  "unpaidOrders": "💰 Unpaid",
+  "qrCode": "🔗 QR",
+  "report": "📊 Report",
+  "settings": "⚙️ Settings",
+  "logout": "🚪 Logout",
+  "checkout": "💳 Checkout",
+  "clearOrder": "🗑️ Clear",
+  "addMember": "＋ Add",
+  "upgradePlan": "⭐ Upgrade",
+		  "langSwitch": "🌐 中",
+		  
+
+  // 设置
+  "settingsTitle": "⚙️ Settings",
+  "dataSyncUrl": "Data Sync URL (GET)",
+  "imageUploadUrl": "Image Upload URL (POST) - optional",
+  "imgbbKey": "ImgBB API Key",
+  "saveSettings": "💾 Save Settings",
+  "loadDemo": "📦 Load Demo Data",
+		  "adminModeLabel": "🔓 Admin Mode",
+"changeLogo": "Change Logo",
+"editStoreName": "Edit Store Name",
+"discountRules": "🏷️ Discount Rules",
+"manageCategory": "📂 Manage Categories",
+"addMenuItem": "＋ Add Item",
+"updateMenu": "📝 Update Menu",
+"lockEdit": "🔒 Lock Edit",
+"unlockEdit": "🔓 Unlock Edit",
+
+  // 收银面板
+  "currentOrder": "🧾 Current Order",
+  "subtotal": "Subtotal",
+  "memberDiscount": "Member Discount",
+  "total": "Total",
+  "clearOrderConfirm": "Clear order?",
+
+  // 会员
+  "memberSearch": "📞 Search member phone...",
+  "memberInfo": "Member Info",
+  "points": "Points",
+  "totalSpent": "Total Spent",
+  "redeemDiscount": "🎉 Redeem discount",
+  "noMember": "No member linked",
+  "addMemberTitle": "🧑‍🤝‍🧑 Add Member",
+  "memberName": "Name",
+  "memberPhone": "Phone",
+
+  // 支付
+  "paymentTitle": "💳 Payment",
+  "paymentMethod": "Payment Method:",
+  "cash": "💰 Cash",
+  "card": "💳 Credit / Debit Card",
+  "online": "📱 Online Payment",
+  "amountDue": "Amount Due:",
+  "amountReceived": "Amount Received:",
+  "change": "Change:",
+  "cardType": "Card Type:",
+  "cardLast4": "Last 4 Digits:",
+  "refNum": "Reference No.:",
+  "onlinePlatform": "Platform:",
+  "payNow": "✅ Confirm Payment",
+		  "clickToAdd": "Click menu to add item",
+"memberSearch": "📞 Search member phone...",
+"clear": "Clear",
+"addMember": "＋ Add",
+
+  // 折扣规则
+  "discountRulesTitle": "🏷️ Discount Rules",
+  "ruleType": "Type (percentage/fixed)",
+  "ruleValue": "Value",
+  "ruleMinPoints": "Min Points",
+  "addRule": "＋ Add Rule",
+
+  // 日报
+  "dailyReportTitle": "📊 Daily Report",
+  "date": "Date",
+  "orderCount": "Order Count",
+  "totalSales": "Total Sales",
+  "cashTotal": "Cash Total",
+  "cardTotal": "Card Total",
+  "onlineTotal": "Online Total",
+  "discountTotal": "Discount Total",
+  "closeDay": "🔒 Close Day",
+
+  // 菜品编辑
+  "editItemTitle": "✏️ Edit Item",
+  "itemName": "Name",
+  "itemDesc": "Description",
+  "itemPrice": "Price",
+  "itemOriginalPrice": "Original Price",
+  "itemCategory": "Category",
+  "itemEmoji": "Emoji",
+  "itemImageUrl": "Image URL",
+  "itemUploadImage": "Upload Image",
+  "itemAvailable": "In Stock",
+  "saveItem": "💾 Save Item",
+  "deleteItem": "🗑️ Delete",
+  "deleteItemConfirm": "Delete this item?",
+
+  // 分类管理
+  "categoryTitle": "🏷️ Manage Categories",
+  "newCategory": "New Category",
+  "addCategory": "＋ Add Category",
+  "deleteCategoryConfirm": "Delete category? Items will be moved to 'Other'.",
+
+  // 出餐
+  "preparing": "⏳ Preparing",
+  "completed": "✅ Completed",
+  "noActiveOrders": "No active orders",
+  "noHistoryOrders": "No history orders",
+  "startPrep": "Start Preparing",
+  "foodReady": "Food Ready",
+  "pickedUp": "Customer Picked Up",
+
+  // 订单状态
+  "statusPendingPayment": "Pending Payment",
+  "statusPending": "Pending",
+  "statusPreparing": "Preparing",
+  "statusReady": "Ready for Pickup",
+  "statusCompleted": "Completed",
+  "notYetPaid": "⏳ Not Paid",
+
+		  "receiptStoreName": "Persimmon Dessert",
+"callNumberLabel": "Call Number",
+"printReceipt": "Print Receipt",
+"paymentCash": "💰 Cash",
+"paymentCard": "💳 Credit/Debit Card",
+"paymentOnline": "📱 Online Payment",
+"onlineRefPlaceholder": "Enter reference number",
+"cardRefPlaceholder": "Optional",
+	
+  // 顾客端
+  "customerTitle": "🍅 Persimmon Dessert",
+  "customerSubtitle": "Scan to order · Delicious & fast",
+  "viewCart": "🛒 View Cart",
+  "cartTitle": "🛒 My Cart",
+  "customerName": "👤 Your Name",
+  "customerPhone": "📞 Phone (optional)",
+  "submitOrder": "✅ Submit Order",
+  "continueOrdering": "Continue Ordering",
+  "orderSubmitted": "Order submitted! Please wait for your number.",
+
+  // 套餐选择
+  "pricingTitle": "⭐ Upgrade Plan",
+  "currentPlan": "Current Plan:",
+  "freePlan": "Free",
+  "basicPlan": "Basic",
+  "proPlan": "Pro",
+  "monthly": "Monthly",
+  "yearly": "Yearly (20% off)",
+  "choosePlan": "Choose Plan",
+  "sstIncluded": "All prices include 6% SST",
+  "featuresUnlimitedOrders": "Unlimited Orders",
+  "featuresCloudSync": "Cloud Sync",
+  "featuresMultiDevice": "Multi-device",
+  "featuresBasicReport": "Basic Reports",
+  "featuresReceiptPrint": "Receipt Printing",
+  "featuresMemberDiscount": "Member Discount",
+  "featuresInventory": "Inventory Management",
+  "featuresStaffPermission": "Staff Permission",
+  "featuresMultiShop": "Multi-shop",
+  "featuresDataExport": "Data Export",
+  "featuresCustomReceipt": "Custom Receipt Template",
+	"feature_unlimitedOrders": "Unlimited Orders",
+"feature_cloudSync": "Cloud Sync",
+"feature_multiDevice": "Multi-Device Login",
+"feature_basicReport": "Basic Reports",
+"feature_receiptPrint": "Receipt Printing",
+"feature_memberDiscount": "Member Discount",
+"feature_inventory": "Inventory Management",
+"feature_staffPermission": "Staff Permissions",
+"feature_multiShop": "Multi-Shop",
+"feature_dataExport": "Data Export",
+"feature_customReceipt": "Custom Receipt Template",
+"feature_foodOrdering": "Online Ordering",	  
+
+		  "basicPlanName": "Basic Standard",
+  "proPlanName": "Pro Professional",
+  "perMonth": "per month",
+  "perYear": "per year",
+  "currentPlanLabel": "Current Plan",
+  "choosePlanLabel": "Choose Plan",
+		  
+  // 其他
+  "orderLimitReached": "🚫 Free plan daily order limit reached. Please upgrade.",
+  "imgCompressing": "Compressing image...",
+  "imgUploading": "Uploading image...",
+  "imgUploadSuccess": "✅ Image uploaded",
+  "imgUploadFailed": "Upload failed",
+  "memberAdded": "✅ Member added",
+  "orderCompleted": "✅ Order #{{orderId}} completed",
+  "orderPaid": "✅ Order #{{orderId}} paid",
+  "pickUpNumber": "🔔 Pick-up number: {{number}}",
+
+  // Toast（补齐）
+  "fillNameAndPhone": "⚠️ Please enter name and phone number",
+  "memberAddFailed": "⚠️ Failed to add member, please try again",
+  "insufficientReceivedAmount": "⚠️ Received amount is insufficient",
+  "orderCleared": "Order cleared",
+  "fillAllFields": "Please fill in all fields",
+  "ruleAdded": "Rule added",
+  "dailyClosedSaved": "✅ Today's report closed and saved",
+  "paymentConfigError": "Payment configuration error. Please contact admin",
+  "redirectingToPayment": "Redirecting to payment...",
+  "paymentCreateFailed": "Payment creation failed: {{error}}",
+  "paymentRedirectError": "Payment redirect error: {{error}}",
+  "settingsSaved": "✅ Settings saved",
+  "cartEmpty": "🛒 Cart is empty",
+  "enterName": "Please enter name",
+  "submitFailedTryLater": "Submit failed, please try again later",
+  "addItemsFirst": "⚠️ Please add items first",
+  "deleteFailed": "⚠️ Delete failed, please try again",
+  "menuItemDeleted": "✅ Menu item deleted",
+  "menuItemSaved": "✅ Menu item saved",
+  "menuItemAdded": "Menu item added",
+  "namePriceCannotBeEmpty": "⚠️ Name and price cannot be empty",
+  "saveFailed": "⚠️ Save failed, please try again",
+  "enterCategoryName": "Please enter a name",
+  "categoryExists": "Category already exists",
+  "categoryAdded": "Category added",
+  "categoryDeleted": "Category \"{{cat}}\" deleted",
+  "fieldUpdated": "Updated {{field}}",
+  "itemAdded": "Added: {{name}}",
+  "orderSubmittedWithId": "✅ Order #{{orderId}} submitted! Please wait for pick-up 🍅",
+  "imgbbKeyMissing": "❌ Please enter ImgBB API key in Settings first",
+  "selectImageFile": "Please choose an image file",
+  "imgCompressUploading": "Compressing & uploading image…",
+  "imgUploadFailedWithReason": "Upload failed: {{error}}",
+  "imgUploadError": "Upload error: {{error}}"
+} },
+      'zh-CN': { translation: {
+  // 通用
+  "appName": "柿柿润糖水 POS 系统",
+  "storeName": "柿柿润糖水",
+  "phone": "📞 017-8369622 / +6010-8476666",
+  "close": "关闭",
+  "save": "保存",
+  "cancel": "取消",
+  "confirm": "确认",
+  "delete": "删除",
+  "edit": "编辑",
+  "add": "添加",
+  "search": "搜索",
+  "clear": "清除",
+  "loading": "加载中...",
+  "noData": "暂无数据",
+  "yes": "是",
+  "no": "否",
+  "on": "开",
+  "off": "关",
+  "available": "在售",
+  "soldOut": "售罄",
+  "upload": "上传",
+  "preview": "预览",
+		  "allCategories": "全部",
+
+		  "emailPlaceholder": "电子邮箱",
+"passwordPlaceholder": "密码",
+"passwordPlaceholderMin": "密码（至少6位）",
+"login": "🔐 登录",
+"register": "📝 注册",
+"registerLink": "注册新账号",
+"forgotPassword": "忘记密码？",
+"alreadyHaveAccount": "已有账号？登录",
+"registeredEmail": "注册邮箱",
+"sendResetLink": "📧 发送重置链接",
+"backToLogin": "返回登录",
+		  
+  // 模式切换
+  "cashierMode": "💰 收银",
+  "customerMode": "📱 顾客",
+  "fulfillmentMode": "📦 出餐",
+
+  // 按钮
+  "unpaidOrders": "💰 待收款",
+  "qrCode": "🔗 二维码",
+  "report": "📊 报表",
+  "settings": "⚙️ 设置",
+  "logout": "🚪 登出",
+  "checkout": "💳 结算",
+  "clearOrder": "🗑️ 清空",
+  "addMember": "＋ 添加会员",
+  "upgradePlan": "⭐ 升级套餐",
+		  "adminModeLabel": "🔓 管理模式",
+"changeLogo": "更换Logo",
+"editStoreName": "改店名",
+"discountRules": "🏷️ 优惠规则",
+"manageCategory": "📂 管理分类",
+"addMenuItem": "＋菜品",
+"updateMenu": "📝 更新菜单",
+"lockEdit": "🔒 锁定编辑",
+"unlockEdit": "🔓 解锁管理",
+		  "langSwitch": "🌐 EN",
+
+  // 设置
+  "settingsTitle": "⚙️ 系统设置",
+  "dataSyncUrl": "数据同步 URL (GET)",
+  "imageUploadUrl": "图片上传 URL (POST) - 可选",
+  "imgbbKey": "ImgBB API 密钥",
+  "saveSettings": "💾 保存设置",
+  "loadDemo": "📦 加载演示数据",
+
+  // 收银面板
+  "currentOrder": "🧾 当前订单",
+  "subtotal": "小计",
+  "memberDiscount": "会员折扣",
+  "total": "总计",
+  "clearOrderConfirm": "确定清空订单？",
+		  "clickToAdd": "点击菜单添加商品",
+"memberSearch": "📞 会员手机号查找...",
+"clear": "清除",
+"addMember": "＋ 添加",
+
+		  "receiptStoreName": "柿柿润糖水",
+"callNumberLabel": "叫号号码",
+"printReceipt": "打印收据",
+"paymentCash": "💰 现金",
+"paymentCard": "💳 信用卡/借记卡",
+"paymentOnline": "📱 线上支付",
+"onlineRefPlaceholder": "输入参考号",
+"cardRefPlaceholder": "可选",
+		  
+  // 会员
+  "memberSearch": "📞 搜索会员手机号...",
+  "memberInfo": "会员信息",
+  "points": "积分",
+  "totalSpent": "累计消费",
+  "redeemDiscount": "🎉 可兑换折扣",
+  "noMember": "未关联会员",
+  "addMemberTitle": "🧑‍🤝‍🧑 添加会员",
+  "memberName": "姓名",
+  "memberPhone": "手机号",
+
+  // 支付
+  "paymentTitle": "💳 结算",
+  "paymentMethod": "支付方式：",
+  "cash": "💰 现金",
+  "card": "💳 信用卡 / 借记卡",
+  "online": "📱 线上支付",
+  "amountDue": "应收：",
+  "amountReceived": "实收：",
+  "change": "找零：",
+  "cardType": "卡类型：",
+  "cardLast4": "卡号末四位：",
+  "refNum": "参考号：",
+  "onlinePlatform": "平台：",
+  "payNow": "✅ 确认收款",
+
+		  "basicPlanName": "Basic 标准版",
+  "proPlanName": "Pro 专业版",
+  "perMonth": "每月",
+  "perYear": "每年",
+  "currentPlanLabel": "当前套餐",
+  "choosePlanLabel": "选择此套餐",
+	  
+  // 折扣规则
+  "discountRulesTitle": "🏷️ 优惠规则",
+  "ruleType": "类型 (percentage/fixed)",
+  "ruleValue": "值",
+  "ruleMinPoints": "最低积分",
+  "addRule": "＋ 添加规则",
+
+  // 日报
+  "dailyReportTitle": "📊 今日报表",
+  "date": "日期",
+  "orderCount": "订单数",
+  "totalSales": "总销售额",
+  "cashTotal": "现金收款",
+  "cardTotal": "银行卡收款",
+  "onlineTotal": "线上收款",
+  "discountTotal": "折扣总额",
+  "closeDay": "🔒 关闭今日账目",
+
+  // 菜品编辑
+  "editItemTitle": "✏️ 编辑菜品",
+  "itemName": "名称",
+  "itemDesc": "描述",
+  "itemPrice": "价格",
+  "itemOriginalPrice": "原价",
+  "itemCategory": "分类",
+  "itemEmoji": "Emoji",
+  "itemImageUrl": "图片URL",
+  "itemUploadImage": "上传图片",
+  "itemAvailable": "在售",
+  "saveItem": "💾 保存菜品",
+  "deleteItem": "🗑️ 删除",
+  "deleteItemConfirm": "确定删除该菜品吗？",
+
+  // 分类管理
+  "categoryTitle": "🏷️ 管理分类",
+  "newCategory": "新分类名",
+  "addCategory": "＋ 添加分类",
+  "deleteCategoryConfirm": "删除此分类？该分类下的商品将移至“其他”。",
+
+  // 出餐
+  "preparing": "⏳ 制作中",
+  "completed": "✅ 已取餐",
+  "noActiveOrders": "无进行中订单",
+  "noHistoryOrders": "无历史订单",
+  "startPrep": "开始准备",
+  "foodReady": "餐已好",
+  "pickedUp": "客人取餐",
+
+  // 订单状态
+  "statusPendingPayment": "待付款",
+  "statusPending": "已付款",
+  "statusPreparing": "制作中",
+  "statusReady": "可取餐",
+  "statusCompleted": "已取餐",
+  "notYetPaid": "⏳ 尚未付款",
+
+  // 顾客端
+  "customerTitle": "🍅 柿柿润糖水",
+  "customerSubtitle": "扫码点餐 · 美味直达",
+  "viewCart": "🛒 查看购物车",
+  "cartTitle": "🛒 我的购物车",
+  "customerName": "👤 您的姓名",
+  "customerPhone": "📞 手机号（选填）",
+  "submitOrder": "✅ 提交订单",
+  "continueOrdering": "继续点餐",
+  "orderSubmitted": "订单已提交！请等待叫号。",
+
+  // 套餐选择
+  "pricingTitle": "⭐ 升级套餐",
+  "currentPlan": "当前套餐：",
+  "freePlan": "免费版",
+  "basicPlan": "标准版",
+  "proPlan": "专业版",
+  "monthly": "月付",
+  "yearly": "年付（8折）",
+  "choosePlan": "选择此套餐",
+  "sstIncluded": "所有价格已包含6% SST",
+  "featuresUnlimitedOrders": "无限订单",
+  "featuresCloudSync": "云数据同步",
+  "featuresMultiDevice": "多设备同时登录",
+  "featuresBasicReport": "基础报表",
+  "featuresReceiptPrint": "小票打印",
+  "featuresMemberDiscount": "会员折扣",
+  "featuresInventory": "库存原料管理",
+  "featuresStaffPermission": "员工权限管理",
+  "featuresMultiShop": "多门店管理",
+  "featuresDataExport": "数据导出 Excel/PDF",
+  "featuresCustomReceipt": "自定义小票模板",
+"feature_unlimitedOrders": "无限订单",
+"feature_cloudSync": "云数据同步",
+"feature_multiDevice": "多设备同时登录",
+"feature_basicReport": "基础报表",
+"feature_receiptPrint": "小票打印",
+"feature_memberDiscount": "会员折扣",
+"feature_inventory": "库存原料管理",
+"feature_staffPermission": "员工权限管理",
+"feature_multiShop": "多门店管理",
+"feature_dataExport": "数据导出 Excel/PDF",
+"feature_customReceipt": "自定义小票模板",
+"feature_foodOrdering": "线上点餐",
+	
+		  
+  // 其他
+  "orderLimitReached": "🚫 免费版每日订单已达上限，请升级套餐。",
+  "imgCompressing": "图片压缩中...",
+  "imgUploading": "图片上传中...",
+  "imgUploadSuccess": "✅ 图片已上传",
+  "imgUploadFailed": "上传失败",
+  "memberAdded": "✅ 会员已添加",
+  "orderCompleted": "✅ 订单 #{{orderId}} 已完成",
+  "orderPaid": "✅ 订单 #{{orderId}} 已付款",
+  "pickUpNumber": "🔔 请取餐：{{number}} 号",
+
+  // Toast（补齐）
+  "fillNameAndPhone": "⚠️ 请填写姓名和手机号",
+  "memberAddFailed": "⚠️ 会员添加失败，请重试",
+  "insufficientReceivedAmount": "⚠️ 实收金额不足",
+  "orderCleared": "订单已清空",
+  "fillAllFields": "填写完整",
+  "ruleAdded": "规则已添加",
+  "dailyClosedSaved": "✅ 今日账目已关闭并保存",
+  "paymentConfigError": "支付配置错误，请联系管理员",
+  "redirectingToPayment": "正在跳转支付...",
+  "paymentCreateFailed": "支付创建失败: {{error}}",
+  "paymentRedirectError": "支付跳转错误: {{error}}",
+  "settingsSaved": "✅ 设置已保存",
+  "cartEmpty": "🛒 购物车是空的",
+  "enterName": "请输入姓名",
+  "submitFailedTryLater": "送出失败，请稍后再试",
+  "addItemsFirst": "⚠️ 请先添加商品",
+  "deleteFailed": "⚠️ 删除失败，请重试",
+  "menuItemDeleted": "✅ 菜品已删除",
+  "menuItemSaved": "✅ 菜品已保存",
+  "menuItemAdded": "菜品已添加",
+  "namePriceCannotBeEmpty": "⚠️ 名称和价格不能为空",
+  "saveFailed": "⚠️ 保存失败，请重试",
+  "enterCategoryName": "请输入名称",
+  "categoryExists": "分类已存在",
+  "categoryAdded": "分类已添加",
+  "categoryDeleted": "分类\"{{cat}}\"已删除",
+  "fieldUpdated": "已更新{{field}}",
+  "itemAdded": "已添加: {{name}}",
+  "orderSubmittedWithId": "✅ 订单 #{{orderId}} 已提交! 请等待取餐 🍅",
+  "imgbbKeyMissing": "❌ 请先在设置中填入 ImgBB API 密钥",
+  "selectImageFile": "请选择图片文件",
+  "imgCompressUploading": "图片压缩并上传中…",
+  "imgUploadFailedWithReason": "上传失败: {{error}}",
+  "imgUploadError": "上传错误: {{error}}"
+} }
+    },
+    detection: {
+      order: ['querystring', 'localStorage', 'navigator', 'htmlTag'],
+      caches: ['localStorage']
+    }
+  }, () => {
+    // 初始化完成后应用语言
+    autoAssignI18n();   // 自动绑定
+    applyLanguage();    // 初始应用语言
+  });
+
+function applyLanguage() {
+    // Update html lang attribute
+    document.documentElement.lang = i18n.language;
+
+    // 处理带有 data-i18n 的元素（直接设置 textContent）
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (key && i18n.exists(key)) {
+            el.textContent = i18n.t(key);
+        }
+    });
+
+    // 处理 placeholder（使用 data-i18n-placeholder）
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (key && i18n.exists(key)) {
+            el.placeholder = i18n.t(key);
+        }
+    });
+
+    // 处理 title（使用 data-i18n-title）
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (key && i18n.exists(key)) {
+            el.title = i18n.t(key);
+        }
+    });
+
+    // Update all lang toggle buttons (there may be two: one in mainApp, one in publicCustomerView)
+    document.querySelectorAll('#langToggle').forEach(btn => {
+        btn.textContent = i18n.language === 'zh-CN' ? '🌐 EN' : '🌐 中';
+    });
+}
+
+	function autoAssignI18n() {
+    const defaultLang = 'zh-CN'; // 你的页面原始语言
+    const translation = i18n.getResourceBundle(defaultLang, 'translation');
+    if (!translation) return;
+
+    // 反转字典：value -> key
+    const reverseDict = {};
+    for (const key in translation) {
+        const value = translation[key];
+        if (typeof value === 'string') {
+            // 只保留唯一的，避免冲突
+            if (!reverseDict[value]) {
+                reverseDict[value] = key;
+            }
+        }
+    }
+
+    // 遍历所有元素中的文本节点
+    const allElements = document.querySelectorAll('body *');
+    allElements.forEach(el => {
+        // 跳过已经手动添加了 data-i18n 的元素
+        if (el.hasAttribute('data-i18n')) return;
+
+        // 对于某些元素我们只处理直接文本节点，但这里简化处理
+        for (let i = 0; i < el.childNodes.length; i++) {
+            const node = el.childNodes[i];
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent.trim();
+                if (text && reverseDict[text]) {
+                    // 设置元素的 data-i18n 属性，并替换文本为英文字典的 key（等下会被 applyLanguage 替换）
+                    el.setAttribute('data-i18n', reverseDict[text]);
+                    break; // 找到一个就停止，避免覆盖多个
+                }
+            }
+        }
+    });
+}
+
+function toggleLanguage() {
+    const currentLang = i18n.language;
+    const newLang = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
+    i18n.changeLanguage(newLang, () => {
+        // 如果收据模态框打开，用新语言重新渲染
+        const receiptModal = document.getElementById('receiptModal');
+        if (receiptModal && receiptModal.style.display === 'flex') {
+            const lastOrderId = APP_STATE.orders.length > 0 ? APP_STATE.orders[0].id : null;
+            if (lastOrderId) {
+                const order = APP_STATE.orders.find(o => o.id === lastOrderId);
+                if (order) showOrderReceipt(order);
+            }
+        }
+
+        // 根据当前模式刷新动态内容
+        if (APP_STATE.mode === 'cashier') {
+            renderOrderPanel();
+        } else if (APP_STATE.mode === 'fulfillment') {
+            renderFulfillmentView();
+        } else if (APP_STATE.mode === 'customer') {
+            renderPublicMenu();
+        }
+
+        // 如果定价模态框打开，用新语言重新渲染
+        if (document.getElementById('pricingModal').style.display === 'flex') {
+            openPricingModal();
+        }
+
+        // 最后应用所有 data-i18n 翻译
+        applyLanguage();
+    });
+}
+
+// 初始化时应用语言
+document.addEventListener('DOMContentLoaded', () => {
+    applyLanguage();
+});
+	
+	
+// ==================== SUPABASE & STRIPE CONFIG ====================
+const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const stripe = Stripe('pk_test_51TVNNWGaRTxvbl03MtFuj3oMYc8mfFD8rOs6el6tVc2ppw9RMG3HXik9gOgIzaquz3mqWUM3bEKJ6PjAu7JI8Tyx00XZKfqIe4');
+// ==================== 套餐权限 JSON ====================
+const PLAN_PERMISSIONS = {
+  free: {
+    orderDailyLimit: 20,
+    unlimitedOrder: false,
+    cloudSync: false,
+    multiDevice: false,
+    reportBasic: false,
+    inventoryManage: false,
+    multiShop: false,
+    staffPermission: false,
+    dataExport: false,
+    customReceipt: false
+  },
+  basic: {
+    orderDailyLimit: 9999,
+    unlimitedOrder: true,
+    cloudSync: true,
+    multiDevice: true,
+    reportBasic: true,
+    inventoryManage: false,
+    multiShop: false,
+    staffPermission: false,
+    dataExport: false,
+    customReceipt: true
+  },
+  pro: {
+    orderDailyLimit: 9999,
+    unlimitedOrder: true,
+    cloudSync: true,
+    multiDevice: true,
+    reportBasic: true,
+    inventoryManage: true,
+    multiShop: true,
+    staffPermission: true,
+    dataExport: true,
+    customReceipt: true
+  }
+};
+// ==================== GLOBAL STATE ====================
+const APP_STATE = {
+    mode: 'cashier',
+    menu: [], categories: [], activeCategory: '全部',
+    cashierOrder: [], customerCart: [],
+    members: [], currentMember: null,
+    orders: [], discountRules: [],
+	publicCart: [],
+    settings: {},
+    gasUrl: localStorage.getItem('gasUrl') || '',
+    orderIdCounter: parseInt(localStorage.getItem('orderIdCounter') || '1000'),
+    adminUnlocked: false,
+    postUrl: localStorage.getItem('postUrl') || '',
+    imgbbKey: localStorage.getItem('imgbbKey') || '',
+    // 新增：
+    currentUser: null,
+    currentPlan: 'free',
+    // 多租户：当前店铺 ID（uuid）
+    storeId: null,
+    supabaseReady: false
+};
+
+	let realtimeSubscription = null;
+	
+// ==================== DEMO DATA (fallback) ====================
+function getDemoMenu() { /* unchanged */ return [
+    { id: '01', name: '柿柿润糖水', price: 10.00, category: '糖水', emoji: '🍅', available: true },
+    { id: '02', name: 'Milk Mochi', price: 7.00, category: '麻薯', emoji: '🥛', available: true },
+    { id: '03', name: 'Set A', price: 30.00, category: '套餐', emoji: '🎀', available: true },
+    { id: '04', name: 'Set B', price: 55.00, category: '套餐', emoji: '🎁', available: true },
+];}
+
+function getDemoMembers() { return [
+    { id: 'M001', name: '小明', phone: '0123456789', points: 120, totalSpent: 240.00 },
+    { id: 'M002', name: '阿花', phone: '0178369622', points: 85, totalSpent: 170.00 },
+];}
+function getDemoDiscountRules() { return []; }
+
+	function canAccess(feature) {
+  const plan = PLAN_PERMISSIONS[APP_STATE.currentPlan] || PLAN_PERMISSIONS.free;
+  return plan[feature] === true;
+}
+
+function checkOrderLimit() {
+    if (APP_STATE.currentPlan === 'free') {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayOrders = APP_STATE.orders.filter(o => o.date?.startsWith(today)).length;
+        if (todayOrders >= PLAN_PERMISSIONS.free.orderDailyLimit) {
+            showToast('orderLimitReached');
+            return false;
+        }
+    }
+    return true;
+}
+// ==================== INIT ====================
+async function init() {
+    await checkUser(); // checkUser 会自动调用 fetchAllData
+    // 不需要再单独加载数据
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.member-search')) {
+    const dropdown = document.getElementById('memberDropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }
+});
+
+function loadDemoData() {
+    APP_STATE.menu = getDemoMenu();
+    APP_STATE.members = getDemoMembers();
+    APP_STATE.discountRules = getDemoDiscountRules();
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i=>i.category))];
+}
+
+async function fetchAllData() {
+  try {
+    if (!APP_STATE.storeId) {
+      throw new Error('Missing APP_STATE.storeId');
+    }
+    const [
+      { data: menu },
+      { data: members },
+      { data: orders },
+      { data: discountRules },
+      { data: settingsRows }
+    ] = await Promise.all([
+      supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('orders').select('*').eq('store_id', APP_STATE.storeId).order('date', { ascending: false }),
+      supabaseClient.from('discount_rules').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('settings').select('*').eq('store_id', APP_STATE.storeId)
+    ]);
+
+    APP_STATE.menu = menu.map(item => ({
+      ...item,
+      price: Number(item.price),
+      originalPrice: item.originalPrice ? Number(item.originalPrice) : null,
+      available: item.available === true || item.available === 'TRUE'
+    }));
+    APP_STATE.members = members.map(m => ({
+      ...m,
+      points: Number(m.points),
+      totalSpent: Number(m.totalSpent)
+    }));
+    APP_STATE.orders = orders || [];
+    APP_STATE.discountRules = discountRules || [];
+    APP_STATE.settings = {};
+    if (settingsRows) {
+    settingsRows.forEach(row => {
+        APP_STATE.settings[row.key] = row.value;
+    });
+    // ✅ 确保 autoAddMember 默认值为 true 如果数据库中不存在
+    if (APP_STATE.settings.autoAddMember === undefined) {
+        APP_STATE.settings.autoAddMember = true;
+    } else {
+        APP_STATE.settings.autoAddMember = APP_STATE.settings.autoAddMember === 'true' || APP_STATE.settings.autoAddMember === true;
+    }
+}
+
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    APP_STATE.supabaseReady = true;
+  } catch (e) {
+    console.error('Supabase fetch error:', e);
+    loadDemoData();
+  }
+}
+
+
+// ==================== RENDER ====================
+function renderAll() {
+    renderCategoryTabs();
+    renderMenuGrid();
+    renderOrderPanel();
+    if (APP_STATE.mode === 'customer') {
+        renderCustomerCategoryTabs();
+        renderCustomerMenuGrid();
+        updateCartBadge();
+    }
+}
+function renderCategoryTabs() {
+    document.getElementById('categoryTabs').innerHTML = APP_STATE.categories.map(cat => {
+        const displayText = cat === '全部' ? i18n.t('allCategories') : cat;
+        return `<button class="cat-tab${cat === APP_STATE.activeCategory ? ' active' : ''}" onclick="setCategory('${cat}')">${displayText}</button>`;
+    }).join('');
+}
+function setCategory(cat) { APP_STATE.activeCategory = cat; renderAll(); }
+function getFilteredMenu() {
+  // Only show available items in menu:
+  return APP_STATE.activeCategory==='全部'
+    ? APP_STATE.menu.filter(i => i.available === true || i.available === 'TRUE')
+    : APP_STATE.menu.filter(i => (i.category === APP_STATE.activeCategory)
+         && (i.available === true || i.available === 'TRUE'));
+}
+function renderMenuGrid() {
+    const grid = document.getElementById('menuGrid');
+    if (!grid) return;
+    const items = getFilteredMenu();
+    grid.innerHTML = items.map(item => {
+        const hasSale = item.originalPrice && Number(item.originalPrice) > Number(item.price);
+        
+        // Image or emoji
+        let imageHTML = '';
+        let emojiDisplay = 'display:block;';
+        if (item.imageUrl || item.image) {
+            const url = item.imageUrl || item.image;
+            if (url && url.trim() !== '') {
+                imageHTML = `<img src="${url}" class="item-img" alt="${item.name}" loading="lazy" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">`;
+                emojiDisplay = 'display:none;';
+            }
+        }
+        
+        return `
+        <div class="menu-card${item.available ? '' : ' out-of-stock'}" onclick="${item.available ? `addToOrder('${item.id}')` : ''}">
+            ${hasSale ? '<span class="badge-sale">优惠</span>' : ''}
+            ${imageHTML}
+            <span class="item-emoji" style="font-size:2.5rem;${emojiDisplay}">${item.emoji || '🍴'}</span>
+            <div class="item-name">${item.name}</div>
+            <div class="item-desc">${item.description || ''}</div>
+            <div class="item-price">
+                RM ${Number(item.price).toFixed(2)}
+                ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+function renderCustomerMenuGrid() {
+    const grid = document.getElementById('customerMenuGrid');
+    if (!grid) return;
+    const items = getFilteredMenu();
+    grid.innerHTML = items.map(item => {
+        const hasSale = item.originalPrice && Number(item.originalPrice) > Number(item.price);
+        
+        let imageHTML = '';
+        let emojiDisplay = 'display:block;';
+        if (item.imageUrl || item.image) {
+            const url = item.imageUrl || item.image;
+            if (url && url.trim() !== '') {
+                imageHTML = `<img src="${url}" class="item-img" alt="${item.name}" loading="lazy" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">`;
+                emojiDisplay = 'display:none;';
+            }
+        }
+        
+        return `
+        <div class="menu-card${item.available ? '' : ' out-of-stock'}" onclick="${item.available ? `addToCustomerCart('${item.id}')` : ''}">
+            ${hasSale ? '<span class="badge-sale">优惠</span>' : ''}
+            ${imageHTML}
+            <span class="item-emoji" style="font-size:2.5rem;${emojiDisplay}">${item.emoji || '🍴'}</span>
+            <div class="item-name">${item.name}</div>
+            <div class="item-desc">${item.description || ''}</div>
+            <div class="item-price">
+                RM ${Number(item.price).toFixed(2)}
+                ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+function renderOrderPanel() {
+    const container = document.getElementById('orderItems');
+    if (APP_STATE.cashierOrder.length === 0) {
+        container.innerHTML = `<div class="order-empty"><span class="icon">🛒</span><span data-i18n="clickToAdd">点击菜单添加商品</span></div>`;
+    } else {
+        container.innerHTML = APP_STATE.cashierOrder.map((entry, idx) => `
+        <div class="order-item-row">
+            <span class="oi-name">${entry.menuItem.name}</span>
+            <div class="oi-qty">
+                <button onclick="adjustOrderQty(${idx}, -1)">−</button>
+                <span>${entry.quantity}</span>
+                <button onclick="adjustOrderQty(${idx}, 1)">+</button>
+            </div>
+            <span class="oi-price">RM ${(Number(entry.menuItem.price) * entry.quantity).toFixed(2)}</span>
+            <button class="oi-del" onclick="removeFromOrder(${idx})">✕</button>
+        </div>
+        `).join('');
+    }
+    updateOrderTotals();
+    updateMemberDisplay();
+}
+function updateOrderTotals() {
+    let subtotal = APP_STATE.cashierOrder.reduce((s, e) => s + Number(e.menuItem.price) * e.quantity, 0);
+    let discount = 0;
+    if (APP_STATE.currentMember) {
+        const applicableRules = APP_STATE.discountRules.filter(r => Number(r.minPoints) <= (APP_STATE.currentMember.points || 0));
+        for (let rule of applicableRules) {
+            if (rule.type === 'percentage') discount += subtotal * (Number(rule.value) / 100);
+            else if (rule.type === 'fixed') discount += Number(rule.value);
+        }
+        discount = Math.min(discount, subtotal);
+    }
+    document.getElementById('subtotalDisplay').textContent = `RM ${subtotal.toFixed(2)}`;
+    document.getElementById('discountRow').hidden = discount === 0;
+    document.getElementById('discountDisplay').textContent = `-RM ${discount.toFixed(2)}`;
+    document.getElementById('totalDisplay').textContent = `RM ${(subtotal - discount).toFixed(2)}`;
+}
+
+// ==================== MEMBER SEARCH WITH DROPDOWN ====================
+function searchMemberSuggestions() {
+    const phone = document.getElementById('memberPhoneInput').value.trim();
+    const dropdown = document.getElementById('memberDropdown');
+    if (phone.length < 3) {
+        dropdown.style.display = 'none';
+        APP_STATE.currentMember = null;
+        updateMemberDisplay();
+        return;
+    }
+    const matches = APP_STATE.members.filter(m => String(m.phone).includes(phone));
+    if (matches.length === 0) {
+        dropdown.style.display = 'none';
+        APP_STATE.currentMember = null;
+    } else {
+        dropdown.innerHTML = matches.map(m => 
+            `<div class="member-dropdown-item" 
+                onclick="event.stopPropagation(); selectMemberById('${m.id}');"
+                onmousedown="event.preventDefault();"
+            >${m.name} - ${m.phone}</div>`
+        ).join('');
+        dropdown.style.display = 'block';
+    }
+    updateMemberDisplay();
+}
+
+// Ensure dropdown doesn't close when clicking an item
+document.getElementById('memberDropdown').addEventListener('mousedown', function(e) {
+    e.stopPropagation();
+});
+	
+function selectMember(member) {
+    APP_STATE.currentMember = member;
+    document.getElementById('memberPhoneInput').value = member.phone;
+    document.getElementById('memberDropdown').style.display = 'none';
+    updateMemberDisplay();
+}
+function selectMemberById(id) {
+    const member = APP_STATE.members.find(m => m.id === id);
+    if (member) selectMember(member);
+}
+function clearMember() {
+    APP_STATE.currentMember = null;
+    document.getElementById('memberPhoneInput').value = '';
+    document.getElementById('memberDropdown').style.display = 'none';
+    updateMemberDisplay();
+}
+function updateMemberDisplay() {
+    const display = document.getElementById('memberInfoDisplay');
+    if (APP_STATE.currentMember) {
+        display.innerHTML = `
+        <div class="member-info">
+            <div class="member-avatar">${APP_STATE.currentMember.name.charAt(0)}</div>
+            <div>
+                <strong>${APP_STATE.currentMember.name}</strong> · 积分: ${APP_STATE.currentMember.points} · 
+                累计消费: RM ${Number(APP_STATE.currentMember.totalSpent).toFixed(2)}
+                ${APP_STATE.currentMember.points >= 50 ? ' 🎉可兑换折扣' : ''}
+            </div>
+        </div>`;
+    } else {
+        display.innerHTML = '<span style="color:#C0A0A0;">未关联会员</span>';
+    }
+    updateOrderTotals();
+}
+
+// ==================== ADD MEMBER ====================
+function openAddMemberModal() { document.getElementById('addMemberModal').style.display='flex'; }
+function closeAddMemberModal(e) { if(e&&e.target!==document.getElementById('addMemberModal'))return; document.getElementById('addMemberModal').style.display='none'; }
+document.getElementById('addMemberModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+async function submitNewMember() {
+    const name = document.getElementById('newMemberName').value.trim();
+    const phone = document.getElementById('newMemberPhone').value.trim();
+    if (!name || !phone) {
+        showToast('fillNameAndPhone');
+        return;
+    }
+    
+    const memberId = 'M' + Date.now().toString().slice(-6);
+    const newMember = {
+        id: memberId,
+        store_id: APP_STATE.storeId,
+        name: name,
+        phone: phone,
+        points: 0,
+        totalSpent: 0
+    };
+    
+    // 本地添加
+    APP_STATE.members.push(newMember);
+    
+    // 写入 Supabase
+    const { error } = await supabaseClient.from('members').insert([newMember]);
+    if (error) {
+        console.error('Add member error:', error);
+        showToast('memberAddFailed');
+        APP_STATE.members = APP_STATE.members.filter(m => m.id !== memberId);
+        return;
+    }
+    
+    document.getElementById('addMemberModal').style.display = 'none';
+    document.getElementById('newMemberName').value = '';
+    document.getElementById('newMemberPhone').value = '';
+    showToast('memberAdded');
+    
+    APP_STATE.currentMember = newMember;
+    document.getElementById('memberPhoneInput').value = newMember.phone;
+    updateMemberDisplay();
+}
+function openPaymentModal(orderId) {
+    let payOrder = null;
+    if (orderId) {
+        payOrder = APP_STATE.orders.find(o => o.id === orderId);
+        APP_STATE.selectedOrderForPayment = payOrder;
+    } else {
+        APP_STATE.selectedOrderForPayment = null;
+    }
+    window.currentPayingOrderId = null;  // Reset customer order flag
+    const total = payOrder ? Number(payOrder.total) : getOrderTotal();
+    document.getElementById('payTotalDisplay').textContent = `RM ${total.toFixed(2)}`;
+    document.getElementById('paymentModal').style.display = 'flex';
+    document.getElementById('paymentMethodSelect').value = 'cash';
+    document.getElementById('cashReceived').value = '';
+    document.getElementById('changeDisplay').textContent = 'RM 0.00';
+    showPaymentDetails();
+    calculateChange();
+}
+
+function calculateChange() {
+    let total;
+    if (window.currentPayingOrderId) {
+        // Paying a customer order - get total from the order
+        const order = APP_STATE.orders.find(o => o.id === window.currentPayingOrderId);
+        total = order ? Number(order.total) : getOrderTotal();
+    } else if (APP_STATE.selectedOrderForPayment) {
+        total = Number(APP_STATE.selectedOrderForPayment.total);
+    } else {
+        total = getOrderTotal();
+    }
+    const received = parseFloat(document.getElementById('cashReceived').value) || 0;
+    const change = Math.max(0, received - total);
+    document.getElementById('changeDisplay').textContent = `RM ${change.toFixed(2)}`;
+}
+
+function closePaymentModal(e) { 
+    if(e && e.target!==document.getElementById('paymentModal')) return;
+    document.getElementById('paymentModal').style.display='none';
+    APP_STATE.selectedOrderForPayment = null;
+}
+
+// Remember to update finalizePayment or processPayment so it also clears the pointer after processing.
+
+function showPaymentDetails() {
+    const method = document.getElementById('paymentMethodSelect').value;
+    document.getElementById('cashDetails').style.display = method==='cash'?'block':'none';
+    document.getElementById('cardDetails').style.display = method==='card'?'block':'none';
+    document.getElementById('onlineDetails').style.display = method==='online'?'block':'none';
+    if(method==='cash') calculateChange();
+}
+
+function finalizePayment() {
+    const method = document.getElementById('paymentMethodSelect').value;
+    const total = getOrderTotal();
+    let paymentDetails = { method };
+    if (method === 'cash') {
+        const received = parseFloat(document.getElementById('cashReceived').value) || 0;
+        if (received < total) { showToast('insufficientReceivedAmount'); return; }
+        paymentDetails.amountTendered = received;
+        paymentDetails.change = received - total;
+    } else if (method === 'card') {
+        paymentDetails.cardType = document.getElementById('cardType').value;
+        paymentDetails.cardLast4 = document.getElementById('cardLast4').value;
+        paymentDetails.refNum = document.getElementById('cardRefNum').value;
+    } else if (method === 'online') {
+        paymentDetails.onlineType = document.getElementById('onlineType').value;
+        paymentDetails.refNum = document.getElementById('onlineRefNum').value;
+    }
+    processPayment(method, total, paymentDetails);
+    document.getElementById('paymentModal').style.display = 'none';
+}
+
+async function processPayment(method, total, paymentDetails = {}) {
+    if (!checkOrderLimit()) return;
+
+    // 生成叫号号码
+    let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
+    APP_STATE.settings.callNumberCounter = callNum;
+    // 同步到 Supabase
+    await supabaseClient.from('settings').upsert(
+        { store_id: APP_STATE.storeId, key: 'callNumberCounter', value: String(callNum) },
+        { onConflict: 'store_id,key' }
+    );
+
+    const orderId = String(++APP_STATE.orderIdCounter);
+    localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
+
+    const order = {
+        id: orderId,
+        store_id: APP_STATE.storeId,
+        date: new Date().toISOString(),
+        items: APP_STATE.cashierOrder.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
+        total: total,
+        paymentMethod: method,
+        memberPhone: APP_STATE.currentMember?.phone || '',
+        memberName: APP_STATE.currentMember?.name || '',
+        paymentDetails: paymentDetails,
+        discountApplied: getDiscountAmount(),
+        status: 'pending',
+        callNumber: String(callNum)       // 支付时就分配叫号号码
+    };
+
+    // 本地添加
+    APP_STATE.orders.unshift(order);
+    APP_STATE.cashierOrder = [];
+    APP_STATE.currentMember = null;
+    document.getElementById('memberPhoneInput').value = '';
+    renderOrderPanel();
+
+    // 写入 Supabase
+    const { error } = await supabaseClient.from('orders').insert([order]);
+    if (error) console.error('Order insert error:', error);
+
+    // 更新会员积分（如果有会员）
+    if (order.memberPhone) {
+        const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
+        if (member) {
+            member.points += Math.floor(total);
+            member.totalSpent += Number(total);
+            await supabaseClient.from('members').update({
+                points: member.points,
+                totalSpent: member.totalSpent
+            }).eq('id', member.id);
+        }
+    }
+
+    // 弹出收据
+    showOrderReceipt(order);
+}
+
+function showOrderReceipt(order) {
+    const receiptHTML = `
+    <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
+        <h2 style="color:var(--persimmon);margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
+        <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
+        <div style="font-size:3rem;font-weight:800;color:var(--red);margin:12px 0;">🔔 ${order.callNumber}</div>
+        <div style="font-size:0.85rem;color:var(--text-light);">${i18n.t('callNumberLabel')}</div>
+        <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
+        <table style="width:100%;font-size:0.8rem;text-align:left;border-collapse:collapse;">
+            ${order.items.map(item => `
+                <tr>
+                    <td style="padding:4px 0;">${item.name} x${item.qty}</td>
+                    <td style="text-align:right;">RM ${(item.price * item.qty).toFixed(2)}</td>
+                </tr>
+            `).join('')}
+        </table>
+        <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
+        <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
+            <span>${i18n.t('total')}</span>
+            <span>RM ${order.total.toFixed(2)}</span>
+        </div>
+        <div style="font-size:0.8rem;color:var(--text-light);text-align:left;line-height:1.6;">
+            <div>${i18n.t('paymentMethod')}：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
+            ${renderPaymentDetailsLine(order)}
+        </div>
+    </div>
+    <div style="padding:0 16px 16px; display:flex; gap:8px;">
+        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="printReceipt('${order.id}')">🖨️ ${i18n.t('printReceipt')}</button>
+        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="closeReceiptModal()">${i18n.t('close')}</button>
+    </div>`;
+
+    const modal = document.getElementById('receiptModal');
+    modal.querySelector('.modal-sheet').innerHTML = receiptHTML;
+    modal.style.display = 'flex';
+}
+
+	function printReceipt(orderId) {
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    if (!order) return;
+    const printContent = `
+        <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
+            <h2 style="color:#E8784A;margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
+            <div style="font-size:0.8rem;color:#6B4E4E;margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
+            <div style="font-size:3rem;font-weight:800;color:#E85555;margin:12px 0;">🔔 ${order.callNumber}</div>
+            <div style="font-size:0.85rem;color:#6B4E4E;">${i18n.t('callNumberLabel')}</div>
+            <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
+            <table style="width:100%;font-size:0.8rem;text-align:left;border-collapse:collapse;">
+                ${order.items.map(item => `
+                    <tr>
+                        <td style="padding:4px 0;">${item.name} x${item.qty}</td>
+                        <td style="text-align:right;">RM ${(item.price * item.qty).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </table>
+            <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
+            <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
+                <span>${i18n.t('total')}</span>
+                <span>RM ${order.total.toFixed(2)}</span>
+            </div>
+            <div style="font-size:0.8rem;color:#6B4E4E;text-align:left;line-height:1.6;">
+                <div>${i18n.t('paymentMethod')}：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
+                ${renderPaymentDetailsLine(order)}
+            </div>
+        </div>
+    `;
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    printWindow.document.write(`
+        <html>
+        <head><title>收据 ${orderId}</title>
+        <style>
+            body { margin:0; padding:0; }
+            @media print { body { margin:0; } }
+        </style></head>
+        <body>${printContent}</body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.onafterprint = () => printWindow.close();
+}
+	
+function getPaymentMethodLabel(method) {
+    const labels = {
+        cash: i18n.t('paymentCash'),
+        card: i18n.t('paymentCard'),
+        online: i18n.t('paymentOnline')
+    };
+    return labels[method] || method;
+}
+function renderPaymentDetailsLine(order) {
+    const details = order.paymentDetails || {};
+    if (order.paymentMethod === 'cash' && details.amountTendered) {
+        return `<div>${i18n.t('amountReceived')}：RM ${details.amountTendered.toFixed(2)}</div>
+                <div>${i18n.t('change')}：RM ${details.change.toFixed(2)}</div>`;
+    }
+    if (order.paymentMethod === 'card' && details.cardLast4) {
+        return `<div>${i18n.t('cardLast4')}：**** ${details.cardLast4}</div>
+                <div>${i18n.t('refNum')}：${details.refNum || ''}</div>`;
+    }
+    if (order.paymentMethod === 'online' && details.refNum) {
+        return `<div>${i18n.t('onlinePlatform')}：${details.onlineType || ''}</div>
+                <div>${i18n.t('refNum')}：${details.refNum}</div>`;
+    }
+    return '';
+}
+
+function closeReceiptModal() {
+    document.getElementById('receiptModal').style.display = 'none';
+}
+function getOrderTotal() {
+    const subtotal = APP_STATE.cashierOrder.reduce((s,e)=>s+e.menuItem.price*e.quantity,0);
+    const discount = getDiscountAmount();
+    return Math.max(0, subtotal - discount);
+}
+function getDiscountAmount() {
+    if (!APP_STATE.currentMember) return 0;
+    let discount = 0;
+    const subtotal = APP_STATE.cashierOrder.reduce((s,e)=>s+e.menuItem.price*e.quantity,0);
+    for (let rule of APP_STATE.discountRules) {
+        if (Number(rule.minPoints) <= (APP_STATE.currentMember.points||0)) {
+            if (rule.type === 'percentage') discount += subtotal * (Number(rule.value)/100);
+            else if (rule.type === 'fixed') discount += Number(rule.value);
+        }
+    }
+    return Math.min(discount, subtotal);
+}
+
+// ==================== ADD TO ORDER ====================
+function addToOrder(itemId) {
+    const item = APP_STATE.menu.find(m => m.id === itemId);
+    if (!item || !item.available) return;
+    const existing = APP_STATE.cashierOrder.find(e => e.menuItem.id === itemId);
+    if (existing) {
+        existing.quantity++;
+    } else {
+        APP_STATE.cashierOrder.push({ menuItem: item, quantity: 1 });
+    }
+    renderOrderPanel();
+    showToast('itemAdded', { name: item.name });
+}
+function adjustOrderQty(index, delta) {
+    APP_STATE.cashierOrder[index].quantity += delta;
+    if (APP_STATE.cashierOrder[index].quantity <= 0) {
+        APP_STATE.cashierOrder.splice(index, 1);
+    }
+    renderOrderPanel();
+}
+
+function removeFromOrder(index) {
+    APP_STATE.cashierOrder.splice(index, 1);
+    renderOrderPanel();
+}
+
+function clearOrder() {
+    APP_STATE.cashierOrder = [];
+    APP_STATE.currentMember = null;
+    document.getElementById('memberPhoneInput').value = '';
+    document.getElementById('memberDropdown').style.display = 'none';
+    renderOrderPanel();
+    showToast('orderCleared');
+}
+
+// ==================== DISCOUNT RULES MODAL ====================
+function openDiscountRulesModal() { document.getElementById('discountRulesModal').style.display='flex'; renderDiscountRulesList(); }
+function closeDiscountRulesModal(e) { if(e&&e.target!==document.getElementById('discountRulesModal'))return; document.getElementById('discountRulesModal').style.display='none'; }
+document.getElementById('discountRulesModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+function renderDiscountRulesList() {
+    const list = document.getElementById('discountRulesList');
+    list.innerHTML = APP_STATE.discountRules.map(r=>`<div>${r.type} - ${r.value} | 最低积分:${r.minPoints} <button onclick="deleteDiscountRule('${r.id}')">✕</button></div>`).join('');
+}
+async function addDiscountRule() {
+    const type = document.getElementById('newRuleType').value;
+    const value = document.getElementById('newRuleValue').value;
+    const minPoints = document.getElementById('newRuleMinPoints').value;
+    if (!type || !value) { showToast('fillAllFields'); return; }
+    
+    const rule = {
+        id: 'D' + Date.now(),
+        store_id: APP_STATE.storeId,
+        type,
+        value: Number(value),
+        minPoints: Number(minPoints) || 0,
+        validFrom: '',
+        validTo: ''
+    };
+    
+    APP_STATE.discountRules.push(rule);
+    
+    const { error } = await supabaseClient.from('discount_rules').insert([rule]);
+    if (error) console.error('Add discount rule error:', error);
+    
+    renderDiscountRulesList();
+    showToast('ruleAdded');
+}
+async function deleteDiscountRule(id) {
+    APP_STATE.discountRules = APP_STATE.discountRules.filter(r=>r.id!==id);
+    // Optionally delete from sheet (needs a dedicated GAS action)
+    renderDiscountRulesList();
+}
+
+// ==================== DAILY REPORT ====================
+function openReportModal() {
+    document.getElementById('reportModal').style.display='flex';
+    const today = new Date().toISOString().slice(0,10);
+    const todayOrders = APP_STATE.orders.filter(o=>o.date.startsWith(today));
+    const totalSales = todayOrders.reduce((s,o)=>s+Number(o.total),0);
+    const cashTotal = todayOrders.filter(o=>o.paymentMethod==='cash').reduce((s,o)=>s+Number(o.total),0);
+    const cardTotal = todayOrders.filter(o=>o.paymentMethod==='card').reduce((s,o)=>s+Number(o.total),0);
+    const onlineTotal = todayOrders.filter(o=>o.paymentMethod==='online').reduce((s,o)=>s+Number(o.total),0);
+    const discountTotal = todayOrders.reduce((s,o)=>s+(Number(o.discountApplied)||0),0);
+    document.getElementById('dailyReportContent').innerHTML = `
+        <table class="daily-report-table">
+            <tr><td>日期</td><td>${today}</td></tr>
+            <tr><td>订单数</td><td>${todayOrders.length}</td></tr>
+            <tr><td>总销售额</td><td>RM ${totalSales.toFixed(2)}</td></tr>
+            <tr><td>现金</td><td>RM ${cashTotal.toFixed(2)}</td></tr>
+            <tr><td>信用卡</td><td>RM ${cardTotal.toFixed(2)}</td></tr>
+            <tr><td>线上支付</td><td>RM ${onlineTotal.toFixed(2)}</td></tr>
+            <tr><td>折扣总额</td><td>RM ${discountTotal.toFixed(2)}</td></tr>
+        </table>`;
+}
+async function closeDay() {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayOrders = APP_STATE.orders.filter(o => o.date?.startsWith(today));
+    const report = {
+        store_id: APP_STATE.storeId,
+        date: today,
+        totalSales: todayOrders.reduce((s, o) => s + Number(o.total), 0),
+        cashTotal: todayOrders.filter(o => o.paymentMethod === 'cash').reduce((s, o) => s + Number(o.total), 0),
+        cardTotal: todayOrders.filter(o => o.paymentMethod === 'card').reduce((s, o) => s + Number(o.total), 0),
+        onlineTotal: todayOrders.filter(o => o.paymentMethod === 'online').reduce((s, o) => s + Number(o.total), 0),
+        orderCount: todayOrders.length,
+        discountTotal: todayOrders.reduce((s, o) => s + (Number(o.discountApplied) || 0), 0),
+        closedBy: 'Cashier'
+    };
+    
+    const { error } = await supabaseClient.from('daily_reports').insert([report]);
+    if (error) console.error('Save daily report error:', error);
+    
+    document.getElementById('reportModal').style.display = 'none';
+    showToast('dailyClosedSaved');
+}
+function closeReportModal(e) { if(e&&e.target!==document.getElementById('reportModal'))return; document.getElementById('reportModal').style.display='none'; }
+document.getElementById('reportModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+        // ==================== MODE SWITCH ====================
+   function switchMode(mode) {
+    APP_STATE.mode = mode;
+    document.querySelectorAll('#modeSwitcher button').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.querySelector(`#modeSwitcher button[data-mode="${mode}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    document.getElementById('cashierView').classList.toggle('active', mode === 'cashier');
+    const fulfillView = document.getElementById('fulfillmentView');
+    if (fulfillView) fulfillView.classList.toggle('active', mode === 'fulfillment');
+    
+    if (mode === 'cashier') {
+        renderCategoryTabs();
+        renderMenuGrid();
+        renderOrderPanel();
+		applyLanguage(); 
+    } else if (mode === 'fulfillment') {
+        renderFulfillmentView();
+        if (APP_STATE.adminUnlocked) {
+            renderAdminMenuGrid();
+            document.getElementById('adminBar').style.display = 'flex';
+            document.getElementById('unlockBtn').style.display = 'none';
+        } else {
+            document.getElementById('adminBar').style.display = 'none';
+            document.getElementById('unlockBtn').style.display = 'block';
+            document.getElementById('adminMenuGrid').innerHTML = '';
+        }
+    }
+}
+function updateUpgradeButton() {
+  const btn = document.getElementById('upgradeBtn');
+  if (btn) btn.style.display = APP_STATE.currentPlan !== 'pro' ? 'inline-block' : 'none';
+}
+// ==================== 套餐卡片配置 ====================
+const PLAN_DETAILS = {
+    basic: {
+        name: 'Basic 标准版',
+        priceRM: 29,
+        priceUSD: 7,
+        features: [
+            'unlimitedOrders',
+            'cloudSync',
+            'multiDevice',
+            'basicReport',
+            'receiptPrint',
+            'memberDiscount'
+        ],
+        color: '#4CAF84'
+    },
+    pro: {
+        name: 'Pro 专业版',
+        priceRM: 69,
+        priceUSD: 17,
+        features: [
+            'basicAll',
+            'inventory',
+            'staffPermission',
+            'multiShop',
+            'dataExport',
+            'customReceipt',
+            'foodOrdering'
+        ],
+        color: '#E8784A'
+    }
+};
+// 当前选中的计费周期，默认为 monthly
+let selectedBilling = 'monthly';
+
+function setBilling(billing) {
+    selectedBilling = billing;
+    // 更新按钮样式
+    const monthlyBtn = document.getElementById('billingMonthly');
+    const yearlyBtn = document.getElementById('billingYearly');
+    if (billing === 'monthly') {
+        monthlyBtn.style.background = 'var(--persimmon)';
+        monthlyBtn.style.color = 'white';
+        monthlyBtn.style.borderColor = 'var(--persimmon)';
+        yearlyBtn.style.background = 'transparent';
+        yearlyBtn.style.color = 'var(--text-light)';
+        yearlyBtn.style.borderColor = 'var(--border)';
+    } else {
+        yearlyBtn.style.background = 'var(--persimmon)';
+        yearlyBtn.style.color = 'white';
+        yearlyBtn.style.borderColor = 'var(--persimmon)';
+        monthlyBtn.style.background = 'transparent';
+        monthlyBtn.style.color = 'var(--text-light)';
+        monthlyBtn.style.borderColor = 'var(--border)';
+    }
+    updatePlanPrices();  // 更新价格显示
+}
+function updatePlanPrices() {
+    const billing = selectedBilling;  // 直接使用全局变量
+    const monthlyBasic = 29;
+    const yearlyBasic = 278.4;
+    const monthlyPro = 69;
+    const yearlyPro = 662.4;
+    
+    document.querySelectorAll('#planCards .plan-price').forEach(el => {
+        const plan = el.dataset.plan;
+        if (plan === 'basic') {
+            el.textContent = billing === 'monthly' 
+                ? `RM ${monthlyBasic}` 
+                : `RM ${yearlyBasic}`;
+        } else if (plan === 'pro') {
+            el.textContent = billing === 'monthly' 
+                ? `RM ${monthlyPro}` 
+                : `RM ${yearlyPro}`;
+        }
+    });
+}
+
+function openPricingModal() {
+    // 初始化账单周期为月付
+    if (typeof setBilling === 'function') {
+        setBilling('monthly');
+    } else {
+        selectedBilling = 'monthly';
+    }
+
+    const currentPlan = APP_STATE.currentPlan || 'free';
+
+    // 1. 设置当前套餐翻译文本
+    const label = document.getElementById('currentPlanLabel');
+    if (label) {
+        // 使用翻译函数，键为 'freePlan', 'basicPlan', 'proPlan'
+        label.textContent = i18n.t(currentPlan + 'Plan');
+    }
+
+    // 2. 生成套餐卡片
+    const planCardsHTML = Object.keys(PLAN_DETAILS).map(planId => {
+        const plan = PLAN_DETAILS[planId];
+        const billing = selectedBilling;
+        const price = billing === 'monthly'
+            ? (planId === 'basic' ? 29 : 69)
+            : (planId === 'basic' ? 278.4 : 662.4);
+        const isCurrent = currentPlan === planId;
+
+        // 特性列表翻译
+        const featuresList = plan.features.map(f => {
+            const translated = i18n.exists('feature_' + f) ? i18n.t('feature_' + f) : f;
+            return `<li style="padding:4px 0;">✅ ${translated}</li>`;
+        }).join('');
+
+        return `
+        <div style="border:2px solid ${plan.color};border-radius:var(--radius-sm);padding:16px;text-align:center;background:white;display:flex;flex-direction:column;justify-content:space-between;">
+            <div>
+                <h4 style="color:${plan.color};margin-bottom:8px;">${plan.name}</h4>
+                <div class="plan-price" data-plan="${planId}" style="font-size:1.8rem;font-weight:800;">RM ${price}</div>
+                <div data-i18n="${billing === 'monthly' ? 'perMonth' : 'perYear'}" style="font-size:0.75rem;color:var(--text-lighter);">${i18n.t(billing === 'monthly' ? 'perMonth' : 'perYear')}</div>
+                <ul style="list-style:none;padding:0;margin:12px 0;text-align:left;font-size:0.8rem;">
+                    ${featuresList}
+                </ul>
+            </div>
+            <button class="btn btn-primary btn-sm"
+                onclick="handlePlanSelection('${planId}')"
+                ${isCurrent ? 'disabled' : ''}
+                style="margin-top:8px;background:${plan.color};box-shadow:none;border:none;color:white;">
+                ${isCurrent ? i18n.t('currentPlanLabel') : i18n.t('choosePlanLabel')}
+            </button>
+        </div>`;
+    }).join('');
+
+    document.getElementById('planCards').innerHTML = planCardsHTML;
+    applyLanguage();
+    document.getElementById('pricingModal').style.display = 'flex';
+}
+function closePricingModal(event) {
+    if (event && event.target !== document.getElementById('pricingModal')) return;
+    document.getElementById('pricingModal').style.display = 'none';
+}
+document.getElementById('pricingModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+
+// 处理用户选择套餐，触发 Stripe Checkout
+function handlePlanSelection(planId) {
+    const billing = selectedBilling;  // 直接使用全局变量
+    const priceId = getPriceId(planId, billing);
+    if (!priceId) {
+        showToast('paymentConfigError');
+        return;
+    }
+    closePricingModal();
+    openStripeCheckout(priceId);
+}
+async function openStripeCheckout(priceId) {
+    try {
+        showToast('redirectingToPayment');
+        const functionUrl = 'https://tpisbuxzbnmoaowtlbyu.supabase.co/functions/v1/create-checkout-session';
+
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                priceId: priceId,
+                customerEmail: APP_STATE.currentUser?.email || '',
+            }),
+        });
+
+        const { url, error } = await response.json();
+        if (error) {
+            showToast('paymentCreateFailed', { error });
+            return;
+        }
+        if (url) {
+            window.location.href = url;  // 跳转到 Stripe Checkout 页面
+        }
+    } catch (err) {
+        showToast('paymentRedirectError', { error: err.message });
+    }
+}
+
+// 价格 ID 映射（需要你在 Stripe 中创建产品后替换）
+
+function getPriceId(plan, billing) {
+  const prices = {
+    basic_monthly: 'price_1TVNQYGaRTxvbl03KFoCksKP',   // 替换为你的 Stripe 价格 ID
+    basic_yearly: 'price_1TVNR5GaRTxvbl03PXhN4s4R',
+    pro_monthly: 'price_1TVNR5GaRTxvbl03PXhN4s4R',
+    pro_yearly: 'price_1TVNSIGaRTxvbl03XMTaS2Kx'
+  };
+  return prices[`${plan}_${billing}`];
+}
+        // ==================== QR CODE ====================
+        function updateQRCode() {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            const storeId = APP_STATE.storeId;
+            const url = window.location.origin + window.location.pathname + `?mode=customer&store=${encodeURIComponent(storeId || '')}`;
+            document.getElementById('qrUrlDisplay').textContent = url;
+            try {
+                new QRCode(qrContainer, {
+                    text: url,
+                    width: 180,
+                    height: 180,
+                    colorDark: '#3D2020',
+                    colorLight: '#FFFFFF',
+                    correctLevel: QRCode.CorrectLevel.M,
+                });
+            } catch (e) {
+                qrContainer.innerHTML =
+                    '<p style="padding:40px;background:#FDF5F0;border-radius:12px;">QR码生成中...<br><small>请确保网络连接正常</small></p>';
+            }
+        }
+
+        function openQRModal() {
+            document.getElementById('qrModal').style.display = 'flex';
+            updateQRCode();
+        }
+
+        function closeQRModal(event) {
+            if (event && event.target !== document.getElementById('qrModal')) return;
+            document.getElementById('qrModal').style.display = 'none';
+        }
+        document.getElementById('qrModal').addEventListener('click', function(e) {
+            if (e.target === this) this.style.display = 'none';
+        });
+
+        // ==================== SETTINGS ====================
+       function openSettings() {
+    document.getElementById('gasUrlInput').value = APP_STATE.gasUrl;
+    document.getElementById('postUrlInput').value = APP_STATE.postUrl || '';
+    document.getElementById('imgbbKeyInput').value = APP_STATE.imgbbKey || '';
+    // ✅ 读取自动添加会员设置
+    document.getElementById('autoAddMemberToggle').checked = APP_STATE.settings.autoAddMember !== false;
+    document.getElementById('settingsModal').style.display = 'flex';
+}
+
+async function saveSettings() {   // 注意这里要改为 async
+    APP_STATE.gasUrl = document.getElementById('gasUrlInput').value.trim();
+    APP_STATE.postUrl = document.getElementById('postUrlInput').value.trim();
+    APP_STATE.imgbbKey = document.getElementById('imgbbKeyInput').value.trim();
+    localStorage.setItem('gasUrl', APP_STATE.gasUrl);
+    localStorage.setItem('postUrl', APP_STATE.postUrl);
+    localStorage.setItem('imgbbKey', APP_STATE.imgbbKey);
+
+    // 保存自动添加会员设置
+    const autoAdd = document.getElementById('autoAddMemberToggle').checked;
+    APP_STATE.settings.autoAddMember = autoAdd;
+
+    // 一次性同步所有设置到 Supabase
+    if (typeof supabaseClient !== 'undefined') {
+        const settingsToUpsert = [
+            { store_id: APP_STATE.storeId, key: 'autoAddMember', value: autoAdd ? 'true' : 'false' },
+            { store_id: APP_STATE.storeId, key: 'imgbbKey', value: APP_STATE.imgbbKey }
+        ];
+        await supabaseClient.from('settings').upsert(settingsToUpsert, { onConflict: 'store_id,key' });
+    }
+
+    document.getElementById('settingsModal').style.display = 'none';
+    showToast('settingsSaved');
+
+    // 因为本地状态已经更新，不需要重新加载数据
+    // 如果希望从数据库重新获取（非必须），可以保留以下代码，但要确保数据库写入完成
+    // if (APP_STATE.supabaseReady) {
+    //     await fetchAllData();
+    // } else {
+    //     loadDemoData();
+    //     renderAll();
+    // }
+}
+        function closeSettingsModal(event) {
+            if (event && event.target !== document.getElementById('settingsModal')) return;
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+        document.getElementById('settingsModal').addEventListener('click', function(e) {
+            if (e.target === this) this.style.display = 'none';
+        });
+
+   
+
+        // ==================== TOAST ====================
+        // 支持 i18n key + 变量；若传入的是普通字符串，则原样显示
+        function showToast(keyOrText, vars = {}) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+
+            const text =
+                (typeof i18n !== 'undefined' && typeof i18n.exists === 'function' && i18n.exists(keyOrText))
+                    ? i18n.t(keyOrText, vars)
+                    : keyOrText;
+
+            toast.textContent = text;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+// ==================== AUTH ====================
+async function checkUser() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    const urlStoreId = urlParams.get('store');
+
+    if (session) {
+        // ✅ 已登录 → 进入管理后台
+        APP_STATE.currentUser = session.user;
+        await loadUserProfile();
+        if (!APP_STATE.storeId) {
+            console.warn('No store_id on profile yet. Please run the multi-tenant migration SQL.');
+        }
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('publicCustomerView').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        await fetchAllData();
+    if (!realtimeSubscription) {
+        initRealtime();
+    }  // 启动实时监听
+        renderAll();
+		applyLanguage();
+        updateQRCode();
+		updateUnpaidBadge();
+        } else if (mode === 'customer') {
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('publicCustomerView').style.display = 'block';
+        document.getElementById('mainApp').style.display = 'none';
+        // 多租户：顾客模式必须通过 URL 传入 store_id，例如 ?mode=customer&store=<uuid>
+        APP_STATE.storeId = urlStoreId || APP_STATE.storeId;
+        if (!APP_STATE.storeId) {
+            const container = document.getElementById('publicCustomerView');
+            if (container) {
+                container.innerHTML = '<div style="max-width:480px;margin:60px auto;background:white;padding:20px;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08);text-align:center;color:#6B4E4E;">Missing store id.<br><small>Please open via the QR code generated from cashier/admin.</small></div>';
+            }
+            return;
+        }
+        await fetchPublicMenu();
+        await loadPublicSettings();   // ← 加载设置，确保读取到 autoAddMember
+        renderPublicMenu();
+		updatePublicCartCount(); 
+    } else {
+        // 🔐 默认显示登录界面
+        document.getElementById('authContainer').style.display = 'block';
+        document.getElementById('publicCustomerView').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'none';
+    }
+}
+
+	async function initRealtime() {
+    if (realtimeSubscription) {
+        await supabaseClient.removeChannel(realtimeSubscription);
+    }
+
+    realtimeSubscription = supabaseClient
+        .channel('orders-changes')
+        .on('system', { event: 'connected' }, () => {
+            console.log('✅ Realtime connected');
+        })
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'orders' },
+            (payload) => {
+                console.log('实时订单变更:', payload);
+                if (payload.eventType === 'INSERT') {
+                    APP_STATE.orders.unshift(payload.new);
+                } else if (payload.eventType === 'UPDATE') {
+                    const idx = APP_STATE.orders.findIndex(o => o.id === payload.new.id);
+                    if (idx !== -1) APP_STATE.orders[idx] = payload.new;
+                } else if (payload.eventType === 'DELETE') {
+                    APP_STATE.orders = APP_STATE.orders.filter(o => o.id !== payload.old.id);
+                }
+
+                if (APP_STATE.mode === 'cashier') {
+                    if (document.getElementById('unpaidOrdersModal').style.display === 'flex') {
+                        renderUnpaidOrdersList();
+                    }
+                } else if (APP_STATE.mode === 'fulfillment') {
+                    renderFulfillmentView();
+                }
+				// 在 postgres_changes 回调内，所有操作完成后
+updateUnpaidBadge();
+            }
+        )
+        .subscribe();
+}
+	
+async function loadUserProfile() {
+  const { data: profile } = await supabaseClient
+    .from('profiles')
+    .select('plan_id, subscription_status, store_id')
+    .eq('id', APP_STATE.currentUser.id)
+    .single();
+  if (profile) {
+    APP_STATE.currentPlan = profile.plan_id || 'free';
+    APP_STATE.subscriptionStatus = profile.subscription_status || 'active';
+    APP_STATE.storeId = profile.store_id || null;
+	  updateUpgradeButton();
+  }
+}
+
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') {
+    document.getElementById('authContainer').style.display = 'block';
+    document.getElementById('mainApp').style.display = 'none';
+  }
+});
+
+function showLogin() {
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = 'none';
+  document.getElementById('authMessage').textContent = '';
+}
+function showRegister() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
+  document.getElementById('resetForm').style.display = 'none';
+  document.getElementById('authMessage').textContent = '';
+}
+function showReset() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('resetForm').style.display = 'block';
+  document.getElementById('authMessage').textContent = '';
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById('authMessage').textContent = error.message;
+  } else {
+    checkUser();
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const email = document.getElementById('registerEmail').value;
+  const password = document.getElementById('registerPassword').value;
+  const { error } = await supabaseClient.auth.signUp({ email, password });
+  if (error) {
+    document.getElementById('authMessage').textContent = error.message;
+  } else {
+    document.getElementById('authMessage').textContent = '注册成功！请检查邮箱确认（如果开启了邮件验证）。';
+  }
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById('resetEmail').value;
+  const { error } = await supabaseClient.auth.sendPasswordResetEmail(email, { redirectTo: window.location.origin });
+  if (error) {
+    document.getElementById('authMessage').textContent = error.message;
+  } else {
+    document.getElementById('authMessage').textContent = '密码重置邮件已发送，请检查邮箱。';
+  }
+}
+
+async function logout() {
+    if (realtimeSubscription) {
+        await supabaseClient.removeChannel(realtimeSubscription);
+        realtimeSubscription = null;
+    }
+    await supabaseClient.auth.signOut();
+    checkUser();
+}
+	async function fetchPublicMenu() {
+    const { data: menu } = await supabaseClient
+        .from('menu')
+        .select('*')
+        .eq('store_id', APP_STATE.storeId);
+    if (menu) {
+        APP_STATE.menu = menu.map(item => ({
+            ...item,
+            price: Number(item.price),
+            available: item.available === true || item.available === 'TRUE'
+        }));
+        APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    }
+}
+async function loadPublicSettings() {
+    const { data: settingsRows, error } = await supabaseClient
+        .from('settings')
+        .select('*')
+        .eq('store_id', APP_STATE.storeId)
+        .in('key', ['autoAddMember']);  // 只取需要的设置，减少数据传输
+
+    if (error) {
+        console.error('Load public settings error:', error);
+        return;
+    }
+    if (settingsRows) {
+        settingsRows.forEach(row => {
+            APP_STATE.settings[row.key] = row.value;
+        });
+        // 统一处理布尔转换
+        if (APP_STATE.settings.autoAddMember !== undefined) {
+            APP_STATE.settings.autoAddMember = 
+                APP_STATE.settings.autoAddMember === 'true' || APP_STATE.settings.autoAddMember === true;
+        } else {
+            APP_STATE.settings.autoAddMember = true;  // 默认开启
+        }
+    }
+}
+function renderPublicMenu() {
+    const activeCat = APP_STATE.activeCategory || '全部';
+    const items = activeCat === '全部' 
+        ? APP_STATE.menu.filter(i => i.available) 
+        : APP_STATE.menu.filter(i => i.available && i.category === activeCat);
+
+    document.getElementById('publicCategoryTabs').innerHTML = APP_STATE.categories.map(cat => {
+    const displayText = cat === '全部' ? i18n.t('allCategories') : cat;
+    return `<button class="cat-tab${cat === activeCat ? ' active' : ''}" onclick="setPublicCategory('${cat}')">${displayText}</button>`;
+}).join('');
+
+    document.getElementById('publicMenuGrid').innerHTML = items.map(item => {
+        const imageUrl = item.imageUrl || item.image || '';
+        let imageHTML = '';
+        let emojiDisplay = 'display:block;font-size:2.5rem;';
+        if (imageUrl.trim() !== '') {
+            imageHTML = `<img src="${imageUrl}" class="item-img" alt="${item.name}" loading="lazy">`;
+            emojiDisplay = 'display:none;';
+        }
+        return `
+        <div class="menu-card" onclick="addToPublicCart('${item.id}')">
+            ${imageHTML}
+            <span class="item-emoji" style="${emojiDisplay}">${item.emoji || '🍴'}</span>
+            <div class="item-name">${item.name}</div>
+            <div class="item-price">RM ${Number(item.price).toFixed(2)}</div>
+        </div>`;
+    }).join('');
+	updatePublicCartCount();
+}
+
+function setPublicCategory(cat) {
+    APP_STATE.activeCategory = cat;
+    renderPublicMenu();
+}
+
+function addToPublicCart(itemId) {
+    const item = APP_STATE.menu.find(i => i.id === itemId);
+    if (!item || !item.available) return;
+    const existing = APP_STATE.publicCart.find(e => e.menuItem.id === itemId);
+    if (existing) {
+        existing.quantity++;
+    } else {
+        APP_STATE.publicCart.push({ menuItem: item, quantity: 1 });
+    }
+    updatePublicCartCount();
+    showToast('itemAdded', { name: item.name });
+}
+
+function updatePublicCartCount() {
+    const count = APP_STATE.publicCart.reduce((s, e) => s + e.quantity, 0);
+    let badge = document.getElementById('publicCartCount');
+    
+    // 如果气泡元素不存在，动态创建一个
+    if (!badge) {
+        const cartBtn = document.querySelector('#publicCustomerView .btn-outline.btn-sm[onclick*="toggleCustomerCart"]');
+        if (!cartBtn) return;
+        badge = document.createElement('span');
+        badge.id = 'publicCartCount';
+        badge.style.cssText = `
+            position:absolute; top:-6px; right:-8px;
+            background:#E85555; color:white;
+            font-size:0.7rem; font-weight:700;
+            min-width:18px; height:18px; line-height:18px;
+            border-radius:9px; text-align:center;
+            display:none;
+        `;
+        cartBtn.style.position = 'relative';
+        cartBtn.appendChild(badge);
+    }
+    
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+function toggleCustomerCart() {
+    if (APP_STATE.publicCart.length === 0) {
+        showToast('cartEmpty');
+        return;
+    }
+    renderPublicCart();
+    document.getElementById('publicCartModal').style.display = 'flex';
+}
+
+function renderPublicCart() {
+    const container = document.getElementById('publicCartItems');
+    const total = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
+    container.innerHTML = APP_STATE.publicCart.map((entry, idx) => `
+        <div class="order-item-row">
+            <span class="oi-name">${entry.menuItem.name}</span>
+            <div class="oi-qty">
+                <button onclick="adjustPublicCart(${idx}, -1)">−</button>
+                <span>${entry.quantity}</span>
+                <button onclick="adjustPublicCart(${idx}, 1)">+</button>
+            </div>
+            <span class="oi-price">RM ${(entry.menuItem.price * entry.quantity).toFixed(2)}</span>
+        </div>
+    `).join('');
+    document.getElementById('publicCartTotal').textContent = `RM ${total.toFixed(2)}`;
+}
+
+function adjustPublicCart(index, delta) {
+    APP_STATE.publicCart[index].quantity += delta;
+    if (APP_STATE.publicCart[index].quantity <= 0) {
+        APP_STATE.publicCart.splice(index, 1);
+    }
+    if (APP_STATE.publicCart.length === 0) {
+        document.getElementById('publicCartModal').style.display = 'none';
+    }
+    renderPublicCart();
+    updatePublicCartCount();   // 确保气泡更新
+}
+
+function closePublicCartModal(event) {
+    if (event && event.target !== document.getElementById('publicCartModal')) return;
+    document.getElementById('publicCartModal').style.display = 'none';
+}
+
+async function submitPublicOrder() {
+    const name = document.getElementById('publicCustomerName').value.trim();
+    if (!name) { showToast('enterName'); return; }
+    if (APP_STATE.publicCart.length === 0) { showToast('cartEmpty'); return; }
+    const phone = document.getElementById('publicCustomerPhone').value.trim();
+    const total = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
+    const orderId = 'PUB-' + Date.now();
+    const order = {
+        id: orderId,
+        store_id: APP_STATE.storeId,
+        date: new Date().toISOString(),
+        items: APP_STATE.publicCart.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
+        total: total,
+        paymentMethod: 'customer_order',
+        memberPhone: phone,
+        memberName: name,
+        paymentDetails: {},
+        discountApplied: 0,
+        status: 'pending_payment',
+        callNumber: ''
+    };
+    const { data: insertedOrder, error } = await supabaseClient
+        .from('orders')
+        .insert([order])
+        .select('id, public_token')
+        .single();
+    if (error) {
+        console.error('Order insert error:', error);
+        showToast('submitFailedTryLater');
+        return;
+    }
+    const publicToken = insertedOrder?.public_token;
+
+    // ==================== 自动添加会员（新增）====================
+    // 条件：设置了自动添加（默认为 true）、填写了电话、该电话尚未注册为会员
+    const autoAdd = APP_STATE.settings.autoAddMember !== false; // 默认为 true
+    if (autoAdd && phone) {
+        const existingMember = APP_STATE.members.find(m => String(m.phone) === phone);
+        if (!existingMember) {
+            const newMember = {
+                id: 'M' + Date.now().toString().slice(-6),
+                store_id: APP_STATE.storeId,
+                name: name,
+                phone: phone,
+                points: 0,
+                totalSpent: 0
+            };
+            // 本地添加，以便收银端立即能搜索到
+            APP_STATE.members.push(newMember);
+            // 异步写入 Supabase，不阻塞跳转
+            supabaseClient.from('members').insert([newMember]).then(({ error: e2 }) => {
+                if (e2) console.error('自动添加会员失败:', e2);
+            });
+        }
+    }
+    // ============================================================
+
+    APP_STATE.publicCart = [];
+    document.getElementById('publicCartModal').style.display = 'none';
+    document.getElementById('publicCustomerName').value = '';
+    document.getElementById('publicCustomerPhone').value = '';
+    updatePublicCartCount();
+
+    // 跳转到订单状态页面
+    if (publicToken) {
+        window.location.href = 'order-status.html?t=' + encodeURIComponent(publicToken);
+    } else {
+        // fallback（极少发生）
+        window.location.href = 'order-status.html?orderId=' + encodeURIComponent(orderId);
+    }
+}
+	
+        // ==================== URL PARAM CHECK ====================
+        function checkUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const mode = params.get('mode');
+            if (mode === 'customer') {
+                switchMode('customer');
+            }
+        }
+
+        // ==================== KEYBOARD SHORTCUTS ====================
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F1') {
+                e.preventDefault();
+                switchMode('cashier');
+            }
+            if (e.key === 'F2') {
+                e.preventDefault();
+                switchMode('customer');
+            }
+            if (e.key === 'F8' && APP_STATE.mode === 'cashier') {
+                e.preventDefault();
+                quickPayment('cash');
+            }
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+            }
+        });
+
+        // ==================== START ====================
+        init();
+        checkUrlParams();
+
+        console.log('🍅 柿柿润糖水 POS 系统已就绪');
+        console.log('  💰 收银模式 - 当前视图');
+        console.log('  📱 顾客模式 - 扫码或切换');
+        console.log('  ⚙️ 设置 Google Sheets URL 以启用云同步');
+        console.log('  📋 F1=收银 F2=顾客 F8=现金结算 Esc=关闭弹窗');
+        console.log('  📞 017-8369622 / +6010-8476666');
+		
+		function openAddMemberModal() {
+    document.getElementById('addMemberModal').style.display = 'flex';
+}
+function closeAddMemberModal(event) {
+    if (event && event.target !== document.getElementById('addMemberModal')) return;
+    document.getElementById('addMemberModal').style.display = 'none';
+}
+document.getElementById('addMemberModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+
+// ==================== RENDERING HELPERS ====================
+function renderCustomerCategoryTabs() {
+    document.getElementById('customerCategoryTabs').innerHTML = APP_STATE.categories.map(cat => {
+        const displayText = cat === '全部' ? i18n.t('allCategories') : cat;
+        return `<button class="cat-tab${cat === APP_STATE.activeCategory ? ' active' : ''}" onclick="setCategory('${cat}')">${displayText}</button>`;
+    }).join('');
+}
+	
+
+function renderFulfillmentView() {
+    const activeOrders = APP_STATE.orders.filter(o => o.status !== 'completed');
+    const completedOrders = APP_STATE.orders.filter(o => o.status === 'completed');
+    
+    document.getElementById('activeOrders').innerHTML = activeOrders.length === 0 
+        ? '<p style="color:var(--text-lighter);padding:20px;">无进行中订单</p>' 
+        : activeOrders.map(order => renderOrderCard(order)).join('');
+    
+    document.getElementById('completedOrders').innerHTML = completedOrders.length === 0 
+        ? '<p style="color:var(--text-lighter);padding:20px;">无历史订单</p>'
+        : completedOrders.slice(-20).reverse().map(order => renderOrderCard(order)).join('');
+}
+
+function renderOrderCard(order) {
+    const status = order.status || 'pending';
+    const callNumber = order.callNumber || '';
+    const items = (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) || [];
+    
+    let statusLabel = { pending_payment: '待付款', pending: '待处理', preparing: '制作中', ready: '可取餐', completed: '已取餐' }[status] || '未知';
+    let badgeClass = `status-${status}`;
+    if (status === 'pending_payment') badgeClass = 'status-pending'; // use same orangish badge
+
+    let buttons = '';
+    if (status === 'pending_payment') {
+        buttons = '<span style="color:var(--red);font-size:0.75rem;">⏳ 未付款</span>';
+    } else if (status === 'pending') {
+        buttons = `<button class="btn btn-xs btn-outline" onclick="updateOrderStatus('${order.id}','preparing')">开始准备</button>`;
+    } else if (status === 'preparing') {
+        buttons = `<button class="btn btn-xs btn-primary" onclick="markReady('${order.id}')">餐已好</button>`;
+    } else if (status === 'ready') {
+        buttons = `<button class="btn btn-xs btn-success" onclick="markCompleted('${order.id}')">客人取餐</button>`;
+    }
+
+    return `
+    <div class="order-card ${status === 'completed' ? 'completed' : ''}">
+        <div class="flex-row">
+            <span><strong>#${order.id}</strong></span>
+            <span class="status-badge ${badgeClass}">${statusLabel}</span>
+            ${callNumber ? `<span class="call-number">🔔 ${callNumber}</span>` : ''}
+        </div>
+        <div style="font-size:0.75rem;">${items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
+        <div class="flex-row" style="margin-top:4px;">
+            <span>RM ${Number(order.total).toFixed(2)}</span>
+            <span style="color:var(--text-lighter);">${order.memberName || ''}</span>
+            ${buttons}
+        </div>
+    </div>`;
+}
+
+async function updateOrderStatus(orderId, newStatus, callNumber = null) {
+    const updateData = { status: newStatus };
+    if (callNumber !== null) updateData.callNumber = String(callNumber);
+    
+    const { error } = await supabaseClient.from('orders').update(updateData).eq('id', orderId);
+    if (error) {
+        console.error('Update order status error:', error);
+        return;
+    }
+    
+    // 同时更新本地
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    if (order) {
+        order.status = newStatus;
+        if (callNumber !== null) order.callNumber = String(callNumber);
+    }
+    renderFulfillmentView();
+}
+	
+async function markReady(orderId) {
+    // 直接更新状态为 ready，不再生成 callNumber（支付时已生成）
+    await updateOrderStatus(orderId, 'ready');
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    showToast('pickUpNumber', { number: order?.callNumber || '' });
+}
+async function markCompleted(orderId) {
+    await updateOrderStatus(orderId, 'completed');
+    renderFulfillmentView();
+}
+function updateCartBadge() {
+    const count = APP_STATE.customerCart.reduce((sum, e) => sum + e.quantity, 0);
+    const badge = document.getElementById('cartCountBadge');
+    if (badge) badge.textContent = count;
+    const fab = document.getElementById('customerCartFab');
+    if (fab) fab.style.opacity = count ? '1' : '0.6';
+}
+// ==================== ORDER ACTIONS ====================
+function addToOrder(itemId) {
+    const item = APP_STATE.menu.find(m => m.id === itemId);
+    if (!item || !item.available) return;
+    const existing = APP_STATE.cashierOrder.find(e => e.menuItem.id === itemId);
+    if (existing) {
+        existing.quantity++;
+    } else {
+        APP_STATE.cashierOrder.push({ menuItem: item, quantity: 1 });
+    }
+    renderOrderPanel();
+    showToast('itemAdded', { name: item.name });
+}
+
+function adjustOrderQty(index, delta) {
+    APP_STATE.cashierOrder[index].quantity += delta;
+    if (APP_STATE.cashierOrder[index].quantity <= 0) {
+        APP_STATE.cashierOrder.splice(index, 1);
+    }
+    renderOrderPanel();
+}
+
+function removeFromOrder(index) {
+    APP_STATE.cashierOrder.splice(index, 1);
+    renderOrderPanel();
+}
+
+function clearOrder() {
+    APP_STATE.cashierOrder = [];
+    APP_STATE.currentMember = null;
+    document.getElementById('memberPhoneInput').value = '';
+    renderOrderPanel();
+    showToast('orderCleared');
+}
+
+// ==================== CUSTOMER CART ====================
+function addToCustomerCart(itemId) {
+    const item = APP_STATE.menu.find(m => m.id === itemId);
+    if (!item || !item.available) return;
+    const existing = APP_STATE.customerCart.find(e => e.menuItem.id === itemId);
+    if (existing) {
+        existing.quantity++;
+    } else {
+        APP_STATE.customerCart.push({ menuItem: item, quantity: 1 });
+    }
+    updateCartBadge();
+    showToast('itemAdded', { name: item.name });
+}
+
+function openCustomerCart() {
+    if (APP_STATE.customerCart.length === 0) {
+        showToast('cartEmpty');
+        return;
+    }
+    renderCustomerCartModal();
+    document.getElementById('customerCartModal').style.display = 'flex';
+}
+
+function closeCustomerCartModal(event) {
+    if (event && event.target !== document.getElementById('customerCartModal')) return;
+    document.getElementById('customerCartModal').style.display = 'none';
+}
+document.getElementById('customerCartModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+
+function renderCustomerCartModal() {
+    const container = document.getElementById('customerCartItems');
+    const total = APP_STATE.customerCart.reduce((sum, e) => sum + Number(e.menuItem.price) * e.quantity, 0);
+    container.innerHTML = APP_STATE.customerCart.map((entry, idx) => `
+        <div class="order-item-row">
+            <span class="oi-name">${entry.menuItem.name}</span>
+            <div class="oi-qty">
+                <button onclick="adjustCustomerCart(${idx}, -1)">−</button>
+                <span>${entry.quantity}</span>
+                <button onclick="adjustCustomerCart(${idx}, 1)">+</button>
+            </div>
+            <span class="oi-price">RM ${(Number(entry.menuItem.price) * entry.quantity).toFixed(2)}</span>
+        </div>
+    `).join('');
+    document.getElementById('customerCartTotal').textContent = `RM ${total.toFixed(2)}`;
+}
+
+function adjustCustomerCart(index, delta) {
+    APP_STATE.customerCart[index].quantity += delta;
+    if (APP_STATE.customerCart[index].quantity <= 0) {
+        APP_STATE.customerCart.splice(index, 1);
+    }
+    if (APP_STATE.customerCart.length === 0) {
+        document.getElementById('customerCartModal').style.display = 'none';
+    }
+    renderCustomerCartModal();
+    updateCartBadge();
+}
+
+function submitCustomerOrder() {
+	if (!checkOrderLimit()) return;
+    const name = document.getElementById('customerNameInput').value.trim();
+    if (!name) { showToast('enterName'); return; }
+    if (APP_STATE.customerCart.length === 0) { showToast('cartEmpty'); return; }
+    
+    const phone = document.getElementById('customerPhoneInput').value.trim();
+    const total = APP_STATE.customerCart.reduce((sum, e) => sum + Number(e.menuItem.price) * e.quantity, 0);
+    const orderId = String(++APP_STATE.orderIdCounter);
+    localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
+    
+    let member = null;
+    if (phone) {
+        member = APP_STATE.members.find(m => String(m.phone).includes(phone));
+        if (member) {
+            member.points += Math.floor(total);
+            member.totalSpent += total;
+            supabaseClient.from('members').update({
+                points: member.points,
+                totalSpent: member.totalSpent
+            }).eq('id', member.id).then(({ error }) => {
+                if (error) console.error('Member update error:', error);
+            });
+        }
+    }
+    
+    const order = {
+        id: orderId,
+        store_id: APP_STATE.storeId,
+        date: new Date().toISOString(),
+        items: APP_STATE.customerCart.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: Number(e.menuItem.price) })),
+        total: total,
+        paymentMethod: 'customer_order',
+        memberPhone: member ? member.phone : phone,
+        memberName: member ? member.name : name,
+        paymentDetails: {},
+        discountApplied: 0,
+        status: 'pending_payment',
+        callNumber: ''
+    };
+    
+    APP_STATE.orders.push(order);
+    
+    // 写入 Supabase
+    supabaseClient.from('orders').insert([order]).then(({ error }) => {
+        if (error) console.error('Customer order insert failed:', error);
+    });
+    
+    document.getElementById('customerCartModal').style.display = 'none';
+    APP_STATE.customerCart = [];
+    updateCartBadge();
+    document.getElementById('customerNameInput').value = '';
+    document.getElementById('customerPhoneInput').value = '';
+    showToast('orderSubmittedWithId', { orderId });
+}
+// ==================== QUICK PAYMENT (for keyboard shortcut) ====================
+function quickPayment(method) {
+    if (APP_STATE.cashierOrder.length === 0) { showToast('addItemsFirst'); return; }
+    const total = getOrderTotal();
+    processPayment(method, total, { method });
+}
+
+function toggleAdminMode() {
+    APP_STATE.adminUnlocked = !APP_STATE.adminUnlocked;
+    document.getElementById('adminBar').style.display = APP_STATE.adminUnlocked ? 'flex' : 'none';
+    document.getElementById('unlockBtn').style.display = APP_STATE.adminUnlocked ? 'none' : 'block';
+    if (APP_STATE.adminUnlocked) {
+        // enable inline editing on menu cards
+        document.querySelectorAll('.menu-card').forEach(card => card.classList.add('admin-mode'));
+    } else {
+        document.querySelectorAll('.menu-card').forEach(card => card.classList.remove('admin-mode'));
+    }
+    if (APP_STATE.mode === 'fulfillment') renderAdminMenuGrid();
+}
+	
+async function updateMenuItemField(id, field, value) {
+    const item = APP_STATE.menu.find(i => i.id === id);
+    if (!item) return;
+    item[field] = value;
+    const updateData = { [field]: value };
+    const { error } = await supabaseClient.from('menu').update(updateData).eq('id', id);
+    if (error) console.error('Update field error:', error);
+    showToast('fieldUpdated', { field });
+}
+
+async function deleteMenuItem(id) {
+    if (!confirm('删除该菜品？')) return;
+    
+    const { error } = await supabaseClient.from('menu').delete().eq('id', id);
+    if (error) {
+        console.error('Delete error:', error);
+        showToast('deleteFailed');
+        return;
+    }
+    
+    APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== id);
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    renderAdminMenuGrid();
+    renderMenuGrid();
+    if (APP_STATE.mode === 'customer') renderCustomerMenuGrid();
+    showToast('menuItemDeleted');
+}
+
+async function addNewMenuItem() {
+    const name = prompt('菜品名称');
+    if (!name) return;
+    const price = prompt('价格 (数字)');
+    const category = prompt('分类');
+    const newItem = {
+        id: 'I' + Date.now(),
+        store_id: APP_STATE.storeId,
+        name, price: parseFloat(price) || 0,
+        category: category || '其他',
+        description: '',
+        originalPrice: '',
+        emoji: '',
+        imageUrl: '',
+        available: true
+    };
+    APP_STATE.menu.push(newItem);
+    
+    // 改为 Supabase
+    const { error } = await supabaseClient.from('menu').insert([newItem]);
+    if (error) console.error('Add menu item error:', error);
+    
+    renderAdminMenuGrid();
+    showToast('menuItemAdded');
+}
+
+function addNewCategory() {
+    const cat = prompt('新分类名');
+    if (!cat || APP_STATE.categories.includes(cat)) return;
+    APP_STATE.categories.push(cat);
+    renderAdminMenuGrid();
+}
+
+function uploadLogo() {
+    const file = document.getElementById('logoUpload').files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const logoUrl = e.target.result;
+        APP_STATE.settings.logoUrl = logoUrl;
+        document.querySelector('.header-brand img').src = logoUrl;
+        await supabaseClient.from('settings').upsert(
+            { store_id: APP_STATE.storeId, key: 'logoUrl', value: logoUrl },
+            { onConflict: 'store_id,key' }
+        );
+    };
+    reader.readAsDataURL(file);
+}
+
+function editStoreName() {
+    const newName = prompt('新店名', APP_STATE.settings.storeName || '柿柿润糖水');
+    if (!newName) return;
+    APP_STATE.settings.storeName = newName;
+    document.querySelector('.header-brand span').textContent = newName;
+    supabaseClient.from('settings').upsert(
+        { store_id: APP_STATE.storeId, key: 'storeName', value: newName },
+        { onConflict: 'store_id,key' }
+    ).then(({ error }) => {
+        if (error) console.error('Update store name error:', error);
+    });
+}
+
+// ========== MENU EDIT MODAL ==========
+// ==================== MENU EDITING ====================
+
+// Render menu items for editing
+function openMenuEditModal(itemId = null) {
+    const select = document.getElementById('editItemCategory');
+    select.innerHTML = APP_STATE.categories.filter(c => c !== '全部').map(c => `<option value="${c}">${c}</option>`).join('');
+    
+    if (itemId) {
+        const item = APP_STATE.menu.find(i => i.id === itemId);
+        if (!item) return;
+        document.getElementById('editItemId').value = item.id;
+        document.getElementById('editItemName').value = item.name || '';
+        document.getElementById('editItemDesc').value = item.description || '';
+        document.getElementById('editItemPrice').value = item.price || '';
+        document.getElementById('editItemOrigPrice').value = item.originalPrice || '';
+        document.getElementById('editItemCategory').value = item.category || '';
+        document.getElementById('editItemEmoji').value = item.emoji || '';
+        document.getElementById('editItemImage').value = item.imageUrl || '';
+        document.getElementById('editItemAvailable').checked = item.available !== false;
+        
+        // Show preview if image exists
+        const imgPreview = document.getElementById('menuImagePreview');
+        if (imgPreview) {
+            if (item.imageUrl && item.imageUrl.trim() !== '') {
+                imgPreview.src = item.imageUrl;
+                imgPreview.style.display = 'block';
+            } else {
+                imgPreview.src = '';
+                imgPreview.style.display = 'none';
+            }
+        }
+    } else {
+        // New item - clear all fields
+        document.getElementById('editItemId').value = '';
+        document.getElementById('editItemName').value = '';
+        document.getElementById('editItemDesc').value = '';
+        document.getElementById('editItemPrice').value = '';
+        document.getElementById('editItemOrigPrice').value = '';
+        document.getElementById('editItemCategory').value = APP_STATE.categories[1] || '';
+        document.getElementById('editItemEmoji').value = '';
+        document.getElementById('editItemImage').value = '';
+        document.getElementById('editItemAvailable').checked = true;
+        
+        const imgPreview = document.getElementById('menuImagePreview');
+        if (imgPreview) {
+            imgPreview.src = '';
+            imgPreview.style.display = 'none';
+        }
+    }
+    document.getElementById('menuEditModal').style.display = 'flex';
+}
+function closeMenuEditModal(event) {
+    if (event && event.target !== document.getElementById('menuEditModal')) return;
+    document.getElementById('menuEditModal').style.display = 'none';
+}
+
+document.getElementById('menuEditModal').addEventListener('click', function(e){
+    if(e.target === this) this.style.display='none';
+});
+
+// Save or update item
+async function saveMenuItem() {
+    const id = document.getElementById('editItemId').value;
+    const name = document.getElementById('editItemName').value.trim();
+    const price = document.getElementById('editItemPrice').value;
+    
+    if (!name || !price) {
+        showToast('namePriceCannotBeEmpty');
+        return;
+    }
+    
+    const data = {
+        id: id || 'I' + Date.now(),
+        store_id: APP_STATE.storeId,
+        name: name,
+        description: document.getElementById('editItemDesc').value.trim(),
+        price: parseFloat(price) || 0,
+        originalPrice: parseFloat(document.getElementById('editItemOrigPrice').value) || null,
+        category: document.getElementById('editItemCategory').value || '其他',
+        emoji: document.getElementById('editItemEmoji').value.trim(),
+        imageUrl: document.getElementById('editItemImage').value.trim(),
+        available: document.getElementById('editItemAvailable').checked
+    };
+    
+    // 写入 Supabase (upsert: 存在则更新，不存在则插入)
+    const { error } = await supabaseClient.from('menu').upsert([data], { onConflict: 'id' });
+    if (error) {
+        console.error('Menu save error:', error);
+        showToast('saveFailed');
+        return;
+    }
+    
+    // 更新本地状态
+    if (id) {
+        const idx = APP_STATE.menu.findIndex(i => i.id === id);
+        if (idx >= 0) {
+            APP_STATE.menu[idx] = data;
+        }
+    } else {
+        APP_STATE.menu.push(data);
+    }
+    
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    
+    document.getElementById('menuEditModal').style.display = 'none';
+    renderCategoryTabs();
+    renderMenuGrid();
+    if (APP_STATE.mode === 'customer') renderCustomerMenuGrid();
+    if (APP_STATE.adminUnlocked) renderAdminMenuGrid();
+    showToast('menuItemSaved');
+}
+// Show/hide "删除" button
+function showMenuDeleteBtn(show) {
+    let btn = document.getElementById('deleteMenuItemBtn');
+    if (!btn) {
+        // Create if not exist yet
+        btn = document.createElement('button');
+        btn.id = "deleteMenuItemBtn";
+        btn.className = "btn btn-outline btn-sm";
+        btn.style.flex = "1";
+        btn.style.background = "#fff2f0";
+        btn.style.color = "#e85555";
+        btn.innerHTML = "🗑️ 删除";
+        btn.onclick = deleteMenuItem;
+        // Insert after save button
+        let btnRow = document.querySelector('#menuEditModal .modal-sheet > div[style*=gap]');
+        if (btnRow) btnRow.appendChild(btn);
+    }
+    btn.style.display = show ? 'block' : 'none';
+}
+
+// Delete menu item
+async function deleteMenuItem() {
+    const id = document.getElementById('editItemId').value.trim();
+    if (!id) return;
+    if (!confirm('确定要删除该菜品吗？')) return;
+    APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== id);
+    const { error } = await supabaseClient.from('menu').delete().eq('id', id);
+if (error) console.error('Delete error:', error);
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    closeMenuEditModal();
+    renderAll();
+    showToast('menuItemDeleted');
+}
+
+// Show a grid of existing menu items for edit
+function renderAdminMenuGrid() {
+    const grid = document.getElementById('adminMenuGrid');
+    if (!grid) return;
+    if (!APP_STATE.adminUnlocked) {
+        grid.innerHTML = '';
+        return;
+    }
+    grid.style.display = 'grid';
+    grid.innerHTML = APP_STATE.menu.map(item => {
+        const availableText = item.available ? i18n.t('available') : i18n.t('soldOut');
+        return `
+        <div class="menu-card admin-mode" style="position: relative;" onclick="openMenuEditModal('${item.id}')">
+            <span class="edit-icon" onclick="event.stopPropagation(); openMenuEditModal('${item.id}')">✏️</span>
+            <span class="item-emoji">${item.emoji || ''}</span>
+            <div class="item-name">${item.name}</div>
+            <div style="font-size:0.78rem;color:var(--text-light);">${item.category || ''}</div>
+            <div class="item-price">RM ${Number(item.price).toFixed(2)}</div>
+            <div style="font-size:0.75em;color:#c45a2e">${availableText}</div>
+        </div>`;
+    }).join('') + `
+        <div class="menu-card admin-mode" style="opacity:0.7;" onclick="openMenuEditModal()">
+            <span class="item-emoji">＋</span>
+            <div class="item-name" style="color:#e8784a">${i18n.t('addMenuItem')}</div>
+        </div>`;
+
+    applyLanguage();
+}
+
+// 确保全局可访问（你的代码中已有，但建议保留）
+window.openMenuEditModal = openMenuEditModal;
+window.saveMenuItem = saveMenuItem;
+window.deleteMenuItem = deleteMenuItem;
+window.renderAdminMenuGrid = renderAdminMenuGrid;
+
+// Always re-render menu grid when unlocking admin mode
+function toggleAdminMode() {
+    APP_STATE.adminUnlocked = !APP_STATE.adminUnlocked;
+    document.getElementById('adminBar').style.display = APP_STATE.adminUnlocked ? 'flex' : 'none';
+    document.getElementById('unlockBtn').style.display = APP_STATE.adminUnlocked ? 'none' : 'block';
+    renderAdminMenuGrid();
+}
+
+// Call this once app loads if unlocked
+if (APP_STATE.adminUnlocked) renderAdminMenuGrid();
+
+// ========== CATEGORY MODAL ==========
+function openCategoryModal() {
+  renderCategoryListModal();
+  document.getElementById('categoryModal').style.display = 'flex';
+}
+function closeCategoryModal(e) {
+  if (e && e.target !== document.getElementById('categoryModal')) return;
+  document.getElementById('categoryModal').style.display = 'none';
+}
+document.getElementById('categoryModal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+function renderCategoryListModal() {
+  const ul = document.getElementById('categoryListUl');
+  const cats = APP_STATE.categories.filter(c => c !== '全部');
+  ul.innerHTML = cats.map(c => `<li style="display:flex;justify-content:space-between;padding:4px 0;">
+    ${c} <button onclick="deleteCategory('${c}')" style="background:none;border:none;color:var(--red);cursor:pointer;">✕</button>
+  </li>`).join('');
+}
+
+async function deleteCategory(cat) {
+  if (!confirm(`删除分类"${cat}"？此分类下的菜品不会被删除，但会失去分类。`)) return;
+  APP_STATE.menu.forEach(item => {
+    if (item.category === cat) item.category = '其他';
+  });
+  
+  // 改为 Supabase 批量更新
+  await Promise.all(APP_STATE.menu.map(item => 
+    supabaseClient.from('menu').update({ category: item.category }).eq('id', item.id)
+  ));
+  
+  APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+  renderCategoryListModal();
+  renderAll();
+  showToast('categoryDeleted', { cat });
+}
+// Delegate the add category button inside modal
+async function addNewCategory() {
+  const name = document.getElementById('newCategoryName').value.trim();
+  if (!name) return showToast('enterCategoryName');
+  if (APP_STATE.categories.includes(name)) return showToast('categoryExists');
+  APP_STATE.categories.push(name);
+  document.getElementById('newCategoryName').value = '';
+  renderCategoryListModal();
+  // update datalist
+  const dl = document.getElementById('categoryList');
+  dl.innerHTML = APP_STATE.categories.map(c => `<option value="${c}">`).join('');
+  showToast('categoryAdded');
+}
+
+	function openUnpaidOrdersModal() {
+    renderUnpaidOrdersList();
+    document.getElementById('unpaidOrdersModal').style.display = 'flex';
+    updateUnpaidBadge();   // 打开时刷新气泡
+}
+	function updateUnpaidBadge() {
+    const unpaidCount = APP_STATE.orders.filter(o => o.status === 'pending_payment').length;
+    const badge = document.getElementById('unpaidBadge');
+    if (badge) {
+        if (unpaidCount > 0) {
+            badge.textContent = unpaidCount;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+	
+function closeUnpaidOrdersModal(e) {
+    if (e && e.target !== document.getElementById('unpaidOrdersModal')) return;
+    document.getElementById('unpaidOrdersModal').style.display = 'none';
+    updateUnpaidBadge();   // 关闭后也刷新（付款后可能减少）
+}
+	
+document.getElementById('unpaidOrdersModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+
+function renderUnpaidOrdersList() {
+    const unpaidOrders = APP_STATE.orders.filter(o => o.status === 'pending_payment');
+    const container = document.getElementById('unpaidOrdersList');
+    if (unpaidOrders.length === 0) {
+        container.innerHTML = '<p style="padding:20px;color:var(--text-lighter);">暂无待付款订单 🎉</p>';
+        return;
+    }
+    container.innerHTML = unpaidOrders.map(order => {
+        const items = (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) || [];
+        return `
+        <div class="order-card" style="margin-bottom:8px;">
+            <div><strong>#${order.id}</strong> · ${order.memberName || '顾客'}</div>
+            <div style="font-size:0.75rem;">${items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
+            <div class="flex-row" style="margin-top:4px;">
+                <span style="font-weight:800;">RM ${Number(order.total).toFixed(2)}</span>
+                <button class="btn btn-xs btn-primary" onclick="payCustomerOrder('${order.id}')">💳 收款</button>
+            </div>
+        </div>`;
+    }).join('');
+	updateUnpaidBadge();
+}
+
+async function payCustomerOrder(orderId) {
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    if (!order) return;
+    // Open payment modal with this order's total, then on confirm:
+    openPaymentModalForOrder(order);
+}
+
+// Modified payment modal to handle existing orders
+function openPaymentModalForOrder(order) {
+    // close unpaid modal
+    document.getElementById('unpaidOrdersModal').style.display = 'none';
+    // set a global variable to indicate we're paying a customer order
+    window.currentPayingOrderId = order.id;
+    document.getElementById('payTotalDisplay').textContent = `RM ${Number(order.total).toFixed(2)}`;
+    document.getElementById('paymentModal').style.display = 'flex';
+    document.getElementById('paymentMethodSelect').value = 'cash';
+    document.getElementById('cashReceived').value = '';  // Clear previous input
+    document.getElementById('changeDisplay').textContent = 'RM 0.00';  // Reset change display
+    showPaymentDetails();
+    calculateChange();  // Force recalculation
+}
+// Override finalizePayment to check if we're paying a customer order
+const originalFinalizePayment = finalizePayment;
+finalizePayment = function() {
+    if (window.currentPayingOrderId) {
+        finalizeCustomerPayment();
+    } else {
+        originalFinalizePayment();
+    }
+};
+
+async function finalizeCustomerPayment() {
+    const orderId = window.currentPayingOrderId;
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const method = document.getElementById('paymentMethodSelect').value;
+    const total = Number(order.total);
+    let paymentDetails = { method };
+
+    if (method === 'cash') {
+        const received = parseFloat(document.getElementById('cashReceived').value) || 0;
+        if (received < total) { showToast('insufficientReceivedAmount'); return; }
+        paymentDetails.amountTendered = received;
+        paymentDetails.change = received - total;
+    } else if (method === 'card') {
+        paymentDetails.cardType = document.getElementById('cardType').value;
+        paymentDetails.cardLast4 = document.getElementById('cardLast4').value;
+        paymentDetails.refNum = document.getElementById('cardRefNum').value;
+    } else if (method === 'online') {
+        paymentDetails.onlineType = document.getElementById('onlineType').value;
+        paymentDetails.refNum = document.getElementById('onlineRefNum').value;
+    }
+
+    // 生成叫号号码
+    let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
+    APP_STATE.settings.callNumberCounter = callNum;
+    await supabaseClient.from('settings').upsert(
+        { store_id: APP_STATE.storeId, key: 'callNumberCounter', value: String(callNum) },
+        { onConflict: 'store_id,key' }
+    );
+
+    order.status = 'pending';
+    order.paymentMethod = method;
+    order.paymentDetails = paymentDetails;
+    order.callNumber = String(callNum);
+
+    const { error } = await supabaseClient.from('orders').update({
+        status: 'pending',
+        paymentMethod: method,
+        paymentDetails: paymentDetails,
+        callNumber: String(callNum)
+    }).eq('id', orderId);
+
+    if (error) console.error('Payment update error:', error);
+
+    // 更新会员积分
+    const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
+    if (member) {
+        member.points += Math.floor(total);
+        member.totalSpent += total;
+        await supabaseClient.from('members').update({
+            points: member.points,
+            totalSpent: member.totalSpent
+        }).eq('id', member.id);
+    }
+
+    document.getElementById('paymentModal').style.display = 'none';
+    window.currentPayingOrderId = null;
+    renderFulfillmentView();
+    renderUnpaidOrdersList();
+    showToast('orderPaid', { orderId });
+    showOrderReceipt(order);       // 弹出收据
+}
+
+	// Open menu sheet and render items as a table
+function openMenuSheetModal() {
+    document.getElementById('menuSheetModal').style.display = 'flex';
+    renderMenuSheetTable();
+	applyLanguage(); 
+}
+
+function closeMenuSheetModal(event) {
+    if (event && event.target !== document.getElementById('menuSheetModal')) return;
+    document.getElementById('menuSheetModal').style.display = 'none';
+}
+
+function renderMenuSheetTable() {
+    const tbody = document.getElementById('menuSheetTable').querySelector('tbody');
+    if (!tbody) return;
+    tbody.innerHTML = APP_STATE.menu.map((item, idx) => `
+      <tr>
+        <td>${item.id}</td>
+        <td>${item.name}</td>
+        <td>${item.desc || ''}</td>
+        <td>${Number(item.price).toFixed(2)}</td>
+        <td>${item.originalPrice || ''}</td>
+        <td>${item.category}</td>
+        <td>${item.emoji || ''}</td>
+        <td>${item.image || ''}</td>
+        <td>${item.available ? 'Y' : 'N'}</td>
+        <td>
+          <button class="btn btn-xs btn-outline" data-i18n="edit" onclick="openMenuEditModal('${item.id}')">编辑</button>
+          <button class="btn btn-xs btn-danger" style="margin-left:3px;" data-i18n="delete" onclick="deleteMenuItemFromSheet('${item.id}')">删除</button>
+        </td>
+      </tr>
+    `).join('');
+}
+
+// Add a smart delete button for menu sheet
+async function deleteMenuItemFromSheet(itemId) {
+    if (!confirm('确定要删除该菜品吗？')) return;
+    
+    const { error } = await supabaseClient.from('menu').delete().eq('id', itemId);
+    if (error) {
+        console.error('Delete error:', error);
+        showToast('deleteFailed');
+        return;
+    }
+    
+    APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== itemId);
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+    renderMenuSheetTable();
+    renderAll();
+    showToast('menuItemDeleted');
+}
+
+	function compressImage(file, maxSizeKB = 200) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                // Start with original dimensions
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Try to compress
+                let quality = 0.9;
+                let result = canvas.toDataURL('image/jpeg', quality);
+                
+                // Reduce quality until size is under maxSizeKB
+                while (result.length / 1024 > maxSizeKB && quality > 0.1) {
+                    quality -= 0.1;
+                    result = canvas.toDataURL('image/jpeg', quality);
+                }
+                
+                // If still too large, reduce dimensions
+                while (result.length / 1024 > maxSizeKB && width > 200) {
+                    width *= 0.8;
+                    height *= 0.8;
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    result = canvas.toDataURL('image/jpeg', quality);
+                }
+                
+                // Convert base64 to blob
+                const byteString = atob(result.split(',')[1]);
+                const mimeString = result.split(',')[0].split(':')[1].split(';')[0];
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                const blob = new Blob([ab], { type: mimeString });
+                
+                // Create a new file from blob
+                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), { type: 'image/jpeg' });
+                resolve(compressedFile);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+	
+async function uploadMenuImage() {
+    const input = document.getElementById('editItemImageUpload');
+    if (!input.files || !input.files[0]) {
+        showToast('selectImageFile');
+        return;
+    }
+    const file = input.files[0];
+    const apiKey = APP_STATE.imgbbKey;
+    if (!apiKey) {
+        showToast('imgbbKeyMissing');
+        return;
+    }
+    
+    showToast('imgCompressUploading');
+    
+    try {
+        // Compress image to ~200KB before upload
+        const compressedFile = await compressImage(file, 200);
+        console.log(`压缩完成: ${(file.size/1024).toFixed(1)}KB → ${(compressedFile.size/1024).toFixed(1)}KB`);
+        
+        const formData = new FormData();
+        formData.append('image', compressedFile);
+
+        const resp = await fetch('https://api.imgbb.com/1/upload?key=' + apiKey, {
+            method: 'POST',
+            body: formData
+        });
+        const json = await resp.json();
+        if (json.success) {
+            const imageUrl = json.data.url;
+            showToast('imgUploadSuccess');
+            document.getElementById('editItemImage').value = imageUrl;
+            // Show preview
+            let prev = document.getElementById('menuImagePreview');
+            if (!prev) {
+                prev = document.createElement('img');
+                prev.id = 'menuImagePreview';
+                prev.style.maxWidth = '100px';
+                prev.style.marginTop = '4px';
+                prev.style.borderRadius = '8px';
+                document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
+            }
+            prev.src = imageUrl;
+            prev.style.display = 'block';
+        } else {
+            showToast('imgUploadFailedWithReason', { error: (json.error?.message || '未知错误') });
+        }
+    } catch (err) {
+        showToast('imgUploadError', { error: err.message });
+        console.error('Upload error:', err);
+    }
+}
+
+	// Make accessible globally
+window.openMenuSheetModal = openMenuSheetModal;
+window.closeMenuSheetModal = closeMenuSheetModal;
+window.deleteMenuItemFromSheet = deleteMenuItemFromSheet;
+
+	// 页面加载时检查用户
+document.addEventListener('DOMContentLoaded', () => {
+  checkUser();
+});
+
+	function showPublicOrderSuccessModal(orderId) {
+    const modal = document.getElementById('publicOrderSuccessModal');
+    // 更新订单号和链接
+    modal.querySelector('p').innerHTML = `订单号：<strong>${orderId}</strong><br>请前往柜台付款`;
+    modal.querySelector('#publicTrackLink').href = `track.html?orderId=${orderId}`;
+    modal.style.display = 'flex';
+}
+
+function closePublicOrderSuccessModal() {
+    document.getElementById('publicOrderSuccessModal').style.display = 'none';
+}
+	
+    </script>
+	</div> <!-- 闭合 #mainApp -->
+</body>
+</html>
