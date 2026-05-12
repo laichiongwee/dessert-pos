@@ -2632,21 +2632,18 @@ async function handleLogin(e) {
 }
 
 async function handleRegister(e) {
-    e.preventDefault();
-    const email = document.getElementById('registerEmail').value.trim();
-    const password = document.getElementById('registerPassword').value;
-    const { error } = await supabaseClient.auth.signUp({ email, password });
-    if (error) {
-        document.getElementById('authMessage').textContent = error.message;
-    } else {
-        // 清空错误信息
-        document.getElementById('authMessage').textContent = '';
-        // 显示弹出层
-        document.getElementById('registerSuccessModal').style.display = 'flex';
-        // 可选：清空表单
-        document.getElementById('registerEmail').value = '';
-        document.getElementById('registerPassword').value = '';
-    }
+  e.preventDefault();
+  const email = document.getElementById('registerEmail').value;
+  const password = document.getElementById('registerPassword').value;
+  const { error } = await supabaseClient.auth.signUp({ email, password });
+  if (error) {
+    document.getElementById('authMessage').textContent = error.message;
+  } else {
+    document.getElementById('authMessage').textContent = '';
+    document.getElementById('registerSuccessModal').style.display = 'flex';
+    document.getElementById('registerEmail').value = '';
+    document.getElementById('registerPassword').value = '';
+  }
 }
 	function closeRegisterSuccessModal() {
     document.getElementById('registerSuccessModal').style.display = 'none';
