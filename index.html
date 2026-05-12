@@ -694,7 +694,7 @@ i18n
 "registeredEmail": "Registered Email",
 "sendResetLink": "📧 Send reset link",
 "backToLogin": "Back to login",
-
+"addedItem": "Added: {{name}}",
 	
   // 模式切换
   "cashierMode": "💰 Cashier",
@@ -767,6 +767,9 @@ i18n
 "memberSearch": "📞 Search member phone...",
 "clear": "Clear",
 "addMember": "＋ Add",
+		  "fillNameAndPhone": "⚠️ Please fill in name and phone number",
+		  "memberAddFailed": "⚠️ Failed to add member, please try again",
+		  "insufficientAmount": "⚠️ Insufficient amount received",
 
   // 折扣规则
   "discountRulesTitle": "🏷️ Discount Rules",
@@ -800,6 +803,7 @@ i18n
   "saveItem": "💾 Save Item",
   "deleteItem": "🗑️ Delete",
   "deleteItemConfirm": "Delete this item?",
+		  
 
   // 分类管理
   "categoryTitle": "🏷️ Manage Categories",
@@ -921,7 +925,7 @@ i18n
   "upload": "上传",
   "preview": "预览",
 		  "allCategories": "全部",
-
+"addedItem": "已添加: {{name}}",
 		  "emailPlaceholder": "电子邮箱",
 "passwordPlaceholder": "密码",
 "passwordPlaceholderMin": "密码（至少6位）",
@@ -998,6 +1002,8 @@ i18n
   "addMemberTitle": "🧑‍🤝‍🧑 添加会员",
   "memberName": "姓名",
   "memberPhone": "手机号",
+		  "fillNameAndPhone": "⚠️ 请填写姓名和手机号",
+		  "memberAddFailed": "⚠️ 会员添加失败，请重试",
 
   // 支付
   "paymentTitle": "💳 结算",
@@ -1013,6 +1019,7 @@ i18n
   "refNum": "参考号：",
   "onlinePlatform": "平台：",
   "payNow": "✅ 确认收款",
+		  "insufficientAmount": "⚠️ 实收金额不足",
 
 		  "basicPlanName": "Basic 标准版",
   "proPlanName": "Pro 专业版",
@@ -1599,17 +1606,21 @@ function clearMember() {
 function updateMemberDisplay() {
     const display = document.getElementById('memberInfoDisplay');
     if (APP_STATE.currentMember) {
+        const points = APP_STATE.currentMember.points;
+        const totalSpent = Number(APP_STATE.currentMember.totalSpent).toFixed(2);
+        const redeemText = points >= 50 ? i18n.t('redeemDiscount') : '';
         display.innerHTML = `
         <div class="member-info">
             <div class="member-avatar">${APP_STATE.currentMember.name.charAt(0)}</div>
             <div>
-                <strong>${APP_STATE.currentMember.name}</strong> · 积分: ${APP_STATE.currentMember.points} · 
-                累计消费: RM ${Number(APP_STATE.currentMember.totalSpent).toFixed(2)}
-                ${APP_STATE.currentMember.points >= 50 ? ' 🎉可兑换折扣' : ''}
+                <strong>${APP_STATE.currentMember.name}</strong> 
+                · ${i18n.t('points')}: ${points} · 
+                ${i18n.t('totalSpent')}: RM ${totalSpent}
+                ${redeemText ? ' ' + redeemText : ''}
             </div>
         </div>`;
     } else {
-        display.innerHTML = '<span style="color:#C0A0A0;">未关联会员</span>';
+        display.innerHTML = `<span style="color:#C0A0A0;">${i18n.t('noMember')}</span>`;
     }
     updateOrderTotals();
 }
@@ -1622,7 +1633,7 @@ async function submitNewMember() {
     const name = document.getElementById('newMemberName').value.trim();
     const phone = document.getElementById('newMemberPhone').value.trim();
     if (!name || !phone) {
-        showToast('⚠️ 请填写姓名和手机号');
+        showToast('fillNameAndPhone');
         return;
     }
     
@@ -1642,7 +1653,7 @@ async function submitNewMember() {
     const { error } = await supabaseClient.from('members').insert([newMember]);
     if (error) {
         console.error('Add member error:', error);
-        showToast('⚠️ 会员添加失败，请重试');
+        showToast(i18n.t('memberAddFailed'));
         APP_STATE.members = APP_STATE.members.filter(m => m.id !== memberId);
         return;
     }
@@ -1713,7 +1724,7 @@ function finalizePayment() {
     let paymentDetails = { method };
     if (method === 'cash') {
         const received = parseFloat(document.getElementById('cashReceived').value) || 0;
-        if (received < total) { showToast('⚠️ 实收金额不足'); return; }
+        if (received < total) { showToast(i18n.t('insufficientAmount')); return; }
         paymentDetails.amountTendered = received;
         paymentDetails.change = received - total;
     } else if (method === 'card') {
@@ -1924,7 +1935,7 @@ function addToOrder(itemId) {
         APP_STATE.cashierOrder.push({ menuItem: item, quantity: 1 });
     }
     renderOrderPanel();
-    showToast(`已添加: ${item.name}`);
+   showToast(i18n.t('addedItem', { name: item.name }));
 }
 function adjustOrderQty(index, delta) {
     APP_STATE.cashierOrder[index].quantity += delta;
