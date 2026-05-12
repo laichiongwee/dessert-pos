@@ -803,7 +803,11 @@ i18n
   "saveItem": "💾 Save Item",
   "deleteItem": "🗑️ Delete",
   "deleteItemConfirm": "Delete this item?",
-		  
+		"edit": "Edit",                     // 已存在
+"editCategoryPrompt": "Modify category \"{{name}}\":",
+"categoryAlreadyExists": "Category already exists",
+"categoryEdited": "Category updated",
+"categoryEditFailed": "Failed to update category",  
 
   // 分类管理
   "categoryTitle": "🏷️ Manage Categories",
@@ -1002,6 +1006,12 @@ i18n
   "saveSettings": "💾 保存设置",
   "loadDemo": "📦 加载演示数据",
 
+		  "edit": "编辑",                     // 已存在
+"editCategoryPrompt": "修改分类 \"{{name}}\"：",
+"categoryAlreadyExists": "分类已存在",
+"categoryEdited": "分类已更新",
+"categoryEditFailed": "分类更新失败",
+		  
   // 收银面板
   "currentOrder": "🧾 当前订单",
   "subtotal": "小计",
@@ -3404,13 +3414,61 @@ document.getElementById('categoryModal').addEventListener('click', function(e) {
 });
 
 function renderCategoryListModal() {
-  const ul = document.getElementById('categoryListUl');
-  const cats = APP_STATE.categories.filter(c => c !== '全部');
-  ul.innerHTML = cats.map(c => `<li style="display:flex;justify-content:space-between;padding:4px 0;">
-    ${c} <button onclick="deleteCategory('${c}')" style="background:none;border:none;color:var(--red);cursor:pointer;">✕</button>
-  </li>`).join('');
+    const ul = document.getElementById('categoryListUl');
+    const cats = APP_STATE.categories.filter(c => c !== '全部');
+    ul.innerHTML = cats.map(c => `
+        <li style="display:flex;justify-content:space-between;padding:4px 0; gap: 6px;">
+            <span>${c}</span>
+            <div>
+                <button onclick="editCategory('${c}')" style="background:none;border:none;color:var(--persimmon);cursor:pointer;margin-right:6px;" data-i18n="edit">编辑</button>
+                <button onclick="deleteCategory('${c}')" style="background:none;border:none;color:var(--red);cursor:pointer;">✕</button>
+            </div>
+        </li>
+    `).join('');
+    applyLanguage(); // 让 data-i18n 生效
 }
+async function editCategory(oldName) {
+    const newName = prompt(i18n.t('editCategoryPrompt', { name: oldName }), oldName);
+    if (!newName || newName.trim() === '' || newName.trim() === oldName) return; // 取消或未修改
+    const trimmedName = newName.trim();
+    
+    // 检查是否与已有分类重复（忽略原名称）
+    if (APP_STATE.categories.filter(c => c !== '全部').some(c => c === trimmedName && c !== oldName)) {
+        showToast(i18n.t('categoryAlreadyExists'));
+        return;
+    }
 
+    // 更新 categories 数组
+    const index = APP_STATE.categories.indexOf(oldName);
+    if (index !== -1) {
+        APP_STATE.categories[index] = trimmedName;
+    }
+
+    // 更新菜单项中所有引用该分类的项
+    APP_STATE.menu.forEach(item => {
+        if (item.category === oldName) {
+            item.category = trimmedName;
+        }
+    });
+
+    // 批量更新 Supabase 中的菜单表
+    const { error } = await supabaseClient
+        .from('menu')
+        .update({ category: trimmedName })
+        .eq('category', oldName);
+
+    if (error) {
+        console.error('Edit category error:', error);
+        showToast(i18n.t('categoryEditFailed'));
+        // 回滚本地修改（简单起见，重新加载）
+        await fetchAllData();
+    } else {
+        showToast(i18n.t('categoryEdited'));
+    }
+
+    renderCategoryListModal();
+    renderAll(); // 刷新菜单网格
+}
 async function deleteCategory(cat) {
   if (!confirm(i18n.t('deleteCategoryConfirm', { cat: cat }))) return;
   APP_STATE.menu.forEach(item => {
