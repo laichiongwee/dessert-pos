@@ -2437,6 +2437,7 @@ async function checkUser() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
+    const storeIdFromUrl = urlParams.get('store') || '';   // ← 只声明一次
 
     // ✅ 如果明确请求顾客点餐模式，无论是否登录，都进入顾客页面
     if (mode === 'customer') {
@@ -2446,7 +2447,6 @@ async function checkUser() {
     showToast('missingStoreId'); 
     return;
   }
-    const storeIdFromUrl = urlParams.get('store') || '';
     APP_STATE.storeId = storeIdFromUrl || null;
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('publicCustomerView').style.display = 'block';
