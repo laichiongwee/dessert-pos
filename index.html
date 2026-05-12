@@ -2277,7 +2277,7 @@ function handlePlanSelection(planId) {
     const billing = selectedBilling;  // 直接使用全局变量
     const priceId = getPriceId(planId, billing);
     if (!priceId) {
-        showToast('支付配置错误，请联系管理员');
+        showToast('paymentConfigError');
         return;
     }
     closePricingModal();
@@ -2285,7 +2285,7 @@ function handlePlanSelection(planId) {
 }
 async function openStripeCheckout(priceId) {
     try {
-        showToast('正在跳转支付...');
+        showToast('redirectingPayment');
         const functionUrl = 'https://tpisbuxzbnmoaowtlbyu.supabase.co/functions/v1/create-checkout-session';
 
         const response = await fetch(functionUrl, {
@@ -2299,14 +2299,14 @@ async function openStripeCheckout(priceId) {
 
         const { url, error } = await response.json();
         if (error) {
-            showToast('支付创建失败: ' + error);
+            showToast(i18n.t('paymentCreateFailed', { error }));
             return;
         }
         if (url) {
             window.location.href = url;  // 跳转到 Stripe Checkout 页面
         }
     } catch (err) {
-        showToast('支付跳转错误: ' + err.message);
+        showToast(i18n.t('paymentRedirectError', { error: err.message }));
     }
 }
 
@@ -2880,16 +2880,15 @@ function renderOrderCard(order) {
     if (status === 'pending_payment') badgeClass = 'status-pending'; // use same orangish badge
 
     let buttons = '';
-    if (status === 'pending_payment') {
-        buttons = '<span style="color:var(--red);font-size:0.75rem;">i18n.t('notYetPaid')</span>';
-    } else if (status === 'pending') {
-        buttons = `<button class="btn btn-xs btn-outline" onclick="updateOrderStatus('${order.id}','preparing')">i18n.t('startPrep')</button>`;
-    } else if (status === 'preparing') {
-        buttons = `<button class="btn btn-xs btn-primary" onclick="markReady('${order.id}')">i18n.t('foodReady')</button>`;
-    } else if (status === 'ready') {
-        buttons = `<button class="btn btn-xs btn-success" onclick="markCompleted('${order.id}')">i18n.t('pickedUp')</button>`;
-    }
-
+if (status === 'pending_payment') {
+    buttons = `<span style="color:var(--red);font-size:0.75rem;">${i18n.t('notYetPaid')}</span>`;
+} else if (status === 'pending') {
+    buttons = `<button class="btn btn-xs btn-outline" onclick="updateOrderStatus('${order.id}','preparing')">${i18n.t('startPrep')}</button>`;
+} else if (status === 'preparing') {
+    buttons = `<button class="btn btn-xs btn-primary" onclick="markReady('${order.id}')">${i18n.t('foodReady')}</button>`;
+} else if (status === 'ready') {
+    buttons = `<button class="btn btn-xs btn-success" onclick="markCompleted('${order.id}')">${i18n.t('pickedUp')}</button>`;
+}
     return `
     <div class="order-card ${status === 'completed' ? 'completed' : ''}">
         <div class="flex-row">
