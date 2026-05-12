@@ -419,20 +419,20 @@
 <!-- QR Modal -->
 <div class="modal-overlay" id="qrModal" style="display:none;" onclick="closeQRModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
-        <h3>📱 顾客扫码点餐</h3><div id="qrcode"></div><p class="qr-url" id="qrUrlDisplay"></p>
+        <h3 data-i18n="qrCodeTitle">📱 顾客扫码点餐</h3><div id="qrcode"></div><p class="qr-url" id="qrUrlDisplay"></p>
     </div>
 </div>
 
 <!-- Customer Cart Modal -->
 <div class="modal-overlay" id="customerCartModal" style="display:none;" onclick="closeCustomerCartModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
-        <h3>🛒 我的购物车</h3><div id="customerCartItems"></div>
+        <h3 data-i18n="cartTitle">🛒 我的购物车</h3><div id="customerCartItems"></div>
         <div style="border-top:2px solid #F0D8C8;padding-top:10px;margin-top:8px;">
-            <div style="display:flex;justify-content:space-between;font-weight:800;"><span>总计</span><span id="customerCartTotal">RM 0.00</span></div>
-            <input type="text" id="customerNameInput" placeholder="👤 您的姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:8px;font-family:inherit;">
-            <input type="tel" id="customerPhoneInput" placeholder="📞 手机号" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:6px;font-family:inherit;">
-            <button class="btn btn-primary" style="width:100%;margin-top:10px;justify-content:center;" onclick="submitCustomerOrder()">✅ 提交订单</button>
-            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeCustomerCartModal()">继续点餐</button>
+            <div style="display:flex;justify-content:space-between;font-weight:800;"><span data-i18n="total">总计</span><span id="customerCartTotal">RM 0.00</span></div>
+            <input type="text" id="customerNameInput" data-i18n-placeholder="customerName" placeholder="👤 您的姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:8px;font-family:inherit;">
+            <input type="tel" id="customerPhoneInput" data-i18n-placeholder="customerPhone" placeholder="📞 手机号" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:6px;font-family:inherit;">
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;justify-content:center;" onclick="submitCustomerOrder()" data-i18n="submitOrder">✅ 提交订单</button>
+            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeCustomerCartModal()" data-i18n="continueOrdering">继续点餐</button>
         </div>
     </div>
 </div>
