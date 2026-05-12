@@ -682,7 +682,7 @@ i18n
   "upload": "Upload",
   "preview": "Preview",
 		  "allCategories": "All",
-
+"missingStoreId": "Please scan the correct store QR code",
 		  "emailPlaceholder": "Email",
 "passwordPlaceholder": "Password",
 "passwordPlaceholderMin": "Password (at least 6 characters)",
@@ -971,7 +971,7 @@ i18n
 "registeredEmail": "注册邮箱",
 "sendResetLink": "📧 发送重置链接",
 "backToLogin": "返回登录",
-		  
+	"missingStoreId": "请扫描正确的店铺二维码",	  
   // 模式切换
   "cashierMode": "💰 收银",
   "customerMode": "📱 顾客",
@@ -1450,7 +1450,12 @@ function loadDemoData() {
 }
 
 async function fetchAllData() {
-  try {
+  if (!APP_STATE.storeId) {
+    console.warn('storeId 为空，跳过数据加载');
+    loadDemoData();   // 或者显示空数据
+    return;
+  }
+	try {
     const [
   { data: menu },
   { data: members },
@@ -2435,6 +2440,12 @@ async function checkUser() {
 
     // ✅ 如果明确请求顾客点餐模式，无论是否登录，都进入顾客页面
     if (mode === 'customer') {
+		let storeIdFromUrl = urlParams.get('store');
+  if (!storeIdFromUrl) {
+    // 可以显示错误：“请扫描店铺二维码”
+    showToast('missingStoreId'); 
+    return;
+  }
     const storeIdFromUrl = urlParams.get('store') || '';
     APP_STATE.storeId = storeIdFromUrl || null;
         document.getElementById('authContainer').style.display = 'none';
@@ -2512,25 +2523,48 @@ async function initRealtime() {
 }
 	
 async function loadUserProfile() {
-  const { data: profile } = await supabaseClient
+  const { data: profile, error } = await supabaseClient
     .from('profiles')
     .select('plan_id, subscription_status, store_id')
     .eq('id', APP_STATE.currentUser.id)
     .single();
-  if (profile) {
-    APP_STATE.currentPlan = profile.plan_id || 'free';
-    APP_STATE.subscriptionStatus = profile.subscription_status || 'active';
-    APP_STATE.storeId = profile.store_id;
-    updateUpgradeButton();
-  }
-}
 
-supabaseClient.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_OUT') {
-    document.getElementById('authContainer').style.display = 'block';
-    document.getElementById('mainApp').style.display = 'none';
+  if (error || !profile) {
+    console.warn('无法读取用户资料');
+    return;
   }
-});
+
+  APP_STATE.currentPlan = profile.plan_id || 'free';
+  APP_STATE.subscriptionStatus = profile.subscription_status || 'active';
+
+  // 如果还没有属于自己的店铺，创建一个
+  if (!profile.store_id) {
+    // 1. 插入新店铺
+    const { data: newStore, error: storeErr } = await supabaseClient
+      .from('stores')
+      .insert({ name: 'My Store' })
+      .select('id')
+      .single();
+
+    if (storeErr || !newStore) {
+      console.error('创建店铺失败', storeErr);
+      // 兜底：使用默认店铺（确保此 ID 在数据库中存在）
+      APP_STATE.storeId = '00000000-0000-0000-0000-000000000001';
+    } else {
+      APP_STATE.storeId = newStore.id;
+      // 2. 将新 store_id 写回 profiles
+      const { error: updateErr } = await supabaseClient
+        .from('profiles')
+        .update({ store_id: APP_STATE.storeId })
+        .eq('id', APP_STATE.currentUser.id);
+      if (updateErr) console.error('更新用户店铺失败', updateErr);
+    }
+  } else {
+    APP_STATE.storeId = profile.store_id;
+  }
+
+  updateUpgradeButton();
+}
 
 function showLogin() {
   document.getElementById('loginForm').style.display = 'block';
