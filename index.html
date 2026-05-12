@@ -660,7 +660,7 @@
 </div>
 
 <!-- 注册成功提示模态框 -->
-<div class="modal-overlay" id="registerSuccessModal" style="display:none;" onclick="closeRegisterSuccessModal()">
+<div class="modal-overlay" id="registerSuccessModal" style="display:none; z-index:9999 !important;" onclick="closeRegisterSuccessModal()">
     <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:420px;text-align:center;padding:32px 24px;">
         <div style="font-size:3rem;margin-bottom:16px;">📧</div>
         <h3 data-i18n="checkEmailTitle">确认邮件已发送！</h3>
@@ -2638,10 +2638,14 @@ async function handleRegister(e) {
   const { error } = await supabaseClient.auth.signUp({ email, password });
   if (error) {
     document.getElementById('authMessage').textContent = error.message;
+    // 注意：不要在这里调用任何隐藏模态框的代码
   } else {
     document.getElementById('authMessage').textContent = '';
-    // 显示成功弹窗
+    // 显示弹窗
     document.getElementById('registerSuccessModal').style.display = 'flex';
+    // 可选：清空表单
+    document.getElementById('registerEmail').value = '';
+    document.getElementById('registerPassword').value = '';
   }
 }
 	function closeRegisterSuccessModal() {
