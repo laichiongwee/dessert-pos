@@ -2501,7 +2501,10 @@ async function initRealtime() {
                 if (payload.eventType === 'DELETE' && payload.old.store_id !== APP_STATE.storeId) return;
 
                 if (payload.eventType === 'INSERT') {
-                    APP_STATE.orders.unshift(payload.new);
+            const exists = APP_STATE.orders.some(o => o.id === payload.new.id);
+            if (!exists) {
+                APP_STATE.orders.unshift(payload.new);
+            }
                 } else if (payload.eventType === 'UPDATE') {
                     const idx = APP_STATE.orders.findIndex(o => o.id === payload.new.id);
                     if (idx !== -1) APP_STATE.orders[idx] = payload.new;
