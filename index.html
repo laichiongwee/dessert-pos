@@ -2338,7 +2338,7 @@ function getPriceId(plan, billing) {
                 });
             } catch (e) {
                 qrContainer.innerHTML =
-                    '<p style="padding:40px;background:#FDF5F0;border-radius:12px;">QR码生成中...<br><small>请确保网络连接正常</small></p>';
+                    '<p style="padding:40px;background:#FDF5F0;border-radius:12px;">${i18n.t('qrLoading')}</p>';
             }
         }
 
@@ -2697,7 +2697,7 @@ function updatePublicCartCount() {
 }
 function toggleCustomerCart() {
     if (APP_STATE.publicCart.length === 0) {
-        showToast('🛒 購物車是空的');
+        showToast('cartEmpty');
         return;
     }
     renderPublicCart();
@@ -2740,8 +2740,8 @@ function closePublicCartModal(event) {
 
 async function submitPublicOrder() {
     const name = document.getElementById('publicCustomerName').value.trim();
-    if (!name) { showToast('请输入姓名'); return; }
-    if (APP_STATE.publicCart.length === 0) { showToast('购物车是空的'); return; }
+    if (!name) { showToast('enterName'); return; }
+    if (APP_STATE.publicCart.length === 0) { showToast('cartEmpty'); return; }
     const phone = document.getElementById('publicCustomerPhone').value.trim();
     const total = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
     const orderId = 'PUB-' + Date.now();
@@ -2761,7 +2761,7 @@ async function submitPublicOrder() {
     const { error } = await supabaseClient.from('orders').insert([order]);
     if (error) {
         console.error('Order insert error:', error);
-        showToast('送出失败，请稍后再试');
+        showToast('submitFailed');
         return;
     }
 
@@ -2992,7 +2992,7 @@ function addToCustomerCart(itemId) {
 
 function openCustomerCart() {
     if (APP_STATE.customerCart.length === 0) {
-        showToast('🛒 购物车是空的');
+        showToast('cartEmpty');
         return;
     }
     renderCustomerCartModal();
@@ -3126,7 +3126,7 @@ async function deleteMenuItem(id) {
     const { error } = await supabaseClient.from('menu').delete().eq('id', id);
     if (error) {
         console.error('Delete error:', error);
-        showToast('⚠️ 删除失败，请重试');
+        showToast('deleteFailed');
         return;
     }
     
@@ -3135,7 +3135,7 @@ async function deleteMenuItem(id) {
     renderAdminMenuGrid();
     renderMenuGrid();
     if (APP_STATE.mode === 'customer') renderCustomerMenuGrid();
-    showToast('✅ 菜品已删除');
+    showToast('itemDeleted');
 }
 
 async function addNewMenuItem() {
@@ -3267,7 +3267,7 @@ async function saveMenuItem() {
     const price = document.getElementById('editItemPrice').value;
     
     if (!name || !price) {
-        showToast('⚠️ 名称和价格不能为空');
+        showToast('namePriceRequired');
         return;
     }
     
@@ -3308,7 +3308,7 @@ async function saveMenuItem() {
     renderMenuGrid();
     if (APP_STATE.mode === 'customer') renderCustomerMenuGrid();
     if (APP_STATE.adminUnlocked) renderAdminMenuGrid();
-    showToast('✅ 菜品已保存');
+    showToast('itemSaved');
 }
 // Show/hide "删除" button
 function showMenuDeleteBtn(show) {
@@ -3533,7 +3533,7 @@ async function finalizeCustomerPayment() {
 
     if (method === 'cash') {
         const received = parseFloat(document.getElementById('cashReceived').value) || 0;
-        if (received < total) { showToast('⚠️ 实收金额不足'); return; }
+        if (received < total) { showToast(i18n.t('insufficientAmount')); return; }
         paymentDetails.amountTendered = received;
         paymentDetails.change = received - total;
     } else if (method === 'card') {
