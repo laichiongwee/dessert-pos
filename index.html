@@ -827,7 +827,8 @@ i18n
   "statusReady": "Ready for Pickup",
   "statusCompleted": "Completed",
   "notYetPaid": "⏳ Not Paid",
-
+"orderCleared": "Order cleared",
+		  
 		  "receiptStoreName": "Persimmon Dessert",
 "callNumberLabel": "Call Number",
 "printReceipt": "Print Receipt",
@@ -888,7 +889,11 @@ i18n
   "perYear": "per year",
   "currentPlanLabel": "Current Plan",
   "choosePlanLabel": "Choose Plan",
-		  
+
+		  "noUnpaidOrders": "No unpaid orders",
+"customerLabel": "Customer",
+"collectPayment": "Collect"
+	
   // 其他
   "orderLimitReached": "🚫 Free plan daily order limit reached. Please upgrade.",
   "imgCompressing": "Compressing image...",
@@ -1083,7 +1088,7 @@ i18n
   "statusReady": "可取餐",
   "statusCompleted": "已取餐",
   "notYetPaid": "⏳ 尚未付款",
-
+"orderCleared": "订单已清空",
   // 顾客端
   "customerTitle": "🍅 柿柿润糖水",
   "customerSubtitle": "扫码点餐 · 美味直达",
@@ -1095,6 +1100,10 @@ i18n
   "continueOrdering": "继续点餐",
   "orderSubmitted": "订单已提交！请等待叫号。",
 
+		  "noUnpaidOrders": "暂无待付款订单",
+"customerLabel": "顾客",
+"collectPayment": "收款",
+	
   // 套餐选择
   "pricingTitle": "⭐ 升级套餐",
   "currentPlan": "当前套餐：",
@@ -1956,7 +1965,7 @@ function clearOrder() {
     document.getElementById('memberPhoneInput').value = '';
     document.getElementById('memberDropdown').style.display = 'none';
     renderOrderPanel();
-    showToast('订单已清空');
+    showToast(i18n.t('orderCleared'));
 }
 
 // ==================== DISCOUNT RULES MODAL ====================
@@ -3411,24 +3420,24 @@ function renderUnpaidOrdersList() {
     const unpaidOrders = APP_STATE.orders.filter(o => o.status === 'pending_payment');
     const container = document.getElementById('unpaidOrdersList');
     if (unpaidOrders.length === 0) {
-        container.innerHTML = '<p style="padding:20px;color:var(--text-lighter);">暂无待付款订单 🎉</p>';
+        container.innerHTML = `<p style="padding:20px;color:var(--text-lighter);">${i18n.t('noUnpaidOrders')} 🎉</p>`;
+        updateUnpaidBadge();
         return;
     }
     container.innerHTML = unpaidOrders.map(order => {
         const items = (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) || [];
         return `
         <div class="order-card" style="margin-bottom:8px;">
-            <div><strong>#${order.id}</strong> · ${order.memberName || '顾客'}</div>
+            <div><strong>#${order.id}</strong> · ${order.memberName || i18n.t('customerLabel')}</div>
             <div style="font-size:0.75rem;">${items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
             <div class="flex-row" style="margin-top:4px;">
                 <span style="font-weight:800;">RM ${Number(order.total).toFixed(2)}</span>
-                <button class="btn btn-xs btn-primary" onclick="payCustomerOrder('${order.id}')">💳 收款</button>
+                <button class="btn btn-xs btn-primary" onclick="payCustomerOrder('${order.id}')">💳 ${i18n.t('collectPayment')}</button>
             </div>
         </div>`;
     }).join('');
-	updateUnpaidBadge();
+    updateUnpaidBadge();
 }
-
 async function payCustomerOrder(orderId) {
     const order = APP_STATE.orders.find(o => o.id === orderId);
     if (!order) return;
