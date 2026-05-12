@@ -1391,6 +1391,7 @@ const APP_STATE = {
     postUrl: localStorage.getItem('postUrl') || '',
     imgbbKey: localStorage.getItem('imgbbKey') || '',
     // 新增：
+	storeId: null,
     currentUser: null,
     currentPlan: 'free',
     supabaseReady: false
@@ -1451,18 +1452,18 @@ function loadDemoData() {
 async function fetchAllData() {
   try {
     const [
-      { data: menu },
-      { data: members },
-      { data: orders },
-      { data: discountRules },
-      { data: settingsRows }
-    ] = await Promise.all([
-      supabaseClient.from('menu').select('*'),
-      supabaseClient.from('members').select('*'),
-      supabaseClient.from('orders').select('*').order('date', { ascending: false }),
-      supabaseClient.from('discount_rules').select('*'),
-      supabaseClient.from('settings').select('*')
-    ]);
+  { data: menu },
+  { data: members },
+  { data: orders },
+  { data: discountRules },
+  { data: settingsRows }
+] = await Promise.all([
+  supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId),
+  supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId),
+  supabaseClient.from('orders').select('*').order('date', { ascending: false }).eq('store_id', APP_STATE.storeId),
+  supabaseClient.from('discount_rules').select('*').eq('store_id', APP_STATE.storeId),
+  supabaseClient.from('settings').select('*').eq('store_id', APP_STATE.storeId)
+]);
 
     APP_STATE.menu = menu.map(item => ({
       ...item,
@@ -1708,12 +1709,13 @@ async function submitNewMember() {
     
     const memberId = 'M' + Date.now().toString().slice(-6);
     const newMember = {
-        id: memberId,
-        name: name,
-        phone: phone,
-        points: 0,
-        totalSpent: 0
-    };
+  id: memberId,
+  name: name,
+  phone: phone,
+  points: 0,
+  totalSpent: 0,
+  store_id: APP_STATE.storeId   // ← 新增
+};
     
     // 本地添加
     APP_STATE.members.push(newMember);
@@ -1816,10 +1818,9 @@ async function processPayment(method, total, paymentDetails = {}) {
     APP_STATE.settings.callNumberCounter = callNum;
     // 同步到 Supabase
     await supabaseClient.from('settings').upsert(
-        { key: 'callNumberCounter', value: String(callNum) },
-        { onConflict: 'key' }
-    );
-
+    { key: 'callNumberCounter', value: String(callNum), store_id: APP_STATE.storeId },
+    { onConflict: 'key, store_id' }
+);
     const orderId = String(++APP_STATE.orderIdCounter);
     localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
 
@@ -1834,7 +1835,8 @@ async function processPayment(method, total, paymentDetails = {}) {
         paymentDetails: paymentDetails,
         discountApplied: getDiscountAmount(),
         status: 'pending',
-        callNumber: String(callNum)       // 支付时就分配叫号号码
+        callNumber: String(callNum),
+  store_id: APP_STATE.storeId        // 支付时就分配叫号号码
     };
 
     // 本地添加
@@ -2048,7 +2050,8 @@ async function addDiscountRule() {
         value: Number(value),
         minPoints: Number(minPoints) || 0,
         validFrom: '',
-        validTo: ''
+        validTo: '',
+  store_id: APP_STATE.storeId
     };
     
     APP_STATE.discountRules.push(rule);
@@ -2097,7 +2100,8 @@ async function closeDay() {
         onlineTotal: todayOrders.filter(o => o.paymentMethod === 'online').reduce((s, o) => s + Number(o.total), 0),
         orderCount: todayOrders.length,
         discountTotal: todayOrders.reduce((s, o) => s + (Number(o.discountApplied) || 0), 0),
-        closedBy: 'Cashier'
+        closedBy: 'Cashier',
+  store_id: APP_STATE.storeId
     };
     
     const { error } = await supabaseClient.from('daily_reports').insert([report]);
@@ -2333,24 +2337,23 @@ function getPriceId(plan, billing) {
 }
         // ==================== QR CODE ====================
         function updateQRCode() {
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = '';
-            const url = window.location.origin + window.location.pathname + '?mode=customer';
-            document.getElementById('qrUrlDisplay').textContent = url;
-            try {
-                new QRCode(qrContainer, {
-                    text: url,
-                    width: 180,
-                    height: 180,
-                    colorDark: '#3D2020',
-                    colorLight: '#FFFFFF',
-                    correctLevel: QRCode.CorrectLevel.M,
-                });
-            } catch (e) {
-                qrContainer.innerHTML =
-                    `<p style="padding:40px;background:#FDF5F0;border-radius:12px;">${i18n.t('qrLoading')}</p>`;
-            }
-        }
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = '';
+    const url = window.location.origin + window.location.pathname + '?mode=customer&store=' + APP_STATE.storeId;
+    document.getElementById('qrUrlDisplay').textContent = url;
+    try {
+        new QRCode(qrContainer, {
+            text: url,
+            width: 180,
+            height: 180,
+            colorDark: '#3D2020',
+            colorLight: '#FFFFFF',
+            correctLevel: QRCode.CorrectLevel.M,
+        });
+    } catch (e) {
+        qrContainer.innerHTML = `<p style="padding:40px;background:#FDF5F0;border-radius:12px;">${i18n.t('qrLoading')}</p>`;
+    }
+}
 
         function openQRModal() {
             document.getElementById('qrModal').style.display = 'flex';
@@ -2375,7 +2378,7 @@ function getPriceId(plan, billing) {
     document.getElementById('settingsModal').style.display = 'flex';
 }
 
-async function saveSettings() {   // 注意这里要改为 async
+async function saveSettings() {
     APP_STATE.gasUrl = document.getElementById('gasUrlInput').value.trim();
     APP_STATE.postUrl = document.getElementById('postUrlInput').value.trim();
     APP_STATE.imgbbKey = document.getElementById('imgbbKeyInput').value.trim();
@@ -2383,30 +2386,21 @@ async function saveSettings() {   // 注意这里要改为 async
     localStorage.setItem('postUrl', APP_STATE.postUrl);
     localStorage.setItem('imgbbKey', APP_STATE.imgbbKey);
 
-    // 保存自动添加会员设置
     const autoAdd = document.getElementById('autoAddMemberToggle').checked;
     APP_STATE.settings.autoAddMember = autoAdd;
 
-    // 一次性同步所有设置到 Supabase
     if (typeof supabaseClient !== 'undefined') {
         const settingsToUpsert = [
-            { key: 'autoAddMember', value: autoAdd ? 'true' : 'false' },
-            { key: 'imgbbKey', value: APP_STATE.imgbbKey }
+            { key: 'autoAddMember', value: autoAdd ? 'true' : 'false', store_id: APP_STATE.storeId },
+            { key: 'imgbbKey', value: APP_STATE.imgbbKey, store_id: APP_STATE.storeId }
         ];
-        await supabaseClient.from('settings').upsert(settingsToUpsert, { onConflict: 'key' });
+        await supabaseClient.from('settings').upsert(settingsToUpsert, {
+            onConflict: 'key, store_id'    // ← 使用复合主键
+        });
     }
 
     document.getElementById('settingsModal').style.display = 'none';
     showToast('✅ 设置已保存');
-
-    // 因为本地状态已经更新，不需要重新加载数据
-    // 如果希望从数据库重新获取（非必须），可以保留以下代码，但要确保数据库写入完成
-    // if (APP_STATE.supabaseReady) {
-    //     await fetchAllData();
-    // } else {
-    //     loadDemoData();
-    //     renderAll();
-    // }
 }
         function closeSettingsModal(event) {
             if (event && event.target !== document.getElementById('settingsModal')) return;
@@ -2441,6 +2435,8 @@ async function checkUser() {
 
     // ✅ 如果明确请求顾客点餐模式，无论是否登录，都进入顾客页面
     if (mode === 'customer') {
+    const storeIdFromUrl = urlParams.get('store') || '';
+    APP_STATE.storeId = storeIdFromUrl || null;
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('publicCustomerView').style.display = 'block';
         document.getElementById('mainApp').style.display = 'none';
@@ -2474,7 +2470,7 @@ async function checkUser() {
     }
 }
 
-	async function initRealtime() {
+async function initRealtime() {
     if (realtimeSubscription) {
         await supabaseClient.removeChannel(realtimeSubscription);
     }
@@ -2489,6 +2485,10 @@ async function checkUser() {
             { event: '*', schema: 'public', table: 'orders' },
             (payload) => {
                 console.log('实时订单变更:', payload);
+                // ✅ 检查 store_id 是否匹配
+                if (payload.eventType !== 'DELETE' && payload.new.store_id !== APP_STATE.storeId) return;
+                if (payload.eventType === 'DELETE' && payload.old.store_id !== APP_STATE.storeId) return;
+
                 if (payload.eventType === 'INSERT') {
                     APP_STATE.orders.unshift(payload.new);
                 } else if (payload.eventType === 'UPDATE') {
@@ -2505,8 +2505,7 @@ async function checkUser() {
                 } else if (APP_STATE.mode === 'fulfillment') {
                     renderFulfillmentView();
                 }
-				// 在 postgres_changes 回调内，所有操作完成后
-updateUnpaidBadge();
+                updateUnpaidBadge();
             }
         )
         .subscribe();
@@ -2515,13 +2514,14 @@ updateUnpaidBadge();
 async function loadUserProfile() {
   const { data: profile } = await supabaseClient
     .from('profiles')
-    .select('plan_id, subscription_status')
+    .select('plan_id, subscription_status, store_id')
     .eq('id', APP_STATE.currentUser.id)
     .single();
   if (profile) {
     APP_STATE.currentPlan = profile.plan_id || 'free';
     APP_STATE.subscriptionStatus = profile.subscription_status || 'active';
-	  updateUpgradeButton();
+    APP_STATE.storeId = profile.store_id;
+    updateUpgradeButton();
   }
 }
 
@@ -2595,7 +2595,7 @@ async function logout() {
     checkUser();
 }
 	async function fetchPublicMenu() {
-    const { data: menu } = await supabaseClient.from('menu').select('*');
+    const { data: menu } = await supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId);
     if (menu) {
         APP_STATE.menu = menu.map(item => ({
             ...item,
@@ -2606,10 +2606,12 @@ async function logout() {
     }
 }
 async function loadPublicSettings() {
+    const storeId = APP_STATE.storeId;
     const { data: settingsRows, error } = await supabaseClient
         .from('settings')
         .select('*')
-        .in('key', ['autoAddMember']);  // 只取需要的设置，减少数据传输
+        .eq('store_id', storeId)                // ← 新增
+        .in('key', ['autoAddMember']);
 
     if (error) {
         console.error('Load public settings error:', error);
@@ -2619,12 +2621,12 @@ async function loadPublicSettings() {
         settingsRows.forEach(row => {
             APP_STATE.settings[row.key] = row.value;
         });
-        // 统一处理布尔转换
+        // 布尔转换保持不变
         if (APP_STATE.settings.autoAddMember !== undefined) {
-            APP_STATE.settings.autoAddMember = 
+            APP_STATE.settings.autoAddMember =
                 APP_STATE.settings.autoAddMember === 'true' || APP_STATE.settings.autoAddMember === true;
         } else {
-            APP_STATE.settings.autoAddMember = true;  // 默认开启
+            APP_STATE.settings.autoAddMember = true;
         }
     }
 }
@@ -2766,7 +2768,8 @@ async function submitPublicOrder() {
         paymentDetails: {},
         discountApplied: 0,
         status: 'pending_payment',
-        callNumber: ''
+        callNumber: '',
+  store_id: APP_STATE.storeId
     };
     const { error } = await supabaseClient.from('orders').insert([order]);
     if (error) {
@@ -2786,7 +2789,8 @@ async function submitPublicOrder() {
                 name: name,
                 phone: phone,
                 points: 0,
-                totalSpent: 0
+                totalSpent: 0,
+    store_id: APP_STATE.storeId
             };
             // 本地添加，以便收银端立即能搜索到
             APP_STATE.members.push(newMember);
@@ -2919,7 +2923,11 @@ async function updateOrderStatus(orderId, newStatus, callNumber = null) {
     const updateData = { status: newStatus };
     if (callNumber !== null) updateData.callNumber = String(callNumber);
     
-    const { error } = await supabaseClient.from('orders').update(updateData).eq('id', orderId);
+    const { error } = await supabaseClient
+  .from('orders')
+  .update(updateData)
+  .eq('id', orderId)
+  .eq('store_id', APP_STATE.storeId);   // ← 新增
     if (error) {
         console.error('Update order status error:', error);
         return;
@@ -3083,7 +3091,8 @@ function submitCustomerOrder() {
         paymentDetails: {},
         discountApplied: 0,
         status: 'pending_payment',
-        callNumber: ''
+        callNumber: '',
+  store_id: APP_STATE.storeId
     };
     
     APP_STATE.orders.push(order);
@@ -3125,7 +3134,11 @@ async function updateMenuItemField(id, field, value) {
     if (!item) return;
     item[field] = value;
     const updateData = { [field]: value };
-    const { error } = await supabaseClient.from('menu').update(updateData).eq('id', id);
+    const { error } = await supabaseClient
+  .from('menu')
+  .update(updateData)
+  .eq('id', id)
+  .eq('store_id', APP_STATE.storeId);
     if (error) console.error('Update field error:', error);
     showToast(`已更新${field}`);
 }
@@ -3155,20 +3168,19 @@ async function addNewMenuItem() {
     const category = prompt('分类');
     const newItem = {
         id: 'I' + Date.now(),
-        name, price: parseFloat(price) || 0,
+        name,
+        price: parseFloat(price) || 0,
         category: category || '其他',
         description: '',
         originalPrice: '',
         emoji: '',
         imageUrl: '',
-        available: true
+        available: true,
+        store_id: APP_STATE.storeId          // ← 新增
     };
     APP_STATE.menu.push(newItem);
-    
-    // 改为 Supabase
     const { error } = await supabaseClient.from('menu').insert([newItem]);
     if (error) console.error('Add menu item error:', error);
-    
     renderAdminMenuGrid();
     showToast('菜品已添加');
 }
@@ -3189,9 +3201,9 @@ function uploadLogo() {
         APP_STATE.settings.logoUrl = logoUrl;
         document.querySelector('.header-brand img').src = logoUrl;
         await supabaseClient.from('settings').upsert(
-            { key: 'logoUrl', value: logoUrl },
-            { onConflict: 'key' }
-        );
+    { key: 'logoUrl', value: logoUrl, store_id: APP_STATE.storeId },
+    { onConflict: 'key, store_id' }
+);
     };
     reader.readAsDataURL(file);
 }
@@ -3202,8 +3214,8 @@ function editStoreName() {
     APP_STATE.settings.storeName = newName;
     document.querySelector('.header-brand span').textContent = newName;
     supabaseClient.from('settings').upsert(
-        { key: 'storeName', value: newName },
-        { onConflict: 'key' }
+    { key: 'storeName', value: newName, store_id: APP_STATE.storeId },
+    { onConflict: 'key, store_id' }   // 假设已改为复合主键
     ).then(({ error }) => {
         if (error) console.error('Update store name error:', error);
     });
@@ -3290,14 +3302,15 @@ async function saveMenuItem() {
         category: document.getElementById('editItemCategory').value || '其他',
         emoji: document.getElementById('editItemEmoji').value.trim(),
         imageUrl: document.getElementById('editItemImage').value.trim(),
-        available: document.getElementById('editItemAvailable').checked
+        available: document.getElementById('editItemAvailable').checked,
+  store_id: APP_STATE.storeId   // ← 新增
     };
     
     // 写入 Supabase (upsert: 存在则更新，不存在则插入)
     const { error } = await supabaseClient.from('menu').upsert([data], { onConflict: 'id' });
     if (error) {
         console.error('Menu save error:', error);
-        showToast('⚠️ 保存失败，请重试');
+        showToast('saveFailed');
         return;
     }
     
@@ -3346,7 +3359,11 @@ async function deleteMenuItem() {
     if (!id) return;
     if (!confirm(i18n.t('deleteItemConfirm'))) return;
     APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== id);
-    const { error } = await supabaseClient.from('menu').delete().eq('id', id);
+    const { error } = await supabaseClient
+  .from('menu')
+  .delete()
+  .eq('id', id)
+  .eq('store_id', APP_STATE.storeId);   // ← 新增
 if (error) console.error('Delete error:', error);
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     closeMenuEditModal();
@@ -3429,45 +3446,37 @@ function renderCategoryListModal() {
 }
 async function editCategory(oldName) {
     const newName = prompt(i18n.t('editCategoryPrompt', { name: oldName }), oldName);
-    if (!newName || newName.trim() === '' || newName.trim() === oldName) return; // 取消或未修改
+    if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
     const trimmedName = newName.trim();
     
-    // 检查是否与已有分类重复（忽略原名称）
     if (APP_STATE.categories.filter(c => c !== '全部').some(c => c === trimmedName && c !== oldName)) {
         showToast(i18n.t('categoryAlreadyExists'));
         return;
     }
 
-    // 更新 categories 数组
     const index = APP_STATE.categories.indexOf(oldName);
-    if (index !== -1) {
-        APP_STATE.categories[index] = trimmedName;
-    }
+    if (index !== -1) APP_STATE.categories[index] = trimmedName;
 
-    // 更新菜单项中所有引用该分类的项
     APP_STATE.menu.forEach(item => {
-        if (item.category === oldName) {
-            item.category = trimmedName;
-        }
+        if (item.category === oldName) item.category = trimmedName;
     });
 
-    // 批量更新 Supabase 中的菜单表
     const { error } = await supabaseClient
         .from('menu')
         .update({ category: trimmedName })
-        .eq('category', oldName);
+        .eq('category', oldName)
+        .eq('store_id', APP_STATE.storeId);   // ✅ 隔离
 
     if (error) {
         console.error('Edit category error:', error);
         showToast(i18n.t('categoryEditFailed'));
-        // 回滚本地修改（简单起见，重新加载）
         await fetchAllData();
     } else {
         showToast(i18n.t('categoryEdited'));
     }
 
     renderCategoryListModal();
-    renderAll(); // 刷新菜单网格
+    renderAll();
 }
 async function deleteCategory(cat) {
   if (!confirm(i18n.t('deleteCategoryConfirm', { cat: cat }))) return;
@@ -3475,15 +3484,17 @@ async function deleteCategory(cat) {
     if (item.category === cat) item.category = '其他';
   });
   
-  // 改为 Supabase 批量更新
   await Promise.all(APP_STATE.menu.map(item => 
-    supabaseClient.from('menu').update({ category: item.category }).eq('id', item.id)
+    supabaseClient.from('menu')
+      .update({ category: item.category })
+      .eq('id', item.id)
+      .eq('store_id', APP_STATE.storeId)   // ✅ 隔离
   ));
   
   APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
   renderCategoryListModal();
   renderAll();
-  showToast(`分类"${cat}"已删除`);
+  showToast('categoryDeleted', { cat });
 }
 // Delegate the add category button inside modal
 async function addNewCategory() {
@@ -3603,45 +3614,47 @@ async function finalizeCustomerPayment() {
         paymentDetails.refNum = document.getElementById('onlineRefNum').value;
     }
 
-    // 生成叫号号码
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
     APP_STATE.settings.callNumberCounter = callNum;
     await supabaseClient.from('settings').upsert(
-        { key: 'callNumberCounter', value: String(callNum) },
-        { onConflict: 'key' }
-    );
+    { key: 'callNumberCounter', value: String(callNum), store_id: APP_STATE.storeId },
+    { onConflict: 'key, store_id' }
+);
 
     order.status = 'pending';
     order.paymentMethod = method;
     order.paymentDetails = paymentDetails;
     order.callNumber = String(callNum);
 
-    const { error } = await supabaseClient.from('orders').update({
-        status: 'pending',
-        paymentMethod: method,
-        paymentDetails: paymentDetails,
-        callNumber: String(callNum)
-    }).eq('id', orderId);
+    const { error } = await supabaseClient
+        .from('orders')
+        .update({
+            status: 'pending',
+            paymentMethod: method,
+            paymentDetails: paymentDetails,
+            callNumber: String(callNum)
+        })
+        .eq('id', orderId)
+        .eq('store_id', APP_STATE.storeId);   // ✅ 隔离
 
     if (error) console.error('Payment update error:', error);
 
-    // 更新会员积分
     const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
     if (member) {
         member.points += Math.floor(total);
         member.totalSpent += total;
-        await supabaseClient.from('members').update({
-            points: member.points,
-            totalSpent: member.totalSpent
-        }).eq('id', member.id);
+        await supabaseClient.from('members')
+            .update({ points: member.points, totalSpent: member.totalSpent })
+            .eq('id', member.id)
+            .eq('store_id', APP_STATE.storeId);   // ✅ 隔离
     }
 
     document.getElementById('paymentModal').style.display = 'none';
     window.currentPayingOrderId = null;
     renderFulfillmentView();
     renderUnpaidOrdersList();
-    showToast(`✅ 订单 #${orderId} 已收款`);
-    showOrderReceipt(order);       // 弹出收据
+    showToast('orderPaid', { orderId });
+    showOrderReceipt(order);
 }
 
 	// Open menu sheet and render items as a table
@@ -3681,14 +3694,19 @@ function renderMenuSheetTable() {
 // Add a smart delete button for menu sheet
 async function deleteMenuItemFromSheet(itemId) {
     if (!confirm('确定要删除该菜品吗？')) return;
-    
-    const { error } = await supabaseClient.from('menu').delete().eq('id', itemId);
+
+    const { error } = await supabaseClient
+        .from('menu')
+        .delete()
+        .eq('id', itemId)
+        .eq('store_id', APP_STATE.storeId);   // ← 新增
+
     if (error) {
         console.error('Delete error:', error);
         showToast('⚠️ 删除失败');
         return;
     }
-    
+
     APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== itemId);
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     renderMenuSheetTable();
