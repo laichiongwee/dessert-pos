@@ -1185,7 +1185,7 @@ function applyLanguage() {
     document.querySelectorAll('#langToggle').forEach(btn => {
         btn.textContent = i18n.language === 'zh-CN' ? '🌐 EN' : '🌐 中';
     });
-    if (typeof APP_STATE !== 'undefined') updateMemberDisplay();
+    updateMemberDisplay();
 }
 
 	function autoAssignI18n() {
