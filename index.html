@@ -893,7 +893,27 @@ i18n
 		  "noUnpaidOrders": "No unpaid orders",
 "customerLabel": "Customer",
 "collectPayment": "Collect",
-	
+	"orderSubmittedWithId": "✅ Order #{{orderId}} submitted! Please wait for pickup 🍅",
+"cartEmptyWarning": "⚠️ Please add items first",
+"fillComplete": "Please fill in completely",
+"ruleAdded": "Rule added",
+"dayClosed": "✅ Day closed and saved",
+"selectImageFile": "Please select an image file",
+"imgbbKeyMissing": "❌ Please enter ImgBB API key in settings",
+"redirectingPayment": "Redirecting to payment...",
+"paymentCreateFailed": "Payment creation failed: {{error}}",
+"paymentRedirectError": "Payment redirect error: {{error}}",
+"paymentConfigError": "Payment configuration error, please contact admin",
+"qrLoading": "Generating QR code...<br><small>Please check your network</small>",
+"deleteFailed": "⚠️ Deletion failed, please retry",
+"itemDeleted": "✅ Item deleted",
+"itemSaved": "✅ Item saved",
+"namePriceRequired": "⚠️ Name and price cannot be empty",
+"enterName": "Please enter your name",
+"cartEmpty": "Cart is empty",
+"submitFailed": "Submission failed, please try again later",
+// 如果需要带参数的删除分类
+"deleteCategoryConfirm": "Delete category \"{{cat}}\"? Items will not be deleted, but will be moved to 'Other'.",
   // 其他
 		  "qrCodeTitle": "📱 Scan to Order",
 "autoAddMemberLabel": "Auto add member for customer orders",
@@ -1147,6 +1167,27 @@ i18n
 "orderNumberLabel": "订单号",
 "pleasePayCounter": "请前往柜台付款",
 "viewOrderStatus": "查看订单状态 →",
+"orderSubmittedWithId": "✅ 订单 #{{orderId}} 已提交! 请等待取餐 🍅",
+"cartEmptyWarning": "⚠️ 请先添加商品",
+"fillComplete": "填写完整",
+"ruleAdded": "规则已添加",
+"dayClosed": "✅ 今日账目已关闭并保存",
+"selectImageFile": "请选择图片文件",
+"imgbbKeyMissing": "❌ 请先在设置中填入 ImgBB API 密钥",
+"redirectingPayment": "正在跳转支付...",
+"paymentCreateFailed": "支付创建失败: {{error}}",
+"paymentRedirectError": "支付跳转错误: {{error}}",
+"paymentConfigError": "支付配置错误，请联系管理员",
+"qrLoading": "QR码生成中...<br><small>请确保网络连接正常</small>",
+"deleteFailed": "⚠️ 删除失败，请重试",
+"itemDeleted": "✅ 菜品已删除",
+"itemSaved": "✅ 菜品已保存",
+"namePriceRequired": "⚠️ 名称和价格不能为空",
+"enterName": "请输入姓名",
+"cartEmpty": "购物车是空的",
+"submitFailed": "送出失败，请稍后再试",
+"deleteCategoryConfirm": "删除分类\"{{cat}}\"？该分类下的商品将移至“其他”。",
+	
 		  
   // 其他
   "orderLimitReached": "🚫 免费版每日订单已达上限，请升级套餐。",
@@ -1989,7 +2030,7 @@ async function addDiscountRule() {
     const type = document.getElementById('newRuleType').value;
     const value = document.getElementById('newRuleValue').value;
     const minPoints = document.getElementById('newRuleMinPoints').value;
-    if (!type || !value) { showToast('填写完整'); return; }
+    if (!type || !value) { showToast('fillComplete'); return; }
     
     const rule = {
         id: 'D' + Date.now(),
@@ -2006,7 +2047,7 @@ async function addDiscountRule() {
     if (error) console.error('Add discount rule error:', error);
     
     renderDiscountRulesList();
-    showToast('规则已添加');
+    showToast('ruleAdded');
 }
 async function deleteDiscountRule(id) {
     APP_STATE.discountRules = APP_STATE.discountRules.filter(r=>r.id!==id);
@@ -2053,7 +2094,7 @@ async function closeDay() {
     if (error) console.error('Save daily report error:', error);
     
     document.getElementById('reportModal').style.display = 'none';
-    showToast('✅ 今日账目已关闭并保存');
+    showToast('dayClosed');
 }
 function closeReportModal(e) { if(e&&e.target!==document.getElementById('reportModal'))return; document.getElementById('reportModal').style.display='none'; }
 document.getElementById('reportModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
@@ -2821,11 +2862,11 @@ function renderFulfillmentView() {
     const completedOrders = APP_STATE.orders.filter(o => o.status === 'completed');
     
     document.getElementById('activeOrders').innerHTML = activeOrders.length === 0 
-        ? '<p style="color:var(--text-lighter);padding:20px;">无进行中订单</p>' 
+        ? '<p style="color:var(--text-lighter);padding:20px;">i18n.t('noActiveOrders')</p>' 
         : activeOrders.map(order => renderOrderCard(order)).join('');
     
     document.getElementById('completedOrders').innerHTML = completedOrders.length === 0 
-        ? '<p style="color:var(--text-lighter);padding:20px;">无历史订单</p>'
+        ? '<p style="color:var(--text-lighter);padding:20px;">i18n.t('noHistoryOrders')</p>'
         : completedOrders.slice(-20).reverse().map(order => renderOrderCard(order)).join('');
 }
 
@@ -2834,19 +2875,19 @@ function renderOrderCard(order) {
     const callNumber = order.callNumber || '';
     const items = (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) || [];
     
-    let statusLabel = { pending_payment: '待付款', pending: '待处理', preparing: '制作中', ready: '可取餐', completed: '已取餐' }[status] || '未知';
+    let statusLabel = { pending_payment: i18n.t('statusPendingPayment'), pending: i18n.t('statusPending'), preparing: i18n.t('statusPreparing'), ready: i18n.t('statusReady'), completed: i18n.t('statusCompleted') }[status] || '未知';
     let badgeClass = `status-${status}`;
     if (status === 'pending_payment') badgeClass = 'status-pending'; // use same orangish badge
 
     let buttons = '';
     if (status === 'pending_payment') {
-        buttons = '<span style="color:var(--red);font-size:0.75rem;">⏳ 未付款</span>';
+        buttons = '<span style="color:var(--red);font-size:0.75rem;">i18n.t('notYetPaid')</span>';
     } else if (status === 'pending') {
-        buttons = `<button class="btn btn-xs btn-outline" onclick="updateOrderStatus('${order.id}','preparing')">开始准备</button>`;
+        buttons = `<button class="btn btn-xs btn-outline" onclick="updateOrderStatus('${order.id}','preparing')">i18n.t('startPrep')</button>`;
     } else if (status === 'preparing') {
-        buttons = `<button class="btn btn-xs btn-primary" onclick="markReady('${order.id}')">餐已好</button>`;
+        buttons = `<button class="btn btn-xs btn-primary" onclick="markReady('${order.id}')">i18n.t('foodReady')</button>`;
     } else if (status === 'ready') {
-        buttons = `<button class="btn btn-xs btn-success" onclick="markCompleted('${order.id}')">客人取餐</button>`;
+        buttons = `<button class="btn btn-xs btn-success" onclick="markCompleted('${order.id}')">i18n.t('pickedUp')</button>`;
     }
 
     return `
@@ -2933,7 +2974,7 @@ function clearOrder() {
     APP_STATE.currentMember = null;
     document.getElementById('memberPhoneInput').value = '';
     renderOrderPanel();
-    showToast('订单已清空');
+    showToast(i18n.t('orderCleared'));
 }
 
 // ==================== CUSTOMER CART ====================
@@ -3048,11 +3089,11 @@ function submitCustomerOrder() {
     updateCartBadge();
     document.getElementById('customerNameInput').value = '';
     document.getElementById('customerPhoneInput').value = '';
-    showToast(`✅ 订单 #${orderId} 已提交! 请等待取餐 🍅`);
+    showToast(i18n.t('orderSubmittedWithId', { orderId: orderId }));
 }
 // ==================== QUICK PAYMENT (for keyboard shortcut) ====================
 function quickPayment(method) {
-    if (APP_STATE.cashierOrder.length === 0) { showToast('⚠️ 请先添加商品'); return; }
+    if (APP_STATE.cashierOrder.length === 0) { showToast('cartEmptyWarning'); return; }
     const total = getOrderTotal();
     processPayment(method, total, { method });
 }
@@ -3081,7 +3122,7 @@ async function updateMenuItemField(id, field, value) {
 }
 
 async function deleteMenuItem(id) {
-    if (!confirm('删除该菜品？')) return;
+    if (!confirm(i18n.t('deleteItemConfirm'))) return;
     
     const { error } = await supabaseClient.from('menu').delete().eq('id', id);
     if (error) {
@@ -3294,7 +3335,7 @@ function showMenuDeleteBtn(show) {
 async function deleteMenuItem() {
     const id = document.getElementById('editItemId').value.trim();
     if (!id) return;
-    if (!confirm('确定要删除该菜品吗？')) return;
+    if (!confirm(i18n.t('deleteItemConfirm'))) return;
     APP_STATE.menu = APP_STATE.menu.filter(i => i.id !== id);
     const { error } = await supabaseClient.from('menu').delete().eq('id', id);
 if (error) console.error('Delete error:', error);
@@ -3372,7 +3413,7 @@ function renderCategoryListModal() {
 }
 
 async function deleteCategory(cat) {
-  if (!confirm(`删除分类"${cat}"？此分类下的菜品不会被删除，但会失去分类。`)) return;
+  if (!confirm(i18n.t('deleteCategoryConfirm', { cat: cat }))) return;
   APP_STATE.menu.forEach(item => {
     if (item.category === cat) item.category = '其他';
   });
@@ -3660,7 +3701,7 @@ async function deleteMenuItemFromSheet(itemId) {
 async function uploadMenuImage() {
     const input = document.getElementById('editItemImageUpload');
     if (!input.files || !input.files[0]) {
-        showToast('请选择图片文件');
+        showToast('selectImageFile');
         return;
     }
     const file = input.files[0];
