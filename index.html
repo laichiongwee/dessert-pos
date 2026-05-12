@@ -1346,7 +1346,7 @@ function checkOrderLimit() {
         const today = new Date().toISOString().slice(0, 10);
         const todayOrders = APP_STATE.orders.filter(o => o.date?.startsWith(today)).length;
         if (todayOrders >= PLAN_PERMISSIONS.free.orderDailyLimit) {
-            showToast('🚫 免费版每日订单已达上限，请升级套餐');
+            showToast('orderLimitReached');
             return false;
         }
     }
@@ -1650,7 +1650,7 @@ async function submitNewMember() {
     document.getElementById('addMemberModal').style.display = 'none';
     document.getElementById('newMemberName').value = '';
     document.getElementById('newMemberPhone').value = '';
-    showToast('✅ 会员已添加');
+    showToast('memberAdded');
     
     APP_STATE.currentMember = newMember;
     document.getElementById('memberPhoneInput').value = newMember.phone;
@@ -2338,15 +2338,21 @@ async function saveSettings() {   // 注意这里要改为 async
 
    
 
-        // ==================== TOAST ====================
-        function showToast(message) {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 2500);
-        }
+       // ==================== TOAST ====================
+function showToast(keyOrText, vars = {}) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+
+  const text =
+    (typeof i18n !== 'undefined' && i18n.exists(keyOrText))
+      ? i18n.t(keyOrText, vars)
+      : keyOrText;
+
+  toast.textContent = text;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
 // ==================== AUTH ====================
 async function checkUser() {
     const { data: { session } } = await supabaseClient.auth.getSession();
@@ -2849,7 +2855,7 @@ async function markReady(orderId) {
     // 直接更新状态为 ready，不再生成 callNumber（支付时已生成）
     await updateOrderStatus(orderId, 'ready');
     const order = APP_STATE.orders.find(o => o.id === orderId);
-    showToast(`请取餐：${order?.callNumber || ''}号`);
+    showToast('pickUpNumber', { number: order?.callNumber || '' });
 }
 async function markCompleted(orderId) {
     await updateOrderStatus(orderId, 'completed');
