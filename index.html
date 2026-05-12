@@ -748,10 +748,6 @@ i18n
   "addMemberTitle": "🧑‍🤝‍🧑 Add Member",
   "memberName": "Name",
   "memberPhone": "Phone",
-		  points: 'Points',
-totalSpent: 'Total Spent',
-redeemable: '🎉 Redeemable Discount',
-noMember: 'No member linked',
 
   // 支付
   "paymentTitle": "💳 Payment",
@@ -1002,10 +998,6 @@ noMember: 'No member linked',
   "addMemberTitle": "🧑‍🤝‍🧑 添加会员",
   "memberName": "姓名",
   "memberPhone": "手机号",
-		  points: '积分',
-totalSpent: '累计消费',
-redeemable: '🎉可兑换折扣',
-noMember: '未关联会员',
 
   // 支付
   "paymentTitle": "💳 结算",
@@ -1185,7 +1177,6 @@ function applyLanguage() {
     document.querySelectorAll('#langToggle').forEach(btn => {
         btn.textContent = i18n.language === 'zh-CN' ? '🌐 EN' : '🌐 中';
     });
-    updateMemberDisplay();
 }
 
 	function autoAssignI18n() {
@@ -1612,13 +1603,13 @@ function updateMemberDisplay() {
         <div class="member-info">
             <div class="member-avatar">${APP_STATE.currentMember.name.charAt(0)}</div>
             <div>
-                <strong>${APP_STATE.currentMember.name}</strong> · ${i18n.t('points')}: ${APP_STATE.currentMember.points} · 
-                ${i18n.t('totalSpent')}: RM ${Number(APP_STATE.currentMember.totalSpent).toFixed(2)}
-                ${APP_STATE.currentMember.points >= 50 ? ' ' + i18n.t('redeemable') : ''}
+                <strong>${APP_STATE.currentMember.name}</strong> · 积分: ${APP_STATE.currentMember.points} · 
+                累计消费: RM ${Number(APP_STATE.currentMember.totalSpent).toFixed(2)}
+                ${APP_STATE.currentMember.points >= 50 ? ' 🎉可兑换折扣' : ''}
             </div>
         </div>`;
     } else {
-        display.innerHTML = `<span style="color:#C0A0A0;">${i18n.t('noMember')}</span>`;
+        display.innerHTML = '<span style="color:#C0A0A0;">未关联会员</span>';
     }
     updateOrderTotals();
 }
