@@ -442,21 +442,31 @@
     <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-handle"></div>
         <h3 data-i18n="settingsTitle">⚙️ 系统设置</h3>
-        <label style="font-size:0.75rem;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-    <input type="checkbox" id="autoAddMemberToggle" checked>
-    <span data-i18n="autoAddMemberLabel">顾客下单自动添加会员</span>
-</label>
-        <label style="font-size:0.75rem;" data-i18n="dataSyncUrl">数据同步 URL (GET)</label>
-        <input type="url" id="gasUrlInput" placeholder="Apps Script URL for data" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
-        
-        <label style="font-size:0.75rem;" data-i18n="imageUploadUrl">图片上传 URL (POST) - 可留空</label>
-        <input type="url" id="postUrlInput" placeholder="Apps Script POST URL (optional)" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
-        
-        <label style="font-size:0.75rem;" data-i18n="imgbbKey">ImgBB API 密钥</label>
-        <input type="text" id="imgbbKeyInput" placeholder="貼上 ImgBB API key" style="width:100%;padding:8px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;margin-bottom:8px;">
-        
-        <button class="btn btn-primary btn-sm" onclick="saveSettings()" style="margin-top:8px;width:100%;" data-i18n="saveSettings">💾 保存设置</button>
-        <button class="btn btn-outline btn-sm" onclick="loadDemoData()" style="width:100%;margin-top:4px;" data-i18n="loadDemo">📦 加载演示数据</button>
+
+        <!-- 自动添加会员开关 -->
+        <div style="margin-bottom:20px; padding:16px; background:var(--gold-light); border-radius:12px;">
+            <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                <div style="flex:1;">
+                    <div style="font-weight:700; font-size:0.95rem;" data-i18n="autoAddMemberTitle">顾客下单自动添加会员</div>
+                    <div style="font-size:0.75rem; color:var(--text-light); margin-top:4px;" data-i18n="autoAddMemberDesc">
+                        开启后，顾客通过扫码点餐时，系统会自动使用其手机号创建会员
+                    </div>
+                </div>
+                <input type="checkbox" id="autoAddMemberToggle" checked style="width:20px;height:20px;accent-color:var(--persimmon);">
+            </label>
+        </div>
+
+        <!-- ImgBB API Key (只读) -->
+        <label style="font-size:0.75rem; color:var(--text-lighter);" data-i18n="imgbbKey">ImgBB API 密钥（暂不可修改）</label>
+        <input type="text" id="imgbbKeyInput" disabled 
+               style="width:100%; padding:8px; border-radius:16px; border:1.5px solid var(--border); 
+                      background:#f5f5f5; color:#999; font-family:inherit; margin-bottom:20px;"
+               placeholder="密钥已配置">
+
+        <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary btn-sm" onclick="saveSettings()" style="flex:1;" data-i18n="saveSettings">💾 保存设置</button>
+            <button class="btn btn-outline btn-sm" onclick="loadDemoData()" style="flex:1;" data-i18n="loadDemo">📦 加载演示数据</button>
+        </div>
     </div>
 </div>
 
@@ -719,6 +729,8 @@ i18n
   "customerMode": "📱 Customer",
   "fulfillmentMode": "📦 Kitchen",
 
+		  "autoAddMemberTitle": "Auto-add member for customer orders",
+"autoAddMemberDesc": "When enabled, the system will automatically create a member using the phone number provided during QR ordering.",
 		  "checkEmailTitle": "Confirmation Email Sent!",
 "checkEmailDesc": "We have sent a confirmation link to your email. Please click the link to complete your registration.",
 "checkSpamReminder": "📌 If you don't see it, please check your spam/junk folder.",
@@ -1035,7 +1047,8 @@ i18n
   "imgbbKey": "ImgBB API 密钥",
   "saveSettings": "💾 保存设置",
   "loadDemo": "📦 加载演示数据",
-
+"autoAddMemberTitle": "顾客下单自动添加会员",
+"autoAddMemberDesc": "开启后，顾客通过扫码点餐时，系统会自动使用其手机号创建会员。",
 		  "edit": "编辑",                     // 已存在
 "editCategoryPrompt": "修改分类 \"{{name}}\"：",
 "categoryAlreadyExists": "分类已存在",
@@ -2405,22 +2418,12 @@ function getPriceId(plan, billing) {
 
         // ==================== SETTINGS ====================
        function openSettings() {
-    document.getElementById('gasUrlInput').value = APP_STATE.gasUrl;
-    document.getElementById('postUrlInput').value = APP_STATE.postUrl || '';
     document.getElementById('imgbbKeyInput').value = APP_STATE.imgbbKey || '';
-    // ✅ 读取自动添加会员设置
     document.getElementById('autoAddMemberToggle').checked = APP_STATE.settings.autoAddMember !== false;
     document.getElementById('settingsModal').style.display = 'flex';
 }
 
 async function saveSettings() {
-    APP_STATE.gasUrl = document.getElementById('gasUrlInput').value.trim();
-    APP_STATE.postUrl = document.getElementById('postUrlInput').value.trim();
-    APP_STATE.imgbbKey = document.getElementById('imgbbKeyInput').value.trim();
-    localStorage.setItem('gasUrl', APP_STATE.gasUrl);
-    localStorage.setItem('postUrl', APP_STATE.postUrl);
-    localStorage.setItem('imgbbKey', APP_STATE.imgbbKey);
-
     const autoAdd = document.getElementById('autoAddMemberToggle').checked;
     APP_STATE.settings.autoAddMember = autoAdd;
 
@@ -2429,9 +2432,7 @@ async function saveSettings() {
             { key: 'autoAddMember', value: autoAdd ? 'true' : 'false', store_id: APP_STATE.storeId },
             { key: 'imgbbKey', value: APP_STATE.imgbbKey, store_id: APP_STATE.storeId }
         ];
-        await supabaseClient.from('settings').upsert(settingsToUpsert, {
-            onConflict: 'key, store_id'    // ← 使用复合主键
-        });
+        await supabaseClient.from('settings').upsert(settingsToUpsert, { onConflict: 'key, store_id' });
     }
 
     document.getElementById('settingsModal').style.display = 'none';
@@ -2947,18 +2948,20 @@ function renderCustomerCategoryTabs() {
 	
 
 function renderFulfillmentView() {
+    const today = new Date().toISOString().slice(0, 10);
     const activeOrders = APP_STATE.orders.filter(o => o.status !== 'completed');
-    const completedOrders = APP_STATE.orders.filter(o => o.status === 'completed');
-    
+    const completedOrders = APP_STATE.orders.filter(o => {
+        return o.status === 'completed' && o.date && o.date.startsWith(today);
+    });
+
     document.getElementById('activeOrders').innerHTML = activeOrders.length === 0 
-    ? `<p style="color:var(--text-lighter);padding:20px;">${i18n.t('noActiveOrders')}</p>`
-    : activeOrders.map(order => renderOrderCard(order)).join('');
+        ? `<p style="color:var(--text-lighter);padding:20px;">${i18n.t('noActiveOrders')}</p>` 
+        : activeOrders.map(order => renderOrderCard(order)).join('');
 
-document.getElementById('completedOrders').innerHTML = completedOrders.length === 0 
-    ? `<p style="color:var(--text-lighter);padding:20px;">${i18n.t('noHistoryOrders')}</p>`
-    : completedOrders.slice(-20).reverse().map(order => renderOrderCard(order)).join('');
+    document.getElementById('completedOrders').innerHTML = completedOrders.length === 0 
+        ? `<p style="color:var(--text-lighter);padding:20px;">${i18n.t('noHistoryOrders')}</p>`
+        : completedOrders.slice(-20).reverse().map(order => renderOrderCard(order)).join('');
 }
-
 function renderOrderCard(order) {
     const status = order.status || 'pending';
     const callNumber = order.callNumber || '';
