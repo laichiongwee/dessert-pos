@@ -276,6 +276,42 @@
   <div id="authMessage" style="color:red;text-align:center;margin-top:8px;font-size:0.8rem;"></div>
 </div>
 
+	<!-- 注册成功提示模态框 -->
+<div class="modal-overlay" id="registerSuccessModal" style="display:none; z-index:9999 !important;" onclick="closeRegisterSuccessModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:420px;text-align:center;padding:32px 24px;">
+        <div style="font-size:3rem;margin-bottom:16px;">📧</div>
+        <h3 data-i18n="checkEmailTitle">确认邮件已发送！</h3>
+        <p style="font-size:0.9rem;color:var(--text-light);margin:12px 0 8px;">
+            <span data-i18n="checkEmailDesc">我们已将确认链接发送至您的邮箱，请点击该链接完成注册。</span>
+        </p>
+        <p style="font-size:0.85rem;color:var(--red);" data-i18n="checkSpamReminder">
+            📌 如果没有收到，请检查垃圾邮件箱。
+        </p>
+        <p style="font-size:0.8rem;color:var(--text-lighter);" data-i18n="checkEmailSender">
+            发件人：Supabase Auth
+        </p>
+        <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="closeRegisterSuccessModal()" data-i18n="ok">确定</button>
+    </div>
+</div>
+
+	<!-- 密码重置邮件已发送模态框 -->
+<div class="modal-overlay" id="resetPasswordModal" style="display:none;" onclick="closeResetPasswordModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:420px;text-align:center;padding:32px 24px;">
+        <div style="font-size:3rem;margin-bottom:16px;">📧</div>
+        <h3 data-i18n="resetEmailTitle">密码重置邮件已发送！</h3>
+        <p style="font-size:0.9rem;color:var(--text-light);margin:12px 0 8px;">
+            <span data-i18n="resetEmailDesc">我们已将密码重置链接发送至您的邮箱，请点击链接完成重设。</span>
+        </p>
+        <p style="font-size:0.85rem;color:var(--red);" data-i18n="checkSpamReminder">
+            📌 如果没有收到，请检查垃圾邮件箱。
+        </p>
+        <p style="font-size:0.8rem;color:var(--text-lighter);" data-i18n="checkEmailSender">
+            发件人：Supabase Auth
+        </p>
+        <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="closeResetPasswordModal()" data-i18n="ok">确定</button>
+    </div>
+</div>
+	
 	<!-- 公開顧客點餐區（未登入時顯示） -->
 <div id="publicCustomerView" style="display:none;">
     <header class="header">
@@ -659,23 +695,7 @@
     </div>
 </div>
 
-<!-- 注册成功提示模态框 -->
-<div class="modal-overlay" id="registerSuccessModal" style="display:none; z-index:9999 !important;" onclick="closeRegisterSuccessModal()">
-    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:420px;text-align:center;padding:32px 24px;">
-        <div style="font-size:3rem;margin-bottom:16px;">📧</div>
-        <h3 data-i18n="checkEmailTitle">确认邮件已发送！</h3>
-        <p style="font-size:0.9rem;color:var(--text-light);margin:12px 0 8px;">
-            <span data-i18n="checkEmailDesc">我们已将确认链接发送至您的邮箱，请点击该链接完成注册。</span>
-        </p>
-        <p style="font-size:0.85rem;color:var(--red);" data-i18n="checkSpamReminder">
-            📌 如果没有收到，请检查垃圾邮件箱。
-        </p>
-        <p style="font-size:0.8rem;color:var(--text-lighter);" data-i18n="checkEmailSender">
-            发件人：Supabase Auth
-        </p>
-        <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="closeRegisterSuccessModal()" data-i18n="ok">确定</button>
-    </div>
-</div>
+
 	
 <script>
 	const i18n = i18next.createInstance();
@@ -736,6 +756,8 @@ i18n
 "checkSpamReminder": "📌 If you don't see it, please check your spam/junk folder.",
 "checkEmailSender": "Sender: Supabase Auth",
 "ok": "OK",
+		  "resetEmailTitle": "Password Reset Email Sent!",
+"resetEmailDesc": "We have sent a password reset link to your email. Please click the link to reset your password.",
 	
   // 按钮
   "unpaidOrders": "💰 Unpaid",
@@ -1018,6 +1040,8 @@ i18n
 "checkSpamReminder": "📌 如果没有收到，请检查垃圾邮件箱。",
 "checkEmailSender": "发件人：Supabase Auth",
 "ok": "确定",
+		  "resetEmailTitle": "密码重置邮件已发送！",
+"resetEmailDesc": "我们已将密码重置链接发送至您的邮箱，请点击链接完成重设。",
 		  
   // 按钮
   "unpaidOrders": "💰 待收款",
@@ -2652,16 +2676,32 @@ async function handleRegister(e) {
 }
 	
 async function handleResetPassword(e) {
-  e.preventDefault();
-  const email = document.getElementById('resetEmail').value;
-  const { error } = await supabaseClient.auth.sendPasswordResetEmail(email, { redirectTo: window.location.origin });
-  if (error) {
-    document.getElementById('authMessage').textContent = error.message;
-  } else {
-    document.getElementById('authMessage').textContent = '密码重置邮件已发送，请检查邮箱。';
-  }
+    e.preventDefault();
+    const email = document.getElementById('resetEmail').value.trim();
+    if (!email) {
+        document.getElementById('authMessage').textContent = '请输入注册邮箱';
+        return;
+    }
+    const { error } = await supabaseClient.auth.sendPasswordResetEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) {
+        document.getElementById('authMessage').textContent = error.message;
+    } else {
+        document.getElementById('authMessage').textContent = '';
+        // 显示成功弹窗
+        document.getElementById('resetPasswordModal').style.display = 'flex';
+        // 清空输入框
+        document.getElementById('resetEmail').value = '';
+    }
 }
 
+	function closeResetPasswordModal() {
+    document.getElementById('resetPasswordModal').style.display = 'none';
+    // 可选：关闭后返回登录界面
+    showLogin();
+}
+	
 async function logout() {
     if (realtimeSubscription) {
         await supabaseClient.removeChannel(realtimeSubscription);
