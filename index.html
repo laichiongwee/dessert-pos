@@ -1493,7 +1493,36 @@ const APP_STATE = {
 };
 
 	let realtimeSubscription = null;
-	
+
+	function openChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'flex';
+}
+
+function closeChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'none';
+}
+
+async function submitNewPassword() {
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const confirmPassword = document.getElementById('confirmNewPasswordInput').value;
+    if (newPassword.length < 8) {
+        showToast('passwordTooShort'); // 需添加翻译键
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+        showToast('passwordMismatch'); // 需添加翻译键
+        return;
+    }
+    const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+    if (error) {
+        showToast('passwordUpdateFailed', { error: error.message }); // 带参数翻译键
+    } else {
+        showToast('passwordUpdated');
+        closeChangePasswordModal();
+        document.getElementById('newPasswordInput').value = '';
+        document.getElementById('confirmNewPasswordInput').value = '';
+    }
+}
 // ==================== DEMO DATA (fallback) ====================
 function getDemoMenu() { /* unchanged */ return [
     { id: '01', name: '柿柿润糖水', price: 10.00, category: '糖水', emoji: '🍅', available: true },
