@@ -223,7 +223,13 @@
         applyLanguage();
     } else {
         fetchOrderStatus();
-        setInterval(fetchOrderStatus, 10000);
+        setInterval(fetchOrderStatus, 8000); //autorefresh every 8s
+        // ✅ 新增：当页面从隐藏变为可见时，立即刷新一次
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        fetchOrderStatus();
+    }
+});
     }
 
     async function fetchOrderStatus() {
