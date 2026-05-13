@@ -2682,7 +2682,7 @@ async function handleResetPassword(e) {
         document.getElementById('authMessage').textContent = '请输入注册邮箱';
         return;
     }
-    const { error } = await supabaseClient.auth.sendPasswordResetEmail(email, {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + window.location.pathname
     });
     if (error) {
@@ -2691,7 +2691,6 @@ async function handleResetPassword(e) {
         document.getElementById('authMessage').textContent = '';
         // 显示成功弹窗
         document.getElementById('resetPasswordModal').style.display = 'flex';
-        // 清空输入框
         document.getElementById('resetEmail').value = '';
     }
 }
