@@ -256,7 +256,6 @@
         <a href="#" onclick="showRegister()" data-i18n="registerLink">注册新账号</a> |
         <a href="#" onclick="showReset()" data-i18n="forgotPassword">忘记密码？</a>
       </p>
-    </form>
     <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
     <input type="email" id="registerEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
     <input type="password" id="registerPassword" data-i18n-placeholder="passwordPlaceholderMin" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
@@ -855,6 +854,11 @@ i18n
 "passwordMismatch": "Passwords do not match",
 "passwordUpdateFailed": "Update failed: {{error}}",
 "passwordUpdated": "Password updated successfully",
+		  "registerNamePlaceholder": "您的姓名",
+"registerPhonePlaceholder": "手机号（用于找回密码）",
+"registerBirthdayPlaceholder": "生日（年-月-日）",
+"nameEmailPasswordRequired": "请填写姓名、邮箱和密码",
+"registerSuccess": "注册成功！欢迎使用。",
   // 折扣规则
   "discountRulesTitle": "🏷️ Discount Rules",
   "ruleType": "Type (percentage/fixed)",
@@ -1047,6 +1051,11 @@ i18n
 		  "emailPlaceholder": "电子邮箱",
 "passwordPlaceholder": "密码",
 "passwordPlaceholderMin": "密码（至少6位）",
+		  "registerNamePlaceholder": "您的姓名",
+"registerPhonePlaceholder": "手机号（用于找回密码）",
+"registerBirthdayPlaceholder": "生日（年-月-日）",
+"nameEmailPasswordRequired": "请填写姓名、邮箱和密码",
+"registerSuccess": "注册成功！欢迎使用。",
 "login": "🔐 登录",
 "register": "📝 注册",
 "registerLink": "注册新账号",
@@ -2728,25 +2737,38 @@ async function handleRegister(e) {
     const password = document.getElementById('registerPassword').value;
     const name = document.getElementById('registerName').value.trim();
     const phone = document.getElementById('registerPhone').value.trim();
-    const birthday = document.getElementById('registerBirthday').value;
+    const birthday = document.getElementById('registerBirthday').value; // 空字符串或日期
 
     if (!name || !email || !password) {
-        showToast('nameEmailPasswordRequired');
+        showToast('nameEmailPasswordRequired'); // 需添加翻译键
         return;
     }
 
     const { error } = await supabaseClient.auth.signUp({
         email,
         password,
-        options: { data: { name, phone, birthday } }
+        options: {
+            data: {
+                name: name,
+                phone: phone,
+                birthday: birthday
+            }
+        }
     });
 
     if (error) {
         document.getElementById('authMessage').textContent = error.message;
     } else {
+        // 关闭邮件确认后，注册即视为登录成功，直接进入主应用
         document.getElementById('authMessage').textContent = '';
-        showToast('registerSuccess');
-        // 关闭邮件确认后，注册即视为登录成功
+        showToast('registerSuccess'); // 需添加翻译键
+        // 清空表单
+        document.getElementById('registerEmail').value = '';
+        document.getElementById('registerPassword').value = '';
+        document.getElementById('registerName').value = '';
+        document.getElementById('registerPhone').value = '';
+        document.getElementById('registerBirthday').value = '';
+        // 自动登录
         checkUser();
     }
 }
