@@ -257,14 +257,20 @@
         <a href="#" onclick="showReset()" data-i18n="forgotPassword">忘记密码？</a>
       </p>
     </form>
-    <form id="registerForm" onsubmit="(event)" style="display:none;">
-      <input type="email" id="registerEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
-      <input type="password" id="registerPassword" data-i18n-placeholder="passwordPlaceholderMin" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
-      <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="register">📝 注册</button>
-      <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
+    <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
+    <input type="email" id="registerEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    <input type="password" id="registerPassword" data-i18n-placeholder="passwordPlaceholderMin" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    
+    <!-- 新增字段 -->
+    <input type="text" id="registerName" data-i18n-placeholder="registerNamePlaceholder" placeholder="您的姓名" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    <input type="tel" id="registerPhone" data-i18n-placeholder="registerPhonePlaceholder" placeholder="手机号（用于找回密码）" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    <input type="date" id="registerBirthday" data-i18n-placeholder="registerBirthdayPlaceholder" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    
+    <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="register">📝 注册</button>
+    <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
         <a href="#" onclick="showLogin()" data-i18n="alreadyHaveAccount">已有账号？登录</a>
-      </p>
-    </form>
+    </p>
+</form>
     <form id="resetForm" onsubmit="handleResetPassword(event)" style="display:none;">
       <input type="email" id="resetEmail" data-i18n-placeholder="registeredEmail" placeholder="注册邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
       <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="sendResetLink">📧 发送重置链接</button>
