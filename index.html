@@ -282,7 +282,7 @@
   <div id="authMessage" style="color:red;text-align:center;margin-top:8px;font-size:0.8rem;"></div>
 </div>
 <!-- 修改密码模态框 -->
-<div class="modal-overlay" id="changePasswordModal" style="display:none;" onclick="closeChangePasswordModal()">
+<div class="modal-overlay" id="changePasswordModal" style="display:none; z-index:9999;" onclick="closeChangePasswordModal()">
     <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:400px;text-align:center;padding:24px;">
         <h3 data-i18n="changePasswordTitle">🔒 修改密码</h3>
         <p style="font-size:0.9rem;color:var(--text-light);margin-bottom:12px;" data-i18n="changePasswordDesc">
@@ -509,7 +509,9 @@
                 <input type="checkbox" id="autoAddMemberToggle" checked style="width:20px;height:20px;accent-color:var(--persimmon);">
             </label>
         </div>
-<button class="btn btn-xs btn-outline" onclick="openChangePasswordModal()">🔑 修改密码</button>
+<div style="margin-bottom:16px;">
+    <button class="btn btn-sm btn-outline" onclick="openChangePasswordModal()" style="width:100%;">🔑 修改密码</button>
+</div>
         <!-- ImgBB API Key (只读) -->
         <label style="font-size:0.75rem; color:var(--text-lighter);" data-i18n="imgbbKey">ImgBB API 密钥（暂不可修改）</label>
         <input type="text" id="imgbbKeyInput" disabled 
