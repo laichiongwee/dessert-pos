@@ -257,7 +257,7 @@
         <a href="#" onclick="showReset()" data-i18n="forgotPassword">忘记密码？</a>
       </p>
     </form>
-    <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
+    <form id="registerForm" onsubmit="(event)" style="display:none;">
       <input type="email" id="registerEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
       <input type="password" id="registerPassword" data-i18n-placeholder="passwordPlaceholderMin" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
       <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="register">📝 注册</button>
@@ -275,7 +275,19 @@
   </div>
   <div id="authMessage" style="color:red;text-align:center;margin-top:8px;font-size:0.8rem;"></div>
 </div>
-
+<!-- 修改密码模态框 -->
+<div class="modal-overlay" id="changePasswordModal" style="display:none;" onclick="closeChangePasswordModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:400px;text-align:center;padding:24px;">
+        <h3 data-i18n="changePasswordTitle">🔒 修改密码</h3>
+        <p style="font-size:0.9rem;color:var(--text-light);margin-bottom:12px;" data-i18n="changePasswordDesc">
+            请输入您的新密码。
+        </p>
+        <input type="password" id="newPasswordInput" data-i18n-placeholder="newPasswordPlaceholder" placeholder="新密码（至少8位）" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:8px;">
+        <input type="password" id="confirmNewPasswordInput" data-i18n-placeholder="confirmNewPasswordPlaceholder" placeholder="确认新密码" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:12px;">
+        <button class="btn btn-primary" style="width:100%;" onclick="submitNewPassword()" data-i18n="updatePasswordBtn">更新密码</button>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px;" onclick="closeChangePasswordModal()" data-i18n="cancel">取消</button>
+    </div>
+</div>
 	<!-- 注册成功提示模态框 -->
 <div class="modal-overlay" id="registerSuccessModal" style="display:none; z-index:9999 !important;" onclick="closeRegisterSuccessModal()">
     <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:420px;text-align:center;padding:32px 24px;">
@@ -491,7 +503,7 @@
                 <input type="checkbox" id="autoAddMemberToggle" checked style="width:20px;height:20px;accent-color:var(--persimmon);">
             </label>
         </div>
-
+<button class="btn btn-xs btn-outline" onclick="openChangePasswordModal()">🔑 修改密码</button>
         <!-- ImgBB API Key (只读) -->
         <label style="font-size:0.75rem; color:var(--text-lighter);" data-i18n="imgbbKey">ImgBB API 密钥（暂不可修改）</label>
         <input type="text" id="imgbbKeyInput" disabled 
@@ -828,7 +840,15 @@ i18n
 		  "fillNameAndPhone": "⚠️ Please fill in name and phone number",
 		  "memberAddFailed": "⚠️ Failed to add member, please try again",
 		  "insufficientAmount": "⚠️ Insufficient amount received",
-
+"changePasswordTitle": "🔒 Change Password",
+"changePasswordDesc": "Enter your new password.",
+"newPasswordPlaceholder": "New password (at least 8 characters)",
+"confirmNewPasswordPlaceholder": "Confirm new password",
+"updatePasswordBtn": "Update Password",
+"passwordTooShort": "Password must be at least 8 characters",
+"passwordMismatch": "Passwords do not match",
+"passwordUpdateFailed": "Update failed: {{error}}",
+"passwordUpdated": "Password updated successfully",
   // 折扣规则
   "discountRulesTitle": "🏷️ Discount Rules",
   "ruleType": "Type (percentage/fixed)",
@@ -1111,7 +1131,15 @@ i18n
   "memberPhone": "手机号",
 		  "fillNameAndPhone": "⚠️ 请填写姓名和手机号",
 		  "memberAddFailed": "⚠️ 会员添加失败，请重试",
-
+"changePasswordTitle": "🔒 修改密码",
+"changePasswordDesc": "请输入您的新密码。",
+"newPasswordPlaceholder": "新密码（至少8位）",
+"confirmNewPasswordPlaceholder": "确认新密码",
+"updatePasswordBtn": "更新密码",
+"passwordTooShort": "密码长度至少8位",
+"passwordMismatch": "两次密码不一致",
+"passwordUpdateFailed": "更新失败: {{error}}",
+"passwordUpdated": "密码已更新",
   // 支付
   "paymentTitle": "💳 结算",
   "paymentMethod": "支付方式：",
@@ -2660,18 +2688,32 @@ async function handleLogin(e) {
 }
 
 async function handleRegister(e) {
-  e.preventDefault();
-  const email = document.getElementById('registerEmail').value;
-  const password = document.getElementById('registerPassword').value;
-  const { error } = await supabaseClient.auth.signUp({ email, password });
-  if (error) {
-    document.getElementById('authMessage').textContent = error.message;
-  } else {
-    document.getElementById('authMessage').textContent = '';
-    document.getElementById('registerSuccessModal').style.display = 'flex';
-    document.getElementById('registerEmail').value = '';
-    document.getElementById('registerPassword').value = '';
-  }
+    e.preventDefault();
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const name = document.getElementById('registerName').value.trim();
+    const phone = document.getElementById('registerPhone').value.trim();
+    const birthday = document.getElementById('registerBirthday').value;
+
+    if (!name || !email || !password) {
+        showToast('nameEmailPasswordRequired');
+        return;
+    }
+
+    const { error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: { data: { name, phone, birthday } }
+    });
+
+    if (error) {
+        document.getElementById('authMessage').textContent = error.message;
+    } else {
+        document.getElementById('authMessage').textContent = '';
+        showToast('registerSuccess');
+        // 关闭邮件确认后，注册即视为登录成功
+        checkUser();
+    }
 }
 	function closeRegisterSuccessModal() {
     document.getElementById('registerSuccessModal').style.display = 'none';
