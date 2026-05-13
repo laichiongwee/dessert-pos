@@ -1589,7 +1589,11 @@ function renderCategoryTabs() {
         return `<button class="cat-tab${cat === APP_STATE.activeCategory ? ' active' : ''}" onclick="setCategory('${cat}')">${displayText}</button>`;
     }).join('');
 }
-function setCategory(cat) { APP_STATE.activeCategory = cat; renderAll(); }
+function setCategory(cat) {
+    APP_STATE.activeCategory = cat;
+    renderAll();
+    applyLanguage();   // ← add this line
+}
 function getFilteredMenu() {
   // Only show available items in menu:
   return APP_STATE.activeCategory==='全部'
