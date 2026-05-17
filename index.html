@@ -254,7 +254,7 @@
       <button type="submit" class="btn btn-primary" style="width:100%;" data-i18n="login">🔐 登录</button>
       <p style="text-align:center;margin-top:8px;font-size:0.8rem;">
         <a href="#" onclick="showRegister()" data-i18n="registerLink">注册新账号</a> |
-        <a href="#" onclick="showReset()" data-i18n="forgotPassword">忘记密码？</a>
+        <a href="reset-password.html" data-i18n="forgotPassword">忘记密码？</a>
       </p>
     </form>
     <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
@@ -2740,10 +2740,10 @@ async function handleRegister(e) {
     const password = document.getElementById('registerPassword').value;
     const name = document.getElementById('registerName').value.trim();
     const phone = document.getElementById('registerPhone').value.trim();
-    const birthday = document.getElementById('registerBirthday').value; // 空字符串或日期
+    const birthday = document.getElementById('registerBirthday').value;
 
     if (!name || !email || !password) {
-        showToast('nameEmailPasswordRequired'); // 需添加翻译键
+        showToast('nameEmailPasswordRequired');
         return;
     }
 
@@ -2762,16 +2762,15 @@ async function handleRegister(e) {
     if (error) {
         document.getElementById('authMessage').textContent = error.message;
     } else {
-        // 关闭邮件确认后，注册即视为登录成功，直接进入主应用
         document.getElementById('authMessage').textContent = '';
-        showToast('registerSuccess'); // 需添加翻译键
+        showToast('registerSuccess');
         // 清空表单
         document.getElementById('registerEmail').value = '';
         document.getElementById('registerPassword').value = '';
         document.getElementById('registerName').value = '';
         document.getElementById('registerPhone').value = '';
         document.getElementById('registerBirthday').value = '';
-        // 自动登录
+        // 关闭邮件确认后，注册即登录
         checkUser();
     }
 }
