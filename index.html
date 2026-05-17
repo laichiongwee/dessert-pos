@@ -2454,6 +2454,7 @@ async function openStripeCheckout(priceId) {
             body: JSON.stringify({
                 priceId: priceId,
                 customerEmail: APP_STATE.currentUser?.email || '',
+                userId: APP_STATE.currentUser?.id || ''   // ← Add this
             }),
         });
 
@@ -2463,7 +2464,7 @@ async function openStripeCheckout(priceId) {
             return;
         }
         if (url) {
-            window.location.href = url;  // 跳转到 Stripe Checkout 页面
+            window.location.href = url;
         }
     } catch (err) {
         showToast(i18n.t('paymentRedirectError', { error: err.message }));
