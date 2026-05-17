@@ -2899,6 +2899,7 @@ function addToPublicCart(itemId) {
     } else {
         APP_STATE.publicCart.push({ menuItem: item, quantity: 1 });
     }
+	if (navigator.vibrate) navigator.vibrate(50);  // 短震动
     updatePublicCartCount();
     showToast(`已加入：${item.name}`);
 }
