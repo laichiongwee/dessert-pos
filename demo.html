@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Dessert POS</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <script>
+        const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        (async () => {
+            const { error } = await supabaseClient.auth.signInWithPassword({
+                email: 'demo@dessertpos.com',
+                password: 'Demo1234'
+            });
+            if (error) {
+                document.body.innerHTML = '<p style="color:red;text-align:center;margin-top:40px;">Demo account not available. Please try again later.</p>';
+            } else {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+</body>
+</html>
