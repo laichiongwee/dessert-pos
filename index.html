@@ -2747,6 +2747,17 @@ async function handleRegister(e) {
         return;
     }
 
+    // 检查手机号是否已被注册
+    if (phone) {
+        const { data: existingUserId, error: rpcError } = await supabaseClient.rpc('verify_user_identity', {
+            p_phone: phone
+        });
+        if (existingUserId) {
+            document.getElementById('authMessage').textContent = i18n.t('phoneAlreadyRegistered');
+            return;
+        }
+    }
+
     const { error } = await supabaseClient.auth.signUp({
         email,
         password,
@@ -2764,13 +2775,11 @@ async function handleRegister(e) {
     } else {
         document.getElementById('authMessage').textContent = '';
         showToast('registerSuccess');
-        // 清空表单
         document.getElementById('registerEmail').value = '';
         document.getElementById('registerPassword').value = '';
         document.getElementById('registerName').value = '';
         document.getElementById('registerPhone').value = '';
         document.getElementById('registerBirthday').value = '';
-        // 关闭邮件确认后，注册即登录
         checkUser();
     }
 }
