@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dessert POS - Smart QR Ordering for Small Food Businesses</title>
+    <title>Dessert POS - Smart POS for Dessert Shops</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@6.6.6/css/flag-icons.min.css">
     <style>
@@ -36,6 +36,193 @@
         .audience-list { display: flex; justify-content: center; flex-wrap: wrap; gap: 30px; margin-top: 30px; }
         .audience-item { text-align: center; font-weight: 700; font-size: 1.1rem; }
         .audience-item .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+        /* Pricing */
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
+        .plan-card { background: white; border-radius: 24px; padding: 40px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; border: 2px solid #F0E0D6; position: relative; transition: transform 0.2s; }
+        .plan-card:hover { transform: translateY(-5px); }
+        .plan-card.featured { border-color: #E8784A; transform: scale(1.02); }
+        .plan-card .plan-name { font-size: 1.4rem; font-weight: 800; margin-bottom: 10px; }
+        .plan-card .plan-price { font-size: 3rem; font-weight: 800; color: #E8784A; }
+        .plan-card .plan-period { font-size: 0.9rem; color: #6B4E4E; margin-bottom: 20px; }
+        .plan-card ul { list-style: none; padding: 0; margin: 20px 0; text-align: left; }
+        .plan-card li { padding: 8px 0; border-bottom: 1px solid #F0E0D6; font-size: 0.95rem; }
+        .plan-card li::before { content: "✓ "; color: #E8784A; font-weight: bold; }
+        .plan-card .btn { display: block; width: 100%; margin-top: 20px; padding: 14px; background: #E8784A; color: white; border-radius: 40px; font-weight: 700; text-decoration: none; }
+
+        /* Language flags */
+        .flags-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 30px; }
+        .flag-item { text-align: center; font-size: 0.8rem; color: #6B4E4E; }
+        .flag-item span { font-size: 2rem; display: block; }
+
+        /* Footer */
+        .footer { text-align: center; padding: 40px 20px; color: #ccc; background: #3D2020; }
+        .footer a { color: #F0A855; text-decoration: none; }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            .hero p { font-size: 1rem; }
+            .hero .btn { display: block; margin: 10px auto; width: 80%; }
+            .btn-primary { margin-right: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container">
+            <h1>🍅 Dessert POS</h1>
+            <p>The smart, affordable POS built for dessert shops, bakeries, and bubble tea stores.</p>
+            <p style="font-style:italic; margin-top:20px;">"QR Order, Instant Joy – No more shouting, just scan, order, and get a vibrant notification when food is ready."</p>
+            <a href="index.html" class="btn btn-primary">Start Free – 30 Orders/Day</a>
+            <a href="demo.html" class="btn btn-outline">Try Free Demo</a>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section">
+        <div class="container">
+            <h2>Why Dessert POS?</h2>
+            <p class="subtitle">Built for small food businesses, kiosks, and stall operators at food fairs & events.</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="icon">📱</div>
+                    <h3>QR Self-Ordering</h3>
+                    <p>Customers scan a QR code, browse your menu, and place orders directly from their phone. No app download needed.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔔</div>
+                    <h3>Vibrant Notifications</h3>
+                    <p>When food is ready, customers get a loud, fun notification with vibration – even when the screen is off!</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">💬</div>
+                    <h3>WhatsApp Promotions</h3>
+                    <p>Send promotional messages directly to your customers via WhatsApp when they place an order or sign up.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">💳</div>
+                    <h3>Auto Refund on Order Amend</h3>
+                    <p>If an order is amended and the price changes, the system automatically refunds the difference to the customer.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🌐</div>
+                    <h3>Multi-Language Ready</h3>
+                    <p>Automatically detects your customer's language. Supports 12+ languages out of the box.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🧾</div>
+                    <h3>Smart Order Management</h3>
+                    <p>Easily amend orders, apply discounts, and track every transaction in real time.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Who is it for -->
+    <section class="section" style="background: white;">
+        <div class="container">
+            <h2>Who It's For</h2>
+            <div class="audience-list">
+                <div class="audience-item"><span class="icon">🏪</span> Small Cafés & Bakeries</div>
+                <div class="audience-item"><span class="icon">🛒</span> Kiosk Runners</div>
+                <div class="audience-item"><span class="icon">🎪</span> Food Fair & Event Stalls</div>
+                <div class="audience-item"><span class="icon">🧋</span> Bubble Tea & Dessert Shops</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="section" id="pricing">
+        <div class="container">
+            <h2>Simple, Transparent Pricing</h2>
+            <p class="subtitle">Start free, upgrade when your business grows. No hidden fees.</p>
+            <div class="pricing-grid">
+                <!-- Free Plan -->
+                <div class="plan-card">
+                    <div class="plan-name">Free</div>
+                    <div class="plan-price">RM 0</div>
+                    <div class="plan-period">/month</div>
+                    <ul>
+                        <li>30 orders per day</li>
+                        <li>Basic POS functions</li>
+                        <li>Single device</li>
+                        <li>Standard support</li>
+                    </ul>
+                    <a href="index.html" class="btn">Get Started</a>
+                </div>
+
+                <!-- Lite Plan (Featured) -->
+                <div class="plan-card featured">
+                    <div class="plan-name">Lite</div>
+                    <div class="plan-price">US$9</div>
+                    <div class="plan-period">/month</div>
+                    <ul>
+                        <li>Unlimited orders</li>
+                        <li>Membership & discount</li>
+                        <li>QR self-ordering</li>
+                        <li>Vibrant ready notifications</li>
+                        <li>Order amendment</li>
+                        <li>Multi-device sync</li>
+                        <li>WhatsApp promotional messages</li>
+                    </ul>
+                    <a href="index.html" class="btn">Start Free Trial</a>
+                </div>
+
+                <!-- Pro Plan -->
+                <div class="plan-card">
+                    <div class="plan-name">Pro</div>
+                    <div class="plan-price">US$15</div>
+                    <div class="plan-period">/month</div>
+                    <ul>
+                        <li>Everything in Lite</li>
+                        <li>Multi-cashier login</li>
+                        <li>Comprehensive sales reports</li>
+                        <li>Inventory management</li>
+                        <li>Data export (Excel/PDF)</li>
+                        <li>Auto refund on order amend</li>
+                        <li>Priority support</li>
+                    </ul>
+                    <a href="index.html" class="btn">Start Free Trial</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Languages -->
+    <section class="section" style="background: #FDF5F0;">
+        <div class="container">
+            <h2>We Speak Your Language</h2>
+            <p class="subtitle">Our system automatically adapts to your customer's language. No configuration needed.</p>
+            <div class="flags-container">
+                <div class="flag-item"><span class="fi fi-my"></span> Malay</div>
+                <div class="flag-item"><span class="fi fi-id"></span> Indonesia</div>
+                <div class="flag-item"><span class="fi fi-ph"></span> Philippines</div>
+                <div class="flag-item"><span class="fi fi-th"></span> Thai</div>
+                <div class="flag-item"><span class="fi fi-vn"></span> Vietnam</div>
+                <div class="flag-item"><span class="fi fi-kr"></span> Korean</div>
+                <div class="flag-item"><span class="fi fi-jp"></span> Japanese</div>
+                <div class="flag-item"><span class="fi fi-cn"></span> Chinese</div>
+                <div class="flag-item"><span class="fi fi-es"></span> Spanish</div>
+                <div class="flag-item"><span class="fi fi-fr"></span> French</div>
+                <div class="flag-item"><span class="fi fi-it"></span> Italian</div>
+                <div class="flag-item"><span class="fi fi-br"></span> Brazil</div>
+                <div class="flag-item"><span class="fi fi-za"></span> Africa</div>
+                <div class="flag-item"><span class="fi fi-sa"></span> Arabia</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>© 2026 Dessert POS. Built for small food heroes. | <a href="index.html">Login</a> | <a href="reset-password.html">Reset Password</a></p>
+        </div>
+    </footer>
+
+</body>
+</html>        .audience-item .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
 
         /* Pricing */
         .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
