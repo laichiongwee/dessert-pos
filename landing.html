@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dessert POS - Smart POS for Dessert Shops</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Nunito', sans-serif; background: #fff5ef; color: #3D2020; }
+        .hero { background: linear-gradient(135deg, #E8784A, #F0A855); color: white; padding: 60px 20px; text-align: center; }
+        .hero h1 { font-size: 2.5rem; margin-bottom: 16px; }
+        .hero p { font-size: 1.1rem; opacity: 0.9; margin-bottom: 32px; }
+        .btn { display: inline-block; padding: 14px 32px; border-radius: 30px; font-weight: 700; text-decoration: none; font-size: 1rem; cursor: pointer; border: none; }
+        .btn-primary { background: white; color: #E8784A; }
+        .btn-outline { background: transparent; border: 2px solid white; color: white; margin-left: 12px; }
+        .section { max-width: 960px; margin: 60px auto; padding: 0 20px; }
+        .section h2 { text-align: center; font-size: 2rem; margin-bottom: 32px; color: #E8784A; }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+        .feature-card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); text-align: center; }
+        .feature-card .icon { font-size: 2.5rem; margin-bottom: 12px; }
+        .feature-card h3 { margin-bottom: 8px; }
+        .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+        .price-card { background: white; border-radius: 20px; padding: 32px 24px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); text-align: center; border: 2px solid #F0E0D6; position: relative; }
+        .price-card.popular { border-color: #E8784A; }
+        .price-card .plan-name { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+        .price-card .plan-price { font-size: 2.5rem; font-weight: 800; color: #E8784A; }
+        .price-card .plan-period { font-size: 0.9rem; color: #6B4E4E; margin-bottom: 16px; }
+        .price-card ul { list-style: none; padding: 0; margin: 20px 0; text-align: left; }
+        .price-card li { padding: 6px 0; font-size: 0.9rem; }
+        .price-card .btn { width: 100%; margin-top: 12px; }
+        .footer { text-align: center; padding: 40px 20px; color: #9B7E7E; font-size: 0.9rem; }
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 1.8rem; }
+            .btn-outline { margin-left: 0; margin-top: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>🍅 Dessert POS</h1>
+        <p>The smart, affordable POS built for dessert shops, bakeries, and bubble tea stores.</p>
+        <a href="#pricing" class="btn btn-primary">View Plans</a>
+        <a href="demo.html" class="btn btn-outline">Try Free Demo</a>
+    </div>
+
+    <div class="section">
+        <h2>Why Dessert POS?</h2>
+        <div class="features">
+            <div class="feature-card">
+                <div class="icon">📱</div>
+                <h3>QR Ordering</h3>
+                <p>Customers scan, order, and track their food status in real time.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">💰</div>
+                <h3>Multi‑payment</h3>
+                <p>Cash, card, and e‑wallet support with automatic change calculation.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">📊</div>
+                <h3>Reports & Insights</h3>
+                <p>Daily sales breakdown, payment summaries, and member analytics.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">🔔</div>
+                <h3>Kitchen Display</h3>
+                <p>Real‑time order queue with call numbers and status updates.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" id="pricing">
+        <h2>Simple Pricing</h2>
+        <div class="pricing">
+            <div class="price-card">
+                <div class="plan-name">Free</div>
+                <div class="plan-price">RM 0</div>
+                <div class="plan-period">/month</div>
+                <ul>
+                    <li>✅ Up to 50 orders/day</li>
+                    <li>✅ Basic POS functions</li>
+                    <li>✅ Single device</li>
+                    <li>❌ Advanced reports</li>
+                    <li>❌ QR ordering</li>
+                </ul>
+                <a href="index.html" class="btn btn-primary">Get Started</a>
+            </div>
+            <div class="price-card popular">
+                <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#E8784A; color:white; padding:4px 16px; border-radius:12px; font-weight:700; font-size:0.8rem;">POPULAR</div>
+                <div class="plan-name">Basic</div>
+                <div class="plan-price">RM 19</div>
+                <div class="plan-period">/month</div>
+                <ul>
+                    <li>✅ Unlimited orders</li>
+                    <li>✅ Cloud sync</li>
+                    <li>✅ Multi‑device</li>
+                    <li>✅ Basic reports</li>
+                    <li>✅ Member discounts</li>
+                </ul>
+                <a href="index.html" class="btn btn-primary">Start Free Trial</a>
+            </div>
+            <div class="price-card">
+                <div class="plan-name">Pro</div>
+                <div class="plan-price">RM 49</div>
+                <div class="plan-period">/month</div>
+                <ul>
+                    <li>✅ Everything in Basic</li>
+                    <li>✅ QR customer ordering</li>
+                    <li>✅ Advanced reports</li>
+                    <li>✅ Inventory management</li>
+                    <li>✅ Multi‑store</li>
+                </ul>
+                <a href="index.html" class="btn btn-primary">Start Free Trial</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        © 2026 Dessert POS. All rights reserved. | <a href="index.html">Login</a> | <a href="reset-password.html">Reset Password</a>
+    </div>
+</body>
+</html>
