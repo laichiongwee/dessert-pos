@@ -528,6 +528,15 @@
                         <i class="fas fa-shield-alt"></i>
                         <div><strong>Your business data is safe</strong><br><span>Bank-level encryption</span></div>
                     </div>
+                    <!-- NEW BADGES -->
+                <div class="feature-badge-item">
+                    <i class="fas fa-qrcode"></i>
+                    <div><strong>Order with QR</strong><br><span>Scan, order & pay – contactless</span></div>
+                </div>
+                <div class="feature-badge-item">
+                    <i class="fas fa-laptop"></i>
+                    <div><strong>Multi-Device Ready</strong><br><span>Mobile, Pad or PC – no kiosk needed</span></div>
+                </div>
                 </div>
                 <div class="hero-buttons">
                     <a href="demo.html" class="btn btn-primary" id="demoWatchBtn"><i class="fas fa-play" style="font-size:0.85rem;"></i> Try Demo</a>
@@ -679,49 +688,21 @@
 <!-- Simple demo alert (just interactive but matches brand messaging) -->
 <script>
     (function() {
-        // Watch demo interactions – keeps alive demo feel exactly like image description
-        const demoButtons = document.querySelectorAll('#demoWatchBtn, #footerDemoLink');
-        demoButtons.forEach(btn => {
-            if(btn) {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    alert("✨ Dessert POS Demo — Experience QR ordering, vibrant notifications, and smart reports.\n\nNo credit card needed. Start your free trial today!");
-                });
-            }
-        });
-
-        // All pricing buttons "Get Started" / "Start Free Trial" show friendly trial message (consistent with image CTA)
-        const allPricingBtns = document.querySelectorAll('.btn-plan, .btn-plan-primary');
-        allPricingBtns.forEach(btn => {
+        // All pricing buttons → index.html
+        document.querySelectorAll('.btn-plan, .btn-plan-primary').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                if(btn.innerText.includes('Get Started') || btn.innerText.includes('Start Free Trial')) {
-                    alert("🚀 Start your dessert shop journey! Free plan available, upgrade anytime.\nContact our team for personalized demo & setup.");
-                } else {
-                    alert("📢 Explore Dessert POS — the all-in-one solution for dessert & bubble tea success.");
-                }
+                window.location.href = 'index.html';
             });
         });
-
-        // handle smooth scroll for navigation links (Pricing link)
-        const pricingNavLink = document.querySelector('a[href="#pricing"]');
-        if(pricingNavLink) {
-            pricingNavLink.addEventListener('click', (e) => {
+        // Smooth scroll for pricing nav
+        const pricingNav = document.querySelector('a[href="#pricing"]');
+        if(pricingNav) {
+            pricingNav.addEventListener('click', (e) => {
                 e.preventDefault();
-                const pricingSection = document.getElementById('pricing');
-                if(pricingSection) {
-                    pricingSection.scrollIntoView({ behavior: 'smooth' });
-                }
+                document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
             });
         }
-        // Optional: other nav links show a small message (makes it interactive)
-        const otherNavs = document.querySelectorAll('.nav-links a:not([href="#pricing"])');
-        otherNavs.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                alert(`✨ ${link.innerText} — Coming soon! Get in touch for early access.`);
-            });
-        });
     })();
 </script>
 </body>
