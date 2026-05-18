@@ -2,398 +2,651 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dessert POS - Smart POS for Dessert Shops</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@6.6.6/css/flag-icons.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Dessert POS · Smart POS for Bubble Tea & Dessert Shops</title>
+    <!-- Google Fonts & Font Awesome 6 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Nunito', sans-serif; background: #fff5ef; color: #3D2020; line-height: 1.6; }
-        .container { max-width: 1100px; margin: auto; padding: 0 20px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-        /* Hero */
-        .hero { background: linear-gradient(135deg, #E8784A 0%, #F0A855 100%); color: white; padding: 80px 20px; text-align: center; position: relative; overflow: hidden; }
-        .hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 20px; line-height: 1.2; }
-        .hero p { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto 30px; }
-        .hero .btn { display: inline-block; padding: 16px 40px; border-radius: 40px; font-weight: 700; text-decoration: none; font-size: 1.1rem; transition: transform 0.2s; }
-        .btn-primary { background: white; color: #E8784A; margin-right: 15px; }
-        .btn-outline { background: transparent; border: 2px solid white; color: white; }
-        .btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FFF9F4;
+            color: #2D1B1B;
+            line-height: 1.5;
+        }
 
-        /* Section titles */
-        .section { padding: 80px 20px; }
-        .section h2 { text-align: center; font-size: 2.2rem; color: #E8784A; margin-bottom: 15px; }
-        .section .subtitle { text-align: center; color: #6B4E4E; max-width: 600px; margin: 0 auto 50px; }
+        /* smooth container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
 
-        /* Features grid */
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; }
-        .feature-card { background: white; border-radius: 20px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; transition: transform 0.2s; }
-        .feature-card:hover { transform: translateY(-5px); }
-        .feature-card .icon { font-size: 3rem; margin-bottom: 15px; }
-        .feature-card h3 { margin-bottom: 10px; color: #E8784A; }
+        /* HEADER */
+        .header {
+            background: #FFF9F4;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(232, 120, 74, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: rgba(255, 249, 244, 0.96);
+            backdrop-filter: blur(6px);
+        }
 
-        /* Target audience */
-        .audience-list { display: flex; justify-content: center; flex-wrap: wrap; gap: 30px; margin-top: 30px; }
-        .audience-item { text-align: center; font-weight: 700; font-size: 1.1rem; }
-        .audience-item .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+        .header-inner {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
 
-        /* Pricing */
-        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
-        .plan-card { background: white; border-radius: 24px; padding: 40px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; border: 2px solid #F0E0D6; position: relative; transition: transform 0.2s; }
-        .plan-card:hover { transform: translateY(-5px); }
-        .plan-card.featured { border-color: #E8784A; transform: scale(1.02); }
-        .plan-card .plan-name { font-size: 1.4rem; font-weight: 800; margin-bottom: 10px; }
-        .plan-card .plan-price { font-size: 3rem; font-weight: 800; color: #E8784A; }
-        .plan-card .plan-period { font-size: 0.9rem; color: #6B4E4E; margin-bottom: 20px; }
-        .plan-card ul { list-style: none; padding: 0; margin: 20px 0; text-align: left; }
-        .plan-card li { padding: 8px 0; border-bottom: 1px solid #F0E0D6; font-size: 0.95rem; }
-        .plan-card li::before { content: "✓ "; color: #E8784A; font-weight: bold; }
-        .plan-card .btn { display: block; width: 100%; margin-top: 20px; padding: 14px; background: #E8784A; color: white; border-radius: 40px; font-weight: 700; text-decoration: none; }
+        .logo-area {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
 
-        /* Language flags */
-        .flags-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 30px; }
-        .flag-item { text-align: center; font-size: 0.8rem; color: #6B4E4E; }
-        .flag-item span { font-size: 2rem; display: block; }
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #E35F21, #F29242);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
 
-        /* Footer */
-        .footer { text-align: center; padding: 40px 20px; color: #ccc; background: #3D2020; }
-        .footer a { color: #F0A855; text-decoration: none; }
+        .tagline {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #B8734A;
+            border-left: 2px solid #F0B27A;
+            padding-left: 12px;
+        }
 
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 2rem; }
-            .hero p { font-size: 1rem; }
-            .hero .btn { display: block; margin: 10px auto; width: 80%; }
-            .btn-primary { margin-right: auto; }
+        .nav-links {
+            display: flex;
+            gap: 28px;
+            font-weight: 600;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #4F2C1D;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #E5642A;
+        }
+
+        /* buttons */
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: #E8622C;
+            color: white;
+            box-shadow: 0 4px 10px rgba(232, 98, 44, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: #CF4F1C;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(232, 98, 44, 0.25);
+        }
+
+        .btn-outline-light {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+        }
+
+        .btn-outline-light:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+        }
+
+        /* hero */
+        .hero {
+            background: linear-gradient(115deg, #FFE8DA 0%, #FFDCC8 100%);
+            padding: 70px 0 80px;
+            border-bottom-left-radius: 32px;
+            border-bottom-right-radius: 32px;
+        }
+
+        .hero-grid {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 48px;
+        }
+
+        .hero-content {
+            flex: 1.2;
+        }
+
+        .hero-badge {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #E8622C;
+            background: rgba(232, 98, 44, 0.12);
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 40px;
+            margin-bottom: 20px;
+        }
+
+        .hero-content h1 {
+            font-size: 3.2rem;
+            font-weight: 800;
+            line-height: 1.2;
+            color: #2A1810;
+            margin-bottom: 24px;
+        }
+
+        .feature-badge-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 28px;
+            margin: 32px 0 28px;
+        }
+
+        .feature-badge-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .feature-badge-item i {
+            font-size: 1.8rem;
+            color: #E8622C;
+            width: 32px;
+        }
+
+        .feature-badge-item strong {
+            font-weight: 800;
+            display: block;
+            font-size: 1rem;
+            color: #2A1810;
+        }
+
+        .feature-badge-item span {
+            font-size: 0.85rem;
+            color: #634832;
+        }
+
+        .hero-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 10px;
+        }
+
+        .demo-note {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #754F38;
+            font-weight: 500;
+        }
+
+        .hero-visual {
+            flex: 0.8;
+            background: rgba(255,245,235,0.5);
+            border-radius: 32px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .hero-visual i {
+            font-size: 8rem;
+            color: #E8622C;
+            opacity: 0.8;
+        }
+
+        /* sections common */
+        .section {
+            padding: 80px 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #2A1810;
+            margin-bottom: 12px;
+        }
+
+        .section-sub {
+            text-align: center;
+            color: #7F5A44;
+            max-width: 620px;
+            margin: 0 auto 48px auto;
+            font-size: 1.05rem;
+        }
+
+        /* pricing cards */
+        .pricing-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 32px;
+        }
+
+        .pricing-card {
+            background: white;
+            border-radius: 32px;
+            padding: 32px 28px;
+            flex: 1;
+            min-width: 260px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.04);
+            transition: all 0.2s;
+            border: 1px solid #F5E2D6;
+            position: relative;
+        }
+
+        .pricing-card.featured {
+            border: 2px solid #E8622C;
+            transform: scale(1.02);
+            background: #FFFFFF;
+            box-shadow: 0 20px 30px -8px rgba(232,98,44,0.12);
+        }
+
+        .popular-tag {
+            position: absolute;
+            top: -14px;
+            left: 28px;
+            background: #E8622C;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 6px 14px;
+            border-radius: 60px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .plan-name {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .plan-price {
+            font-size: 2.6rem;
+            font-weight: 800;
+            color: #E8622C;
+            margin-top: 12px;
+        }
+
+        .plan-price small {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #7B5A46;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin: 28px 0 32px;
+            padding: 0;
+        }
+
+        .plan-features li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #F5E2D6;
+        }
+
+        .plan-features li i {
+            color: #E8622C;
+            width: 20px;
+            font-size: 0.9rem;
+        }
+
+        .btn-plan {
+            width: 100%;
+            background: #FBF3ED;
+            color: #E8622C;
+            font-weight: 700;
+            border-radius: 60px;
+            padding: 12px 0;
+            transition: 0.2s;
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .btn-plan-primary {
+            background: #E8622C;
+            color: white;
+        }
+
+        .btn-plan-primary:hover {
+            background: #CF4F1C;
+        }
+
+        .btn-plan:hover {
+            background: #F0E0D6;
+            transform: translateY(-2px);
+        }
+
+        /* bottom features row */
+        .bottom-features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 32px;
+            margin-top: 40px;
+        }
+
+        .bottom-feature {
+            flex: 1;
+            min-width: 180px;
+            text-align: center;
+            background: white;
+            padding: 32px 20px;
+            border-radius: 28px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.02);
+            border: 1px solid #F5E2D6;
+            transition: all 0.2s;
+        }
+
+        .bottom-feature i {
+            font-size: 2.4rem;
+            color: #E8622C;
+            margin-bottom: 18px;
+        }
+
+        .bottom-feature h4 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .bottom-feature p {
+            font-size: 0.85rem;
+            color: #6D4C38;
+        }
+
+        /* footer */
+        .footer {
+            background: #251A14;
+            color: #D9C2B2;
+            text-align: center;
+            padding: 40px 20px;
+            border-top-left-radius: 28px;
+            border-top-right-radius: 28px;
+            margin-top: 20px;
+        }
+
+        .footer a {
+            color: #F2B27A;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        @media (max-width: 780px) {
+            .hero-content h1 {
+                font-size: 2.2rem;
+            }
+            .feature-badge-grid {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+            .pricing-card.featured {
+                transform: scale(1);
+            }
+            .header-inner {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 20px;
+            }
+            .hero-grid {
+                flex-direction: column;
+            }
+            .hero-visual {
+                display: none;
+            }
+        }
+
+        @media (max-width: 950px) {
+            .hero-visual {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
 
-    <!-- Hero -->
+<header class="header">
+    <div class="container header-inner">
+        <div class="logo-area">
+            <div class="logo">Dessert Pos</div>
+            <div class="tagline">Smart. Simple. Sweet Success.</div>
+        </div>
+        <div class="nav-links">
+            <a href="#">Features</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#">Industries</a>
+            <a href="#">Resources</a>
+        </div>
+    </div>
+</header>
+
+<main>
+    <!-- Hero Section – exact match with image design -->
     <section class="hero">
-        <div class="container">
-            <h1>🍅 Dessert POS</h1>
-            <p>The smart, affordable POS built for dessert shops, bakeries, and bubble tea stores.</p>
-            <p style="font-style:italic; margin-top:20px;">"QR Order, Instant Joy – No more shouting, just scan, order, and get a vibrant notification when food is ready."</p>
-            <a href="index.html" class="btn btn-primary">Start Free – 30 Orders/Day</a>
-            <a href="demo.html" class="btn btn-outline">Try Free Demo</a>
-        </div>
-    </section>
-
-    <!-- Features -->
-    <section class="section">
-        <div class="container">
-            <h2>Why Dessert POS?</h2>
-            <p class="subtitle">Built for small food businesses, kiosks, and stall operators at food fairs & events.</p>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="icon">📱</div>
-                    <h3>QR Self-Ordering</h3>
-                    <p>Customers scan a QR code, browse your menu, and place orders directly from their phone. No app download needed.</p>
+        <div class="container hero-grid">
+            <div class="hero-content">
+                <div class="hero-badge">🍧 Made for Bubble Tea & Dessert Shops</div>
+                <h1>The All-in-One POS System for Dessert Success</h1>
+                <div class="feature-badge-grid">
+                    <div class="feature-badge-item">
+                        <i class="fas fa-smile-wink"></i>
+                        <div><strong>Easy to Use</strong><br><span>Intuitive & user friendly</span></div>
+                    </div>
+                    <div class="feature-badge-item">
+                        <i class="fas fa-chart-line"></i>
+                        <div><strong>Powerful Reports</strong><br><span>Insights to grow your business</span></div>
+                    </div>
+                    <div class="feature-badge-item">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <div><strong>Cloud Based</strong><br><span>Access anywhere, anytime</span></div>
+                    </div>
+                    <div class="feature-badge-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <div><strong>Your business data is safe</strong><br><span>Bank-level encryption</span></div>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="icon">🔔</div>
-                    <h3>Vibrant Notifications</h3>
-                    <p>When food is ready, customers get a loud, fun notification with vibration – even when the screen is off!</p>
+                <div class="hero-buttons">
+                    <a href="#" class="btn btn-primary" id="demoWatchBtn"><i class="fas fa-play" style="font-size:0.85rem;"></i> Watch Demo</a>
                 </div>
-                <div class="feature-card">
-                    <div class="icon">💬</div>
-                    <h3>WhatsApp Promotions</h3>
-                    <p>Send promotional messages directly to your customers via WhatsApp when they place an order or sign up.</p>
+                <div class="demo-note">
+                    <i class="fas fa-credit-card"></i> No credit card required. Cancel anytime.
                 </div>
-                <div class="feature-card">
-                    <div class="icon">💳</div>
-                    <h3>Auto Refund on Order Amend</h3>
-                    <p>If an order is amended and the price changes, the system automatically refunds the difference to the customer.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon">🌐</div>
-                    <h3>Multi-Language Ready</h3>
-                    <p>Automatically detects your customer's language. Supports 12+ languages out of the box.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon">🧾</div>
-                    <h3>Smart Order Management</h3>
-                    <p>Easily amend orders, apply discounts, and track every transaction in real time.</p>
-                </div>
+            </div>
+            <div class="hero-visual">
+                <i class="fas fa-mobile-alt"></i>
+                <i class="fas fa-receipt" style="font-size: 3rem; margin-left: 10px;"></i>
+                <div style="margin-top: 20px; background: white; border-radius: 24px; padding: 12px; font-size:0.7rem; font-weight:600;">✨ QR ready · Fast checkout</div>
             </div>
         </div>
     </section>
 
-    <!-- Who is it for -->
-    <section class="section" style="background: white;">
-        <div class="container">
-            <h2>Who It's For</h2>
-            <div class="audience-list">
-                <div class="audience-item"><span class="icon">🏪</span> Small Cafés & Bakeries</div>
-                <div class="audience-item"><span class="icon">🛒</span> Kiosk Runners</div>
-                <div class="audience-item"><span class="icon">🎪</span> Food Fair & Event Stalls</div>
-                <div class="audience-item"><span class="icon">🧋</span> Bubble Tea & Dessert Shops</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing -->
+    <!-- Pricing Section exactly as per image: Simple, Transparent Pricing -->
     <section class="section" id="pricing">
         <div class="container">
-            <h2>Simple, Transparent Pricing</h2>
-            <p class="subtitle">Start free, upgrade when your business grows. No hidden fees.</p>
+            <div class="section-title">Simple, Transparent Pricing</div>
+            <div class="section-sub">Start free, upgrade when your business grows. No hidden fees.</div>
+
             <div class="pricing-grid">
                 <!-- Free Plan -->
-                <div class="plan-card">
+                <div class="pricing-card">
                     <div class="plan-name">Free</div>
-                    <div class="plan-price">RM 0</div>
-                    <div class="plan-period">/month</div>
-                    <ul>
-                        <li>30 orders per day</li>
-                        <li>Basic POS functions</li>
-                        <li>Single device</li>
-                        <li>Standard support</li>
+                    <div class="plan-price">RM 0 <small>/month</small></div>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check-circle"></i> 30 orders per day</li>
+                        <li><i class="fas fa-check-circle"></i> Basic POS functions</li>
+                        <li><i class="fas fa-check-circle"></i> Single device</li>
+                        <li><i class="fas fa-check-circle"></i> Standard support</li>
                     </ul>
-                    <a href="index.html" class="btn">Get Started</a>
+                    <a href="#" class="btn-plan">Get Started</a>
                 </div>
 
-                <!-- Lite Plan (Featured) -->
-                <div class="plan-card featured">
+                <!-- Lite Plan (Most Popular) -->
+                <div class="pricing-card featured">
+                    <div class="popular-tag">⭐ Most Popular</div>
                     <div class="plan-name">Lite</div>
-                    <div class="plan-price">US$9</div>
-                    <div class="plan-period">/month</div>
-                    <ul>
-                        <li>Unlimited orders</li>
-                        <li>Membership & discount</li>
-                        <li>QR self-ordering</li>
-                        <li>Vibrant ready notifications</li>
-                        <li>Order amendment</li>
-                        <li>Multi-device sync</li>
-                        <li>WhatsApp promotional messages</li>
+                    <div class="plan-price">RM 29 <small>/month</small></div>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check-circle"></i> Unlimited orders</li>
+                        <li><i class="fas fa-check-circle"></i> Membership & discount</li>
+                        <li><i class="fas fa-check-circle"></i> QR self-ordering</li>
+                        <li><i class="fas fa-check-circle"></i> Vibrant ready notifications</li>
+                        <li><i class="fas fa-check-circle"></i> Order amendment</li>
+                        <li><i class="fas fa-check-circle"></i> Multi-device sync</li>
                     </ul>
-                    <a href="index.html" class="btn">Start Free Trial</a>
+                    <a href="#" class="btn-plan btn-plan-primary">Start Free Trial</a>
                 </div>
 
                 <!-- Pro Plan -->
-                <div class="plan-card">
+                <div class="pricing-card">
                     <div class="plan-name">Pro</div>
-                    <div class="plan-price">US$15</div>
-                    <div class="plan-period">/month</div>
-                    <ul>
-                        <li>Everything in Lite</li>
-                        <li>Multi-cashier login</li>
-                        <li>Comprehensive sales reports</li>
-                        <li>Inventory management</li>
-                        <li>Data export (Excel/PDF)</li>
-                        <li>Auto refund on order amend</li>
-                        <li>Priority support</li>
+                    <div class="plan-price">RM 59 <small>/month</small></div>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check-circle"></i> Everything in Lite</li>
+                        <li><i class="fas fa-check-circle"></i> Multi-cashier login</li>
+                        <li><i class="fas fa-check-circle"></i> Comprehensive sales reports</li>
+                        <li><i class="fas fa-check-circle"></i> Inventory management</li>
+                        <li><i class="fas fa-check-circle"></i> Data export (Excel/PDF)</li>
+                        <li><i class="fas fa-check-circle"></i> Priority support</li>
                     </ul>
-                    <a href="index.html" class="btn">Start Free Trial</a>
+                    <a href="#" class="btn-plan">Start Free Trial</a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Languages -->
-    <section class="section" style="background: #FDF5F0;">
+    <!-- Bottom Feature Row: Cloud Based, Secure & Reliable, Always Up to Date, Local Support -->
+    <section class="section" style="padding-top: 0;">
         <div class="container">
-            <h2>We Speak Your Language</h2>
-            <p class="subtitle">Our system automatically adapts to your customer's language. No configuration needed.</p>
-            <div class="flags-container">
-                <div class="flag-item"><span class="fi fi-my"></span> Malay</div>
-                <div class="flag-item"><span class="fi fi-id"></span> Indonesia</div>
-                <div class="flag-item"><span class="fi fi-ph"></span> Philippines</div>
-                <div class="flag-item"><span class="fi fi-th"></span> Thai</div>
-                <div class="flag-item"><span class="fi fi-vn"></span> Vietnam</div>
-                <div class="flag-item"><span class="fi fi-kr"></span> Korean</div>
-                <div class="flag-item"><span class="fi fi-jp"></span> Japanese</div>
-                <div class="flag-item"><span class="fi fi-cn"></span> Chinese</div>
-                <div class="flag-item"><span class="fi fi-es"></span> Spanish</div>
-                <div class="flag-item"><span class="fi fi-fr"></span> French</div>
-                <div class="flag-item"><span class="fi fi-it"></span> Italian</div>
-                <div class="flag-item"><span class="fi fi-br"></span> Brazil</div>
-                <div class="flag-item"><span class="fi fi-za"></span> Africa</div>
-                <div class="flag-item"><span class="fi fi-sa"></span> Arabia</div>
+            <div class="bottom-features">
+                <div class="bottom-feature">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h4>Cloud Based</h4>
+                    <p>Access anywhere, anytime</p>
+                </div>
+                <div class="bottom-feature">
+                    <i class="fas fa-lock"></i>
+                    <h4>Secure & Reliable</h4>
+                    <p>Your business data is safe</p>
+                </div>
+                <div class="bottom-feature">
+                    <i class="fas fa-sync-alt"></i>
+                    <h4>Always Up to Date</h4>
+                    <p>Automatic updates, no extra cost</p>
+                </div>
+                <div class="bottom-feature">
+                    <i class="fas fa-headset"></i>
+                    <h4>Local Support</h4>
+                    <p>We're here to help you grow</p>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>© 2026 Dessert POS. Built for small food heroes. | <a href="index.html">Login</a> | <a href="reset-password.html">Reset Password</a></p>
-        </div>
-    </footer>
+    <!-- small extra copy: trust badge (optional, consistent with image vibe) -->
+    <div class="container" style="text-align: center; margin-bottom: 40px;">
+        <p style="background: #FEF3E8; display: inline-block; padding: 8px 24px; border-radius: 60px; font-size:0.85rem; color:#7E4A2A;"><i class="fas fa-store"></i> Trusted by 500+ dessert shops & bubble tea stores</p>
+    </div>
+</main>
 
-</body>
-</html>        .audience-item .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+<footer class="footer">
+    <div class="container">
+        <p>© 2026 Dessert Pos — Smart POS for Sweet Success. &nbsp;|&nbsp; 
+        <a href="#">Privacy</a> &nbsp;|&nbsp; <a href="#">Terms</a> &nbsp;|&nbsp; 
+        <a href="#" id="footerDemoLink">Watch Demo</a></p>
+        <p style="margin-top: 12px; font-size: 0.75rem;"><i class="fas fa-mug-hot"></i> Made for bubble tea, desserts, and hardworking owners.</p>
+    </div>
+</footer>
 
-        /* Pricing */
-        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
-        .plan-card { background: white; border-radius: 24px; padding: 40px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; border: 2px solid #F0E0D6; position: relative; transition: transform 0.2s; }
-        .plan-card:hover { transform: translateY(-5px); }
-        .plan-card.featured { border-color: #E8784A; transform: scale(1.02); }
-        .plan-card .plan-name { font-size: 1.4rem; font-weight: 800; margin-bottom: 10px; }
-        .plan-card .plan-price { font-size: 3rem; font-weight: 800; color: #E8784A; }
-        .plan-card .plan-period { font-size: 0.9rem; color: #6B4E4E; margin-bottom: 20px; }
-        .plan-card ul { list-style: none; padding: 0; margin: 20px 0; text-align: left; }
-        .plan-card li { padding: 8px 0; border-bottom: 1px solid #F0E0D6; font-size: 0.95rem; }
-        .plan-card li::before { content: "✓ "; color: #E8784A; font-weight: bold; }
-        .plan-card .btn { display: block; width: 100%; margin-top: 20px; padding: 14px; background: #E8784A; color: white; border-radius: 40px; font-weight: 700; text-decoration: none; }
+<!-- Simple demo alert (just interactive but matches brand messaging) -->
+<script>
+    (function() {
+        // Watch demo interactions – keeps alive demo feel exactly like image description
+        const demoButtons = document.querySelectorAll('#demoWatchBtn, #footerDemoLink');
+        demoButtons.forEach(btn => {
+            if(btn) {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    alert("✨ Dessert POS Demo — Experience QR ordering, vibrant notifications, and smart reports.\n\nNo credit card needed. Start your free trial today!");
+                });
+            }
+        });
 
-        /* Language flags */
-        .flags-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 30px; }
-        .flag-item { text-align: center; font-size: 0.8rem; color: #6B4E4E; }
-        .flag-item span { font-size: 2rem; display: block; }
+        // All pricing buttons "Get Started" / "Start Free Trial" show friendly trial message (consistent with image CTA)
+        const allPricingBtns = document.querySelectorAll('.btn-plan, .btn-plan-primary');
+        allPricingBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if(btn.innerText.includes('Get Started') || btn.innerText.includes('Start Free Trial')) {
+                    alert("🚀 Start your dessert shop journey! Free plan available, upgrade anytime.\nContact our team for personalized demo & setup.");
+                } else {
+                    alert("📢 Explore Dessert POS — the all-in-one solution for dessert & bubble tea success.");
+                }
+            });
+        });
 
-        /* Footer */
-        .footer { text-align: center; padding: 40px 20px; color: #9B7E7E; background: #3D2020; color: #ccc; }
-        .footer a { color: #F0A855; text-decoration: none; }
-
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 2rem; }
-            .hero p { font-size: 1rem; }
-            .hero .btn { display: block; margin: 10px auto; width: 80%; }
-            .btn-primary { margin-right: auto; }
+        // handle smooth scroll for navigation links (Pricing link)
+        const pricingNavLink = document.querySelector('a[href="#pricing"]');
+        if(pricingNavLink) {
+            pricingNavLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const pricingSection = document.getElementById('pricing');
+                if(pricingSection) {
+                    pricingSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
         }
-    </style>
-</head>
-<body>
-
-    <!-- Hero -->
-    <section class="hero">
-        <div class="container">
-            <h1>QR Order, Instant Joy 🍅</h1>
-            <p>No more shouting orders. Let your customers scan, order, and get a vibrant notification when their food is ready.</p>
-            <a href="index.html" class="btn btn-primary">Start Free – 30 Orders/Day</a>
-            <a href="#pricing" class="btn btn-outline">See Plans</a>
-        </div>
-    </section>
-
-    <!-- Features -->
-    <section class="section">
-        <div class="container">
-            <h2>Why Dessert POS?</h2>
-            <p class="subtitle">Built for small food businesses, kiosks, and stall operators at food fairs & events.</p>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="icon">📱</div>
-                    <h3>QR Self-Ordering</h3>
-                    <p>Customers scan a QR code, browse your menu, and place orders directly from their phone. No app download needed.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon">🔔</div>
-                    <h3>Vibrant Notifications</h3>
-                    <p>When food is ready, customers get a loud, fun notification with vibration – even when the screen is off!</p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon">🧾</div>
-                    <h3>Smart Order Management</h3>
-                    <p>Easily amend orders, apply discounts, and track every transaction in real time.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="icon">🌐</div>
-                    <h3>Multi-Language Ready</h3>
-                    <p>Automatically detects your customer's language. Supports 12+ languages out of the box.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Who is it for -->
-    <section class="section" style="background: white;">
-        <div class="container">
-            <h2>Who It's For</h2>
-            <div class="audience-list">
-                <div class="audience-item"><span class="icon">🏪</span> Small Cafés & Bakeries</div>
-                <div class="audience-item"><span class="icon">🛒</span> Kiosk Runners</div>
-                <div class="audience-item"><span class="icon">🎪</span> Food Fair & Event Stalls</div>
-                <div class="audience-item"><span class="icon">🧋</span> Bubble Tea & Dessert Shops</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing -->
-    <section class="section" id="pricing">
-        <div class="container">
-            <h2>Simple, Transparent Pricing</h2>
-            <p class="subtitle">Start free, upgrade when your business grows. No hidden fees.</p>
-            <div class="pricing-grid">
-                <!-- Free Plan -->
-                <div class="plan-card">
-                    <div class="plan-name">Free</div>
-                    <div class="plan-price">RM 0</div>
-                    <div class="plan-period">/month</div>
-                    <ul>
-                        <li>30 orders per day</li>
-                        <li>Basic POS functions</li>
-                        <li>Single device</li>
-                        <li>Standard support</li>
-                    </ul>
-                    <a href="index.html" class="btn">Get Started</a>
-                </div>
-
-                <!-- Lite Plan (Featured) -->
-                <div class="plan-card featured">
-                    <div class="plan-name">Lite</div>
-                    <div class="plan-price">RM 29</div>
-                    <div class="plan-period">/month</div>
-                    <ul>
-                        <li>Unlimited orders</li>
-                        <li>Membership & discount</li>
-                        <li>QR self-ordering</li>
-                        <li>Vibrant ready notifications</li>
-                        <li>Order amendment</li>
-                        <li>Multi-device sync</li>
-                    </ul>
-                    <a href="index.html" class="btn">Start Free Trial</a>
-                </div>
-
-                <!-- Pro Plan -->
-                <div class="plan-card">
-                    <div class="plan-name">Pro</div>
-                    <div class="plan-price">RM 59</div>
-                    <div class="plan-period">/month</div>
-                    <ul>
-                        <li>Everything in Lite</li>
-                        <li>Multi-cashier login</li>
-                        <li>Comprehensive sales reports</li>
-                        <li>Inventory management</li>
-                        <li>Data export (Excel/PDF)</li>
-                        <li>Priority support</li>
-                    </ul>
-                    <a href="index.html" class="btn">Start Free Trial</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Languages -->
-    <section class="section" style="background: #FDF5F0;">
-        <div class="container">
-            <h2>We Speak Your Language</h2>
-            <p class="subtitle">Our system automatically adapts to your customer's language. No configuration needed.</p>
-            <div class="flags-container">
-                <div class="flag-item"><span class="fi fi-my"></span> Malay</div>
-                <div class="flag-item"><span class="fi fi-id"></span> Indonesia</div>
-                <div class="flag-item"><span class="fi fi-ph"></span> Philippines</div>
-                <div class="flag-item"><span class="fi fi-th"></span> Thai</div>
-                <div class="flag-item"><span class="fi fi-vn"></span> Vietnam</div>
-                <div class="flag-item"><span class="fi fi-kr"></span> Korean</div>
-                <div class="flag-item"><span class="fi fi-jp"></span> Japanese</div>
-                <div class="flag-item"><span class="fi fi-cn"></span> Chinese</div>
-                <div class="flag-item"><span class="fi fi-es"></span> Spanish</div>
-                <div class="flag-item"><span class="fi fi-fr"></span> French</div>
-                <div class="flag-item"><span class="fi fi-it"></span> Italian</div>
-                <div class="flag-item"><span class="fi fi-br"></span> Brazil</div>
-                <div class="flag-item"><span class="fi fi-za"></span> Africa</div>
-                <div class="flag-item"><span class="fi fi-sa"></span> Arabia</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>© 2026 Dessert POS. Built for small food heroes. | <a href="index.html">Login</a> | <a href="reset-password.html">Reset Password</a></p>
-        </div>
-    </footer>
-
+        // Optional: other nav links show a small message (makes it interactive)
+        const otherNavs = document.querySelectorAll('.nav-links a:not([href="#pricing"])');
+        otherNavs.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                alert(`✨ ${link.innerText} — Coming soon! Get in touch for early access.`);
+            });
+        });
+    })();
+</script>
 </body>
 </html>
