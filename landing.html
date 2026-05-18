@@ -42,6 +42,60 @@
             flex-wrap: wrap;
             gap: 16px;
         }
+        .logo {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #E35F21, #F29242);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    white-space: nowrap; /* prevent breaking */
+}
+
+/* On mobile screens */
+@media (max-width: 640px) {
+    .logo {
+        font-size: 1.4rem;  /* smaller on phones */
+    }
+    .tagline {
+        font-size: 0.75rem;
+        white-space: normal; /* allow wrapping if needed */
+    }
+    .logo-area {
+        flex-wrap: wrap;
+        justify-content: center;
+        text-align: center;
+    }
+    .header-inner {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+   .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+    .logo-area {
+        justify-content: center;
+        width: 100%;
+    }
+    .logo {
+        font-size: 1.6rem;
+    }
+    .tagline {
+        font-size: 0.7rem;
+    }
+    .nav-links {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+}     
         .logo-area {
             display: flex;
             align-items: center;
@@ -49,7 +103,7 @@
             flex-wrap: wrap;
         }
         .site-logo {
-            height: 48px;
+            height: 60px;
             width: auto;
             object-fit: contain;
         }
