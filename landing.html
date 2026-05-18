@@ -48,13 +48,22 @@
             gap: 16px;
         }
 
-        .logo-area {
-            display: flex;
-            align-items: baseline;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
+ 
 
+        .site-logo {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+/* Remove the previous .logo class if you had text styling, or keep as fallback */
         .logo {
             font-size: 1.8rem;
             font-weight: 800;
