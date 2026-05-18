@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Dessert POS · Smart POS for Bubble Tea & Dessert Shops</title>
+    <title>🍧 Dessert POS · Smart POS for Bubble Tea & Dessert Shops, Bakeries, Small Businesses, Kiosks, and Stall Operators</title>
     <!-- Google Fonts & Font Awesome 6 -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -444,6 +444,37 @@
                 display: none;
             }
         }
+        /* Flags container */
+.flags-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 28px;
+    margin-top: 40px;
+}
+.flag-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #4F2C1D;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 60px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    transition: transform 0.2s;
+    border: 1px solid #F5E2D6;
+}
+.flag-item:hover {
+    transform: translateY(-3px);
+    border-color: #E8622C;
+}
+.flag-item span {
+    font-size: 2rem;
+    display: block;
+}
     </style>
 </head>
 <body>
@@ -468,7 +499,7 @@
     <section class="hero">
         <div class="container hero-grid">
             <div class="hero-content">
-                <div class="hero-badge">🍧 Made for Bubble Tea & Dessert Shops</div>
+                <div class="hero-badge">🍧 Made for Bubble Tea & Dessert Shops, Bakeries, Small Businesses, Kiosks, and Stall Operators</div>
                 <h1>The All-in-One POS System for Dessert Success</h1>
                 <div class="feature-badge-grid">
                     <div class="feature-badge-item">
@@ -592,6 +623,30 @@
     <div class="container" style="text-align: center; margin-bottom: 40px;">
         <p style="background: #FEF3E8; display: inline-block; padding: 8px 24px; border-radius: 60px; font-size:0.85rem; color:#7E4A2A;"><i class="fas fa-store"></i> Trusted by 500+ dessert shops & bubble tea stores</p>
     </div>
+
+    <!-- Languages Section -->
+<section class="section" style="background: #FDF5F0;">
+    <div class="container">
+        <h2 class="section-title">We Speak Your Language</h2>
+        <p class="section-sub">Our system automatically adapts to your customer's language. No configuration needed.</p>
+        <div class="flags-container">
+            <div class="flag-item"><span class="fi fi-my"></span> Malay</div>
+            <div class="flag-item"><span class="fi fi-id"></span> Indonesia</div>
+            <div class="flag-item"><span class="fi fi-ph"></span> Philippines</div>
+            <div class="flag-item"><span class="fi fi-th"></span> Thai</div>
+            <div class="flag-item"><span class="fi fi-vn"></span> Vietnam</div>
+            <div class="flag-item"><span class="fi fi-kr"></span> Korean</div>
+            <div class="flag-item"><span class="fi fi-jp"></span> Japanese</div>
+            <div class="flag-item"><span class="fi fi-cn"></span> Chinese</div>
+            <div class="flag-item"><span class="fi fi-es"></span> Spanish</div>
+            <div class="flag-item"><span class="fi fi-fr"></span> French</div>
+            <div class="flag-item"><span class="fi fi-it"></span> Italian</div>
+            <div class="flag-item"><span class="fi fi-br"></span> Brazil</div>
+            <div class="flag-item"><span class="fi fi-za"></span> Africa</div>
+            <div class="flag-item"><span class="fi fi-sa"></span> Arabia</div>
+        </div>
+    </div>
+</section>
 </main>
 
 <footer class="footer">
