@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🍅 柿柿润糖水 - POS System</title>
+    <title>🍅 Dessert POS System</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.stripe.com/v3/"></script>
@@ -246,7 +246,7 @@
     🌐 EN
   </button>
 
-  <h2 style="text-align:center;color:var(--persimmon);">🍅 <span data-i18n="storeName">柿柿润糖水</span></h2>
+  <h2 id="authBranding" style="text-align:center;color:var(--persimmon);"></h2>
   <div id="authForms">
     <form id="loginForm" onsubmit="handleLogin(event)" style="display:block;">
       <input type="email" id="loginEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
@@ -327,7 +327,7 @@
 	<!-- 公開顧客點餐區（未登入時顯示） -->
 <div id="publicCustomerView" style="display:none;">
     <header class="header">
-        <div class="header-brand"><span>🍅</span><span data-i18n="storeName">柿柿润糖水</span></div>
+        <div class="header-brand"></div>
         <div class="header-actions">
 			<button class="btn btn-xs btn-outline" onclick="toggleLanguage()" id="langToggle">🌐 EN</button>
             <button class="btn btn-outline btn-sm" onclick="toggleCustomerCart()" style="position:relative;" data-i18n="viewCart">
@@ -370,7 +370,7 @@
 	
 <!-- HEADER -->
 <header class="header">
-    <div class="header-brand"><span>🍅</span><span data-i18n="storeName">柿柿润糖水</span></div>
+    <div class="header-brand"></div>
     <div class="header-actions">
         <div class="mode-switch" id="modeSwitcher">
     <button data-mode="cashier" class="active" onclick="switchMode('cashier')" data-i18n="cashierMode">💰 收银</button>
@@ -1471,6 +1471,7 @@ function toggleLanguage() {
 
         // 最后应用所有 data-i18n 翻译
         applyLanguage();
+		updateStoreBranding();
     });
 }
 
@@ -2563,7 +2564,33 @@ function getPriceId(plan, billing) {
     document.getElementById('autoAddMemberToggle').checked = APP_STATE.settings.autoAddMember !== false;
     document.getElementById('settingsModal').style.display = 'flex';
 }
+function updateStoreBranding() {
+  const storeName = APP_STATE.settings.storeName || 'Dessert POS';   // fallback default
+  const logoUrl  = APP_STATE.settings.logoUrl  || '';
 
+  // Page title
+  document.title = `${storeName} - POS System`;
+
+  // All header-brand elements (in main app and public view)
+  document.querySelectorAll('.header-brand').forEach(el => {
+    let html = '';
+    if (logoUrl) {
+      html += `<img src="${logoUrl}" alt="${storeName}" style="height:36px;margin-right:8px;border-radius:8px;">`;
+    } else {
+      html += `<span>🍅</span>`;
+    }
+    html += `<span>${storeName}</span>`;
+    el.innerHTML = html;
+  });
+
+  // Auth page (login / register) – the <h2> with emoji + name
+const authH2 = document.getElementById('authBranding');
+if (authH2) {
+  authH2.innerHTML =
+    (logoUrl ? `<img src="${logoUrl}" alt="${storeName}" style="height:28px;vertical-align:middle;margin-right:8px;">` : '🍅 ') +
+    storeName;
+}
+}
 async function saveSettings() {
     const autoAdd = document.getElementById('autoAddMemberToggle').checked;
     APP_STATE.settings.autoAddMember = autoAdd;
@@ -2637,10 +2664,15 @@ async function saveStoreSettings() {
   document.querySelector('.header-brand span').textContent = newName;
   
   // Save to database
-  await supabaseClient.from('settings').upsert(
-    { key: 'storeName', value: newName, store_id: APP_STATE.storeId },
-    { onConflict: 'key, store_id' }
-  );
+ // After upserting both storeName and logoUrl to Supabase:
+await supabaseClient.from('settings').upsert([
+  { key: 'storeName', value: newName, store_id: APP_STATE.storeId },
+  { key: 'logoUrl', value: APP_STATE.settings.logoUrl, store_id: APP_STATE.storeId }
+], { onConflict: 'key, store_id' });
+
+updateStoreBranding();   // instantly refreshes all headers & title
+closeStoreSettingsModal();
+showToast('storeSettingsSaved');
   
   // Handle logo upload if new file selected
   if (window._newLogoFile) {
@@ -2710,6 +2742,7 @@ async function checkUser() {
         await loadPublicSettings();
         renderPublicMenu();
         updatePublicCartCount();
+		updateStoreBranding();
         return; // 直接返回，不再继续
     }
 
@@ -2727,6 +2760,7 @@ async function checkUser() {
         renderAll();
         applyLanguage();
         updateQRCode();
+		updateStoreBranding();
         updateUnpaidBadge();
     } else {
         // 🔐 默认显示登录界面
