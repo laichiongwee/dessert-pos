@@ -233,7 +233,11 @@
     margin-bottom: 4px;
     line-height: 1;
 }
-
+.auth-logo {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+}
     </style>
 </head>
 <body>
@@ -2565,13 +2569,13 @@ function getPriceId(plan, billing) {
     document.getElementById('settingsModal').style.display = 'flex';
 }
 function updateStoreBranding() {
-  const storeName = APP_STATE.settings.storeName || 'Dessert POS';   // fallback default
+  const storeName = APP_STATE.settings.storeName || 'Dessert POS';
   const logoUrl  = APP_STATE.settings.logoUrl  || '';
 
   // Page title
   document.title = `${storeName} - POS System`;
 
-  // All header-brand elements (in main app and public view)
+  // Main header and public header
   document.querySelectorAll('.header-brand').forEach(el => {
     let html = '';
     if (logoUrl) {
@@ -2583,13 +2587,18 @@ function updateStoreBranding() {
     el.innerHTML = html;
   });
 
-  // Auth page (login / register) – the <h2> with emoji + name
-const authH2 = document.getElementById('authBranding');
-if (authH2) {
-  authH2.innerHTML =
-    (logoUrl ? `<img src="${logoUrl}" alt="${storeName}" style="height:28px;vertical-align:middle;margin-right:8px;">` : '🍅 ') +
-    storeName;
-}
+  // Login screen branding – logo + store name
+  const authBrand = document.getElementById('authBranding');
+  if (authBrand) {
+    const displayLogo = logoUrl || 'https://yymopyjhfarnqbhuqaio.supabase.co/storage/v1/object/public/Dessert_shop/dessert_logo.png';
+    authBrand.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">
+        <img src="${displayLogo}" alt="Dessert POS" style="height:50px;width:auto;object-fit:contain;">
+        <span style="font-size:1.5rem;font-weight:700;">${storeName}</span>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-light);margin-top:4px;">Smart. Simple. Sweet Success.</div>
+    `;
+  }
 }
 async function saveSettings() {
     const autoAdd = document.getElementById('autoAddMemberToggle').checked;
