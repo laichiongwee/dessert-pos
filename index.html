@@ -406,7 +406,7 @@
     <button class="btn btn-xs btn-outline" data-i18n="storeSettings" onclick="openStoreSettingsModal()">🏪 店铺设置</button>
     <button class="btn btn-xs btn-outline" data-i18n="discountRules" onclick="openDiscountRulesModal()">🏷️ 优惠规则</button>
     <button class="btn btn-xs btn-outline" data-i18n="manageCategory" onclick="openCategoryModal()">📂 管理分类</button>
-    <button class="btn btn-xs btn-outline" data-i18n="addMenuItem" onclick="openMenuEditModal()">＋菜品</button>
+    <button class="btn btn-xs btn-outline" data-i18n="addMenuItem" onclick="openMenuEditModal()">＋菜品<span id="menuItemCount">(12 max for Free)</span></button>
     <button class="btn btn-xs btn-outline" data-i18n="updateMenu" onclick="openMenuSheetModal()">📝 更新菜单</button>
     <button class="btn btn-xs btn-danger" data-i18n="lockEdit" onclick="toggleAdminMode()">🔒 锁定编辑</button>
 </div>
@@ -1611,11 +1611,20 @@ function checkOrderLimit() {
     }
     return true;
 }
+
+	function requireFeature(featureKey) {
+  if (!canAccess(featureKey)) {
+    openPricingModal();
+    return false;
+  }
+  return true;
+}
 // ==================== INIT ====================
 async function init() {
     await checkUser(); // checkUser 会自动调用 fetchAllData
 	// In init or after checkUser, control visibility
-document.getElementById('unlockBtn').style.display = canAccessAdmin() ? 'block' : 'none';
+// In checkUser / init, remove any hiding logic for 'unlockBtn'
+document.getElementById('unlockBtn').style.display = 'block';
     // 不需要再单独加载数据
 }
 
@@ -1700,6 +1709,14 @@ function renderAll() {
         updateCartBadge();
     }
 }
+	function updateMenuItemCountDisplay() {
+  const span = document.getElementById('menuItemCount');
+  if (span) {
+    const count = APP_STATE.menu.length;
+    const limit = APP_STATE.currentPlan === 'free' ? 12 : '∞';
+    span.textContent = `(${count}/${limit})`;
+  }
+}
 function renderCategoryTabs() {
     document.getElementById('categoryTabs').innerHTML = APP_STATE.categories.map(cat => {
         const displayText = cat === '全部' ? i18n.t('allCategories') : cat;
@@ -1781,6 +1798,7 @@ function renderCustomerMenuGrid() {
         </div>`;
     }).join('');
 }
+	
 function renderOrderPanel() {
     const container = document.getElementById('orderItems');
     if (APP_STATE.cashierOrder.length === 0) {
@@ -2224,7 +2242,9 @@ function clearOrder() {
 }
 
 // ==================== DISCOUNT RULES MODAL ====================
-function openDiscountRulesModal() { document.getElementById('discountRulesModal').style.display='flex'; renderDiscountRulesList(); }
+function openDiscountRulesModal() {
+	if (!requireFeature('memberDiscount')) return;   // 'memberDiscount' is only in lite/pro
+	document.getElementById('discountRulesModal').style.display='flex'; renderDiscountRulesList(); }
 function closeDiscountRulesModal(e) { if(e&&e.target!==document.getElementById('discountRulesModal'))return; document.getElementById('discountRulesModal').style.display='none'; }
 document.getElementById('discountRulesModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
 function renderDiscountRulesList() {
@@ -3514,24 +3534,22 @@ function quickPayment(method) {
 }
 
 function canAccessAdmin() {
-  return APP_STATE.currentPlan === 'basic' || APP_STATE.currentPlan === 'pro';
+  return APP_STATE.currentPlan === 'lite' || APP_STATE.currentPlan === 'pro';
 }
 
 function toggleAdminMode() {
-  if (!canAccessAdmin()) {
-    showToast('adminRequiresUpgrade');
-    return;
-  }
+  // No plan check – everyone can enter admin mode
   APP_STATE.adminUnlocked = !APP_STATE.adminUnlocked;
-    document.getElementById('adminBar').style.display = APP_STATE.adminUnlocked ? 'flex' : 'none';
-    document.getElementById('unlockBtn').style.display = APP_STATE.adminUnlocked ? 'none' : 'block';
-    if (APP_STATE.adminUnlocked) {
-        // enable inline editing on menu cards
-        document.querySelectorAll('.menu-card').forEach(card => card.classList.add('admin-mode'));
-    } else {
-        document.querySelectorAll('.menu-card').forEach(card => card.classList.remove('admin-mode'));
-    }
-    if (APP_STATE.mode === 'fulfillment') renderAdminMenuGrid();
+  document.getElementById('adminBar').style.display = APP_STATE.adminUnlocked ? 'flex' : 'none';
+  document.getElementById('unlockBtn').style.display = APP_STATE.adminUnlocked ? 'none' : 'block';
+
+  if (APP_STATE.adminUnlocked) {
+    // enable inline editing on menu cards (if needed)
+    document.querySelectorAll('.menu-card').forEach(card => card.classList.add('admin-mode'));
+  } else {
+    document.querySelectorAll('.menu-card').forEach(card => card.classList.remove('admin-mode'));
+  }
+  if (APP_STATE.mode === 'fulfillment') renderAdminMenuGrid();
 }
 	
 async function updateMenuItemField(id, field, value) {
@@ -3626,11 +3644,17 @@ function editStoreName() {
     });
 }
 
+
 // ========== MENU EDIT MODAL ==========
 // ==================== MENU EDITING ====================
 
 // Render menu items for editing
 function openMenuEditModal(itemId = null) {
+	  // FREE plan menu item limit
+  if (!itemId && APP_STATE.currentPlan === 'free' && APP_STATE.menu.length >= 12) {
+    openPricingModal();   // show upgrade prompt
+    return;
+  }
     const select = document.getElementById('editItemCategory');
     select.innerHTML = APP_STATE.categories.filter(c => c !== '全部').map(c => `<option value="${c}">${c}</option>`).join('');
     
