@@ -3668,7 +3668,7 @@ async function saveMenuItem() {
     };
     
     // 写入 Supabase (upsert: 存在则更新，不存在则插入)
-    const { error } = await supabaseClient.from('menu').upsert([data], { onConflict: 'id' });
+    const { error } = await supabaseClient.from('menu').upsert([data], { onConflict: 'id, store_id' });
     if (error) {
         console.error('Menu save error:', error);
         showToast('saveFailed');
