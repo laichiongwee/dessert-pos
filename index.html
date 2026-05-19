@@ -399,8 +399,7 @@
 <div class="admin-bar" id="adminBar" style="display:none;">
     <span data-i18n="adminModeLabel">🔓 管理模式</span>
     <input type="file" id="logoUpload" accept="image/*" style="display:none;" onchange="uploadLogo()">
-    <button class="btn btn-xs btn-outline" data-i18n="changeLogo" onclick="document.getElementById('logoUpload').click()">更换Logo</button>
-    <button class="btn btn-xs btn-outline" data-i18n="editStoreName" onclick="editStoreName()">改店名</button>
+    <button class="btn btn-xs btn-outline" data-i18n="storeSettings" onclick="openStoreSettingsModal()">🏪 店铺设置</button>
     <button class="btn btn-xs btn-outline" data-i18n="discountRules" onclick="openDiscountRulesModal()">🏷️ 优惠规则</button>
     <button class="btn btn-xs btn-outline" data-i18n="manageCategory" onclick="openCategoryModal()">📂 管理分类</button>
     <button class="btn btn-xs btn-outline" data-i18n="addMenuItem" onclick="openMenuEditModal()">＋菜品</button>
@@ -709,7 +708,34 @@
     </div>
 </div>
 
-
+<!-- Store Settings Modal (Logo + Name) -->
+<div class="modal-overlay" id="storeSettingsModal" style="display:none;" onclick="closeStoreSettingsModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="storeSettingsTitle">🏪 店铺设置</h3>
+    
+    <div style="margin-bottom:16px;">
+      <label data-i18n="storeNameLabel">店名</label>
+      <input type="text" id="storeNameInput" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);"
+             data-i18n-placeholder="storeNamePlaceholder" placeholder="输入店名">
+    </div>
+    
+    <div style="margin-bottom:16px;">
+      <label data-i18n="storeLogoLabel">店铺 Logo</label>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="previewLogo(event)">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('logoFileInput').click()" data-i18n="chooseFile">选择文件</button>
+        <span id="logoFileName" style="font-size:0.8rem;color:var(--text-lighter);"></span>
+      </div>
+      <img id="logoPreview" style="max-width:120px; margin-top:8px; display:none; border-radius:12px;">
+    </div>
+    
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary btn-sm" onclick="saveStoreSettings()" style="flex:1;" data-i18n="save">💾 保存</button>
+      <button class="btn btn-outline btn-sm" onclick="closeStoreSettingsModal()" style="flex:1;" data-i18n="cancel">取消</button>
+    </div>
+  </div>
+</div>
 	
 <script>
 	const i18n = i18next.createInstance();
@@ -785,7 +811,7 @@ i18n
   "addMember": "＋ Add",
   "upgradePlan": "⭐ Upgrade",
 		  "langSwitch": "🌐 中",
-		  
+		  "storeSettings": "🏪 Store Settings",
 
   // 设置
   "settingsTitle": "⚙️ Settings",
@@ -803,7 +829,14 @@ i18n
 "updateMenu": "📝 Update Menu",
 "lockEdit": "🔒 Lock Edit",
 "unlockEdit": "🔓 Unlock Edit",
-
+"storeSettingsTitle": "🏪 Store Settings",
+"storeNameLabel": "Store Name",
+"storeNamePlaceholder": "Enter store name",
+"storeLogoLabel": "Store Logo",
+"chooseFile": "Choose File",
+"adminRequiresUpgrade": "🔒 Admin features require Basic or Pro plan. Please upgrade.",
+"storeSettingsSaved": "✅ Store settings saved",
+"logoUploadFailed": "❌ Logo upload failed",
   // 收银面板
   "currentOrder": "🧾 Current Order",
   "subtotal": "Subtotal",
@@ -1096,7 +1129,7 @@ i18n
 "lockEdit": "🔒 锁定编辑",
 "unlockEdit": "🔓 解锁管理",
 		  "langSwitch": "🌐 EN",
-
+"storeSettings": "🏪 店铺设置",
   // 设置
   "settingsTitle": "⚙️ 系统设置",
   "dataSyncUrl": "数据同步 URL (GET)",
@@ -1131,7 +1164,14 @@ i18n
 "paymentOnline": "📱 线上支付",
 "onlineRefPlaceholder": "输入参考号",
 "cardRefPlaceholder": "可选",
-		  
+"storeSettingsTitle": "🏪 店铺设置",
+"storeNameLabel": "店名",
+"storeNamePlaceholder": "输入店名",
+"storeLogoLabel": "店铺 Logo",
+"chooseFile": "选择文件",
+"adminRequiresUpgrade": "🔒 管理功能需要 Basic 或 Pro 套餐，请升级。",
+"storeSettingsSaved": "✅ 店铺设置已保存",
+"logoUploadFailed": "❌ Logo 上传失败",		  
   // 会员
   "memberSearch": "📞 搜索会员手机号...",
   "memberInfo": "会员信息",
@@ -1569,6 +1609,8 @@ function checkOrderLimit() {
 // ==================== INIT ====================
 async function init() {
     await checkUser(); // checkUser 会自动调用 fetchAllData
+	// In init or after checkUser, control visibility
+document.getElementById('unlockBtn').style.display = canAccessAdmin() ? 'block' : 'none';
     // 不需要再单独加载数据
 }
 
@@ -2545,7 +2587,90 @@ async function saveSettings() {
             if (e.target === this) this.style.display = 'none';
         });
 
-   
+   // Open modal
+function openStoreSettingsModal() {
+  // Populate with current values
+  document.getElementById('storeNameInput').value = APP_STATE.settings.storeName || i18n.t('storeName');
+  // If logo exists, show preview
+  const logoUrl = APP_STATE.settings.logoUrl || '';
+  const preview = document.getElementById('logoPreview');
+  if (logoUrl) {
+    preview.src = logoUrl;
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+  document.getElementById('storeSettingsModal').style.display = 'flex';
+}
+
+function closeStoreSettingsModal(event) {
+  if (event && event.target !== document.getElementById('storeSettingsModal')) return;
+  document.getElementById('storeSettingsModal').style.display = 'none';
+}
+
+// Preview selected logo
+function previewLogo(event) {
+  const file = event.target.files[0];
+  if (file) {
+    document.getElementById('logoFileName').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById('logoPreview').src = e.target.result;
+      document.getElementById('logoPreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    // Store file for later upload
+    window._newLogoFile = file;
+  }
+}
+
+// Save both name and logo
+async function saveStoreSettings() {
+  const newName = document.getElementById('storeNameInput').value.trim();
+  if (!newName) {
+    showToast('请填写店名');
+    return;
+  }
+  
+  // Update store name
+  APP_STATE.settings.storeName = newName;
+  document.querySelector('.header-brand span').textContent = newName;
+  
+  // Save to database
+  await supabaseClient.from('settings').upsert(
+    { key: 'storeName', value: newName, store_id: APP_STATE.storeId },
+    { onConflict: 'key, store_id' }
+  );
+  
+  // Handle logo upload if new file selected
+  if (window._newLogoFile) {
+    try {
+      const logoUrl = await uploadToSupabaseStorage(window._newLogoFile, 'logo');
+      APP_STATE.settings.logoUrl = logoUrl;
+      // Update header logo
+      let logoImg = document.querySelector('.header-brand img');
+      if (!logoImg) {
+        logoImg = document.createElement('img');
+        logoImg.style.height = '36px';
+        logoImg.style.marginRight = '8px';
+        logoImg.style.borderRadius = '8px';
+        document.querySelector('.header-brand').prepend(logoImg);
+      }
+      logoImg.src = logoUrl;
+      // Save logo URL
+      await supabaseClient.from('settings').upsert(
+        { key: 'logoUrl', value: logoUrl, store_id: APP_STATE.storeId },
+        { onConflict: 'key, store_id' }
+      );
+    } catch (err) {
+      showToast('logoUploadFailed');
+      console.error(err);
+    }
+  }
+  
+  closeStoreSettingsModal();
+  showToast('storeSettingsSaved');
+}
 
        // ==================== TOAST ====================
 function showToast(keyOrText, vars = {}) {
@@ -3344,8 +3469,16 @@ function quickPayment(method) {
     processPayment(method, total, { method });
 }
 
+function canAccessAdmin() {
+  return APP_STATE.currentPlan === 'basic' || APP_STATE.currentPlan === 'pro';
+}
+
 function toggleAdminMode() {
-    APP_STATE.adminUnlocked = !APP_STATE.adminUnlocked;
+  if (!canAccessAdmin()) {
+    showToast('adminRequiresUpgrade');
+    return;
+  }
+  APP_STATE.adminUnlocked = !APP_STATE.adminUnlocked;
     document.getElementById('adminBar').style.display = APP_STATE.adminUnlocked ? 'flex' : 'none';
     document.getElementById('unlockBtn').style.display = APP_STATE.adminUnlocked ? 'none' : 'block';
     if (APP_STATE.adminUnlocked) {
@@ -4000,7 +4133,26 @@ async function deleteMenuItemFromSheet(itemId) {
         reader.readAsDataURL(file);
     });
 }
-	
+// Supabase Storage bucket name (create it in Supabase dashboard)
+const STORAGE_BUCKET = 'menu-images';
+
+async function uploadToSupabaseStorage(file, folder = '') {
+  if (!file) return null;
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+  const { data, error } = await supabaseClient.storage
+    .from(STORAGE_BUCKET)
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+  if (error) throw error;
+  // Get public URL
+  const { data: publicUrl } = supabaseClient.storage
+    .from(STORAGE_BUCKET)
+    .getPublicUrl(data.path);
+  return publicUrl.publicUrl;
+}	
 async function uploadMenuImage() {
     const input = document.getElementById('editItemImageUpload');
     if (!input.files || !input.files[0]) {
@@ -4008,48 +4160,48 @@ async function uploadMenuImage() {
         return;
     }
     const file = input.files[0];
-    const apiKey = APP_STATE.imgbbKey;
-    if (!apiKey) {
-        showToast('imgbbKeyMissing');
-        return;
-    }
     
     showToast('imgCompressing');
     
     try {
-        // Compress image to ~200KB before upload
+        // Compress image to ~200KB
         const compressedFile = await compressImage(file, 200);
         console.log(`压缩完成: ${(file.size/1024).toFixed(1)}KB → ${(compressedFile.size/1024).toFixed(1)}KB`);
         
-        const formData = new FormData();
-        formData.append('image', compressedFile);
-
-        const resp = await fetch('https://api.imgbb.com/1/upload?key=' + apiKey, {
-            method: 'POST',
-            body: formData
-        });
-        const json = await resp.json();
-        if (json.success) {
-            const imageUrl = json.data.url;
-            showToast('imgUploadSuccess');
-            document.getElementById('editItemImage').value = imageUrl;
-            // Show preview
-            let prev = document.getElementById('menuImagePreview');
-            if (!prev) {
-                prev = document.createElement('img');
-                prev.id = 'menuImagePreview';
-                prev.style.maxWidth = '100px';
-                prev.style.marginTop = '4px';
-                prev.style.borderRadius = '8px';
-                document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
-            }
-            prev.src = imageUrl;
-            prev.style.display = 'block';
-        } else {
-            showToast('imgUploadFailed' + (json.error?.message || '未知错误'));
+        // Upload to Supabase Storage
+        const fileName = `menu/${Date.now()}_${Math.random().toString(36).substring(2)}.jpg`;
+        const { data, error } = await supabaseClient.storage
+            .from('menu-images')
+            .upload(fileName, compressedFile, {
+                cacheControl: '3600',
+                contentType: 'image/jpeg'
+            });
+        
+        if (error) throw error;
+        
+        // Get public URL
+        const { data: publicUrl } = supabaseClient.storage
+            .from('menu-images')
+            .getPublicUrl(data.path);
+        
+        const imageUrl = publicUrl.publicUrl;
+        showToast('imgUploadSuccess');
+        document.getElementById('editItemImage').value = imageUrl;
+        
+        // Show preview
+        let prev = document.getElementById('menuImagePreview');
+        if (!prev) {
+            prev = document.createElement('img');
+            prev.id = 'menuImagePreview';
+            prev.style.maxWidth = '100px';
+            prev.style.marginTop = '4px';
+            prev.style.borderRadius = '8px';
+            document.getElementById('editItemImageUpload').parentNode.appendChild(prev);
         }
+        prev.src = imageUrl;
+        prev.style.display = 'block';
     } catch (err) {
-        showToast('imgUploadFailed' + err.message);
+        showToast('imgUploadFailed' + (err.message || '未知错误'));
         console.error('Upload error:', err);
     }
 }
