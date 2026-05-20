@@ -801,6 +801,19 @@
     </div>
   </div>
 </div>
+
+	<!-- Upgrade Prompt Modal -->
+<div class="modal-overlay" id="upgradePromptModal" style="display:none;" onclick="closeUpgradePrompt()">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:380px; text-align:center; padding:28px 24px;">
+    <div style="font-size:2.5rem; margin-bottom:8px;">⭐</div>
+    <h4 id="upgradePromptTitle" style="margin-bottom:12px;" data-i18n="upgradePromptTitle">Feature Locked</h4>
+    <p id="upgradePromptMessage" style="font-size:0.9rem; color:var(--text-light); margin-bottom:20px;">
+      This feature requires a Lite or Pro plan.
+    </p>
+    <button class="btn btn-primary" style="width:100%; margin-bottom:8px; background:var(--persimmon);" onclick="openPricingModal(); closeUpgradePrompt();" data-i18n="upgradeNow">⭐ Upgrade Now</button>
+    <button class="btn btn-outline btn-sm" style="width:100%;" onclick="closeUpgradePrompt()" data-i18n="maybeLater">Maybe Later</button>
+  </div>
+</div>
 	
 <script>
 	const i18n = i18next.createInstance();
@@ -1009,7 +1022,14 @@ i18n
   "startPrep": "Start Preparing",
   "foodReady": "Food Ready",
   "pickedUp": "Customer Picked Up",
-
+"upgradePromptTitle": "🌟 Feature Locked",
+"upgradePromptDefault": "{{feature}} is only available on Lite and Pro plans.",
+"discountFeatureLocked": "Discount rules are only for Lite/Pro members.",
+"memberFeatureLocked": "Adding members is a Lite/Pro feature.",
+"qrFeatureLocked": "QR code ordering is a Lite/Pro feature.",
+"dailyOrderLimitReached": "You've reached the 30 orders/day limit. Upgrade for unlimited orders.",
+"upgradeNow": "⭐ Upgrade Now",
+"maybeLater": "Maybe Later",
   // 订单状态
   "statusPendingPayment": "Pending Payment",
   "statusPending": "Pending",
@@ -1167,7 +1187,14 @@ i18n
   "cashierMode": "💰 收银",
   "customerMode": "📱 顾客",
   "fulfillmentMode": "📦 出餐",
-
+"upgradePromptTitle": "🌟 功能受限",
+"upgradePromptDefault": "{{feature}} 仅适用于 Lite 和 Pro 套餐。",
+"discountFeatureLocked": "优惠规则仅限 Lite/Pro 用户。",
+"memberFeatureLocked": "会员功能仅限 Lite/Pro 用户。",
+"qrFeatureLocked": "扫码点餐仅限 Lite/Pro 用户。",
+"dailyOrderLimitReached": "您已达到每日 30 单限制，升级即可无限接单。",
+"upgradeNow": "⭐ 立即升级",
+"maybeLater": "稍后再说",
 		  "checkEmailTitle": "确认邮件已发送！",
 "checkEmailDesc": "我们已将确认链接发送至您的邮箱，请点击该链接完成注册。",
 "checkSpamReminder": "📌 如果没有收到，请检查垃圾邮件箱。",
@@ -1549,7 +1576,34 @@ document.addEventListener('DOMContentLoaded', () => {
     applyLanguage();
 });
 	
-	
+/**
+ * Show upgrade prompt if plan lacks a feature.
+ * @param {string} featureKey - the key from PLAN_PERMISSIONS (e.g., 'memberDiscount')
+ * @param {string} customMessage - optional custom message (i18n key or text)
+ * @returns {boolean} true if access allowed, false if prompt shown
+ */
+function requireFeature(featureKey, customMessage = null) {
+  if (canAccess(featureKey)) return true;
+
+  // Build message: use customMessage or fallback to a generic i18n string
+  const messageEl = document.getElementById('upgradePromptMessage');
+  if (customMessage) {
+    // If it's an i18n key, translate; otherwise use as raw text
+    messageEl.textContent = i18n.exists(customMessage) ? i18n.t(customMessage) : customMessage;
+  } else {
+    // Default: feature name from i18n or key
+    const featureName = i18n.exists('feature_' + featureKey) ? i18n.t('feature_' + featureKey) : featureKey;
+    messageEl.textContent = i18n.t('upgradePromptDefault', { feature: featureName });
+  }
+
+  document.getElementById('upgradePromptTitle').textContent = i18n.t('upgradePromptTitle');
+  document.getElementById('upgradePromptModal').style.display = 'flex';
+  return false;
+}
+
+function closeUpgradePrompt() {
+  document.getElementById('upgradePromptModal').style.display = 'none';
+}	
 // ==================== SUPABASE & STRIPE CONFIG ====================
 const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
@@ -1567,7 +1621,10 @@ const PLAN_PERMISSIONS = {
     multiShop: false,
     staffPermission: false,
     dataExport: false,
+	foodOrdering: false,       // QR self-order
+    memberDiscount: false,     // membership & discounts
     customReceipt: false
+	  
   },
   lite: {
     orderDailyLimit: 9999,
@@ -1579,6 +1636,8 @@ const PLAN_PERMISSIONS = {
     multiShop: false,
     staffPermission: false,
     dataExport: false,
+	      foodOrdering: true,
+    memberDiscount: true,
     customReceipt: true
   },
   pro: {
@@ -1591,6 +1650,8 @@ const PLAN_PERMISSIONS = {
     multiShop: true,
     staffPermission: true,
     dataExport: true,
+	      foodOrdering: true,
+    memberDiscount: true,
     customReceipt: true
   }
 };
@@ -1666,15 +1727,15 @@ function getDemoDiscountRules() { return []; }
 }
 
 function checkOrderLimit() {
-    if (APP_STATE.currentPlan === 'free') {
-        const today = new Date().toISOString().slice(0, 10);
-        const todayOrders = APP_STATE.orders.filter(o => o.date?.startsWith(today)).length;
-        if (todayOrders >= PLAN_PERMISSIONS.free.orderDailyLimit) {
-            showToast('orderLimitReached');
-            return false;
-        }
+  if (APP_STATE.currentPlan === 'free') {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayOrders = APP_STATE.orders.filter(o => o.date?.startsWith(today)).length;
+    if (todayOrders >= PLAN_PERMISSIONS.free.orderDailyLimit) {
+      requireFeature('unlimitedOrder', 'dailyOrderLimitReached');
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 	function requireFeature(featureKey) {
@@ -2309,7 +2370,7 @@ function clearOrder() {
 
 // ==================== DISCOUNT RULES MODAL ====================
 function openDiscountRulesModal() {
-	if (!requireFeature('memberDiscount')) return;   // 'memberDiscount' is only in lite/pro
+	if (!requireFeature('memberDiscount', 'discountFeatureLocked')) return;   // 'memberDiscount' is only in lite/pro
 	document.getElementById('discountRulesModal').style.display='flex'; renderDiscountRulesList(); }
 function closeDiscountRulesModal(e) { if(e&&e.target!==document.getElementById('discountRulesModal'))return; document.getElementById('discountRulesModal').style.display='none'; }
 document.getElementById('discountRulesModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
@@ -2636,6 +2697,7 @@ function getPriceId(plan, billing) {
 }
 
         function openQRModal() {
+			if (!requireFeature('foodOrdering', 'qrFeatureLocked')) return;
             document.getElementById('qrModal').style.display = 'flex';
             updateQRCode();
         }
@@ -3405,6 +3467,7 @@ async function submitPublicOrder() {
     document.getElementById('addMemberModal').style.display = 'flex';
 }
 function closeAddMemberModal(event) {
+	if (!requireFeature('memberDiscount', 'memberFeatureLocked')) return;
     if (event && event.target !== document.getElementById('addMemberModal')) return;
     document.getElementById('addMemberModal').style.display = 'none';
 }
