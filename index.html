@@ -3012,9 +3012,7 @@ async function loadUserProfile() {
     birthday: profile.birthday || ''
   };
 
-  // ... rest of store_id logic
-}
-  // 如果还没有属于自己的店铺，创建一个
+  // ── Store‑ID handling (must be inside the function) ──
   if (!profile.store_id) {
     // 1. 插入新店铺
     const { data: newStore, error: storeErr } = await supabaseClient
