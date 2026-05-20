@@ -238,6 +238,29 @@
   width: auto;
   object-fit: contain;
 }
+	.user-profile {
+  padding: 4px 12px 4px 8px;
+  border-radius: 30px;
+  background: rgba(255,255,255,0.85);
+  transition: background 0.2s;
+}
+.user-profile:hover {
+  background: var(--gold-light);
+}
+.user-avatar {
+  transition: transform 0.2s;
+}
+.user-profile:hover .user-avatar {
+  transform: scale(1.05);
+}
+.plan-badge {
+  text-transform: capitalize;
+}
+
+/* Optional: avatar in modal */
+#profileAvatarLarge {
+  margin-bottom: 8px;
+}
     </style>
 </head>
 <body>
@@ -379,6 +402,12 @@
         <div class="mode-switch" id="modeSwitcher">
     <button data-mode="cashier" class="active" onclick="switchMode('cashier')" data-i18n="cashierMode">💰 收银</button>
     <button data-mode="fulfillment" onclick="switchMode('fulfillment')" data-i18n="fulfillmentMode">📦 出餐</button>
+</div>
+		<!-- USER PROFILE (in main app header) -->
+<div class="user-profile" id="userProfile" style="display:flex; align-items:center; gap:8px; cursor:pointer;" onclick="openProfileModal()">
+  <div class="user-avatar" id="userAvatar" style="width:36px; height:36px; border-radius:50%; background:var(--persimmon); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem;">👤</div>
+  <span class="user-name" id="userGreeting" style="font-size:0.85rem; font-weight:600; color:var(--text);">Hi, User</span>
+  <span class="plan-badge" id="planBadge" style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background:var(--gold-light); color:var(--persimmon); font-weight:600;">Free</span>
 </div>
         <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()" style="position:relative;" data-i18n="unpaidOrders">
     💰 待收款
@@ -740,6 +769,27 @@
     </div>
   </div>
 </div>
+
+	<!-- User Profile Edit Modal -->
+<div class="modal-overlay" id="profileModal" style="display:none;" onclick="closeProfileModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:400px; padding:24px;">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="profileTitle">👤 个人资料</h3>
+    
+    <div style="margin-bottom:16px; text-align:center;">
+      <div id="profileAvatarLarge" style="width:64px; height:64px; border-radius:50%; background:var(--persimmon); color:white; display:inline-flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:700;">👤</div>
+    </div>
+
+    <div class="payment-detail-row"><label data-i18n="memberName">姓名</label><input type="text" id="profileName" placeholder="你的姓名" style="flex:1; padding:8px; border-radius:16px; border:1.5px solid var(--border);"></div>
+    <div class="payment-detail-row"><label data-i18n="memberPhone">手机号</label><input type="tel" id="profilePhone" placeholder="手机号" style="flex:1;"></div>
+    <div class="payment-detail-row"><label data-i18n="registerBirthdayPlaceholder">生日</label><input type="date" id="profileBirthday" style="flex:1;"></div>
+
+    <div style="margin-top:16px; display:flex; gap:8px;">
+      <button class="btn btn-primary btn-sm" onclick="saveProfile()" style="flex:1;" data-i18n="save">💾 保存</button>
+      <button class="btn btn-outline btn-sm" onclick="closeProfileModal()" style="flex:1;" data-i18n="cancel">取消</button>
+    </div>
+  </div>
+</div>
 	
 <script>
 	const i18n = i18next.createInstance();
@@ -911,7 +961,9 @@ i18n
   "onlineTotal": "Online Total",
   "discountTotal": "Discount Total",
   "closeDay": "🔒 Close Day",
-
+"profileTitle": "👤 Edit Profile",
+"profileSaved": "✅ Profile updated",
+"saveFailed": "❌ Save failed",
   // 菜品编辑
   "editItemTitle": "✏️ Edit Item",
   "itemName": "Name",
@@ -1148,7 +1200,9 @@ i18n
 "categoryAlreadyExists": "分类已存在",
 "categoryEdited": "分类已更新",
 "categoryEditFailed": "分类更新失败",
-		  
+		  "profileTitle": "👤 编辑个人资料",
+"profileSaved": "✅ 个人资料已更新",
+"saveFailed": "❌ 保存失败",
   // 收银面板
   "currentOrder": "🧾 当前订单",
   "subtotal": "小计",
@@ -1697,6 +1751,7 @@ async function fetchAllData() {
   }
 }
 
+	
 
 // ==================== RENDER ====================
 function renderAll() {
@@ -2786,6 +2841,7 @@ async function checkUser() {
         if (!realtimeSubscription) {
             initRealtime();
         }
+		updateUserDisplay();
         renderAll();
         applyLanguage();
         updateQRCode();
@@ -2847,7 +2903,7 @@ async function initRealtime() {
 async function loadUserProfile() {
   const { data: profile, error } = await supabaseClient
     .from('profiles')
-    .select('plan_id, subscription_status, store_id')
+    .select('plan_id, subscription_status, store_id, full_name, phone, birthday')
     .eq('id', APP_STATE.currentUser.id)
     .single();
 
@@ -2858,6 +2914,13 @@ async function loadUserProfile() {
 
   APP_STATE.currentPlan = profile.plan_id || 'free';
   APP_STATE.subscriptionStatus = profile.subscription_status || 'active';
+
+  // store user profile fields
+  APP_STATE.userProfile = {
+    full_name: profile.full_name || '',
+    phone: profile.phone || '',
+    birthday: profile.birthday || ''
+  };
 
   // 如果还没有属于自己的店铺，创建一个
   if (!profile.store_id) {
@@ -2888,6 +2951,67 @@ async function loadUserProfile() {
   updateUpgradeButton();
 }
 
+	function updateUserDisplay() {
+  const user = APP_STATE.userProfile || {};
+  const name = user.full_name || APP_STATE.currentUser?.email?.split('@')[0] || 'User';
+  const avatarEl = document.getElementById('userAvatar');
+  const greetingEl = document.getElementById('userGreeting');
+  const badgeEl = document.getElementById('planBadge');
+
+  if (greetingEl) greetingEl.textContent = `Hi, ${name}`;
+  if (badgeEl) badgeEl.textContent = APP_STATE.currentPlan.charAt(0).toUpperCase() + APP_STATE.currentPlan.slice(1);
+  
+  if (avatarEl) {
+    // Show initials or a generic icon
+    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2);
+    avatarEl.textContent = initials || '👤';
+  }
+}
+
+	function openProfileModal() {
+  const user = APP_STATE.userProfile || {};
+  document.getElementById('profileName').value = user.full_name || '';
+  document.getElementById('profilePhone').value = user.phone || '';
+  document.getElementById('profileBirthday').value = user.birthday || '';
+  // Update large avatar
+  const largeAvatar = document.getElementById('profileAvatarLarge');
+  const name = user.full_name || APP_STATE.currentUser?.email?.split('@')[0] || 'User';
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2);
+  largeAvatar.textContent = initials || '👤';
+  
+  document.getElementById('profileModal').style.display = 'flex';
+}
+
+function closeProfileModal(event) {
+  if (event && event.target !== document.getElementById('profileModal')) return;
+  document.getElementById('profileModal').style.display = 'none';
+}
+document.getElementById('profileModal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+	async function saveProfile() {
+  const full_name = document.getElementById('profileName').value.trim();
+  const phone = document.getElementById('profilePhone').value.trim();
+  const birthday = document.getElementById('profileBirthday').value;
+
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ full_name, phone, birthday })
+    .eq('id', APP_STATE.currentUser.id);
+
+  if (error) {
+    console.error('Profile update error:', error);
+    showToast('saveFailed');
+    return;
+  }
+
+  APP_STATE.userProfile = { full_name, phone, birthday };
+  updateUserDisplay();
+  closeProfileModal();
+  showToast('profileSaved'); // add translation key if needed
+}
+	
 function showLogin() {
   document.getElementById('loginForm').style.display = 'block';
   document.getElementById('registerForm').style.display = 'none';
