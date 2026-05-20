@@ -2978,23 +2978,42 @@ async function loadUserProfile() {
     .from('profiles')
     .select('plan_id, subscription_status, store_id, full_name, phone, birthday')
     .eq('id', APP_STATE.currentUser.id)
-    .single();
+    .maybeSingle();   // safe fallback
 
-  if (error || !profile) {
-    console.warn('无法读取用户资料');
+  if (error) {
+    console.error('Error loading profile:', error);
     return;
+  }
+
+  if (!profile) {
+    // The trigger should have created it – but if not, create it now
+    const { error: insertErr } = await supabaseClient
+      .from('profiles')
+      .insert([{
+        id: APP_STATE.currentUser.id,
+        plan_id: 'free',
+        full_name: APP_STATE.currentUser.user_metadata?.full_name || '',
+        phone: APP_STATE.currentUser.user_metadata?.phone || '',
+        birthday: APP_STATE.currentUser.user_metadata?.birthday || null
+      }]);
+    if (insertErr) {
+      console.error('Failed to create profile:', insertErr);
+      return;
+    }
+    // Re-fetch
+    return loadUserProfile();
   }
 
   APP_STATE.currentPlan = profile.plan_id || 'free';
   APP_STATE.subscriptionStatus = profile.subscription_status || 'active';
-
-  // store user profile fields
   APP_STATE.userProfile = {
     full_name: profile.full_name || '',
     phone: profile.phone || '',
     birthday: profile.birthday || ''
   };
 
+  // ... rest of store_id logic
+}
   // 如果还没有属于自己的店铺，创建一个
   if (!profile.store_id) {
     // 1. 插入新店铺
@@ -3141,16 +3160,16 @@ async function handleRegister(e) {
     }
 
     const { error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-            data: {
-                name: name,
-                phone: phone,
-                birthday: birthday
-            }
-        }
-    });
+  email,
+  password,
+  options: {
+    data: {
+      full_name: name,   // must be "full_name" to match trigger
+      phone: phone,
+      birthday: birthday // YYYY-MM-DD string
+    }
+  }
+});
 
     if (error) {
         document.getElementById('authMessage').textContent = error.message;
