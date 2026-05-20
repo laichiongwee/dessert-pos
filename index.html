@@ -261,6 +261,15 @@
 #profileAvatarLarge {
   margin-bottom: 8px;
 }
+		.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#upgradeBtn {
+  white-space: nowrap;
+}
     </style>
 </head>
 <body>
@@ -409,6 +418,8 @@
   <span class="user-name" id="userGreeting" style="font-size:0.85rem; font-weight:600; color:var(--text);">Hi, User</span>
   <span class="plan-badge" id="planBadge" style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background:var(--gold-light); color:var(--persimmon); font-weight:600;">Free</span>
 </div>
+		 <!-- Upgrade button (only visible if not Pro) -->
+    <button class="btn btn-xs btn-outline" onclick="openPricingModal()" id="upgradeBtn" style="display:none;" data-i18n="upgradePlan">⭐ 升级套餐</button>
         <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()" style="position:relative;" data-i18n="unpaidOrders">
     💰 待收款
     <span id="unpaidBadge" style="
