@@ -710,27 +710,34 @@
 
 <!-- 套餐升级模态框 -->
 <div class="modal-overlay" id="pricingModal" style="display:none;" onclick="closePricingModal(event)">
-    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:600px; padding: 24px;">
-        <div class="modal-handle"></div>
-        <h3 style="text-align:center;margin-bottom:16px;" data-i18n="pricingTitle">⭐ 升级套餐</h3>
-        <p style="text-align:center;font-size:0.85rem;color:var(--text-light);margin-bottom:16px;">
-            <span data-i18n="currentPlanLabel">当前套餐：</span>
-            <strong id="currentPlanLabel"></strong>
-        </p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="planCards">
-            <!-- 动态生成 -->
-        </div>
-        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" id="billingMonthly" class="btn btn-xs btn-outline"
-                style="border:2px solid var(--persimmon);background:var(--persimmon);color:white;border-radius:20px;padding:6px 16px;"
-                onclick="setBilling('monthly')" data-i18n="monthly">月付</button>
-            <button type="button" id="billingYearly" class="btn btn-xs btn-outline"
-                style="border:2px solid var(--border);background:transparent;color:var(--text-light);border-radius:20px;padding:6px 16px;"
-                onclick="setBilling('yearly')" data-i18n="yearly">年付（8折）</button>
-        </div>
-        <p style="font-size:0.7rem;color:var(--text-lighter);margin-top:8px;" data-i18n="sstIncluded">所有价格均已包含 SST（6%）。若选择年付，您将一次性支付全年费用。</p>
-        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()" data-i18n="cancel">取消</button>
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:860px; padding:24px;">
+    <div class="modal-handle"></div>
+    <h3 style="text-align:center;margin-bottom:12px;" data-i18n="pricingTitle">⭐ 升级套餐</h3>
+    <p style="text-align:center;font-size:0.9rem;color:var(--text-light);margin-bottom:20px;">
+      <span data-i18n="currentPlanLabel">当前套餐：</span>
+      <strong id="currentPlanLabel"></strong>
+    </p>
+
+    <!-- 套餐卡片（3列） -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;" id="planCards">
+      <!-- 动态生成 -->
     </div>
+
+    <!-- 计费周期切换 -->
+    <div style="margin-top:20px; display:flex; gap:8px; justify-content:center;">
+      <button type="button" id="billingMonthly" class="btn btn-xs btn-outline"
+        style="border:2px solid var(--border); background:transparent; color:var(--text-light); border-radius:20px; padding:6px 16px;"
+        onclick="setBilling('monthly')" data-i18n="monthly">月付</button>
+      <button type="button" id="billingYearly" class="btn btn-xs btn-outline"
+        style="border:2px solid var(--persimmon); background:var(--persimmon); color:white; border-radius:20px; padding:6px 16px;"
+        onclick="setBilling('yearly')" data-i18n="yearly">年付（8折）</button>
+    </div>
+
+    <p style="font-size:0.7rem;color:var(--text-lighter);margin-top:8px;text-align:center;" data-i18n="sstIncluded">
+      所有价格均已包含 SST（6%）。若选择年付，您将一次性支付全年费用。
+    </p>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closePricingModal()" data-i18n="cancel">取消</button>
+  </div>
 </div>
 	<!-- 收据模态框 -->
 <div class="modal-overlay" id="receiptModal" style="display:none;" onclick="closeReceiptModal()">
@@ -1092,7 +1099,27 @@ i18n
 "feature_dataExport": "Data Export",
 "feature_customReceipt": "Custom Receipt Template",
 "feature_foodOrdering": "Online Ordering",	  
-
+"downgradeToFree": "Switch to Free",
+"downgradeSuccess": "✅ Successfully downgraded to Free plan",
+"downgradeFailed": "❌ Downgrade failed",
+"feature_orders30": "30 orders per day",
+"feature_basicPOS": "Basic POS functions",
+"feature_singleDevice": "Single device",
+"feature_standardSupport": "Standard support",
+"feature_orders300": "300 orders per day",
+"feature_membershipDiscounts": "Membership & discounts",
+"feature_qrSelfOrdering": "QR self-ordering",
+"feature_pushNotifications": "Push notifications",
+"feature_orderAmendment": "Order amendment",
+"feature_multiDeviceSync": "Multi-device sync",
+"feature_kitchenView": "Kitchen View",
+"feature_everythingLite": "Everything in Lite",
+"feature_unlimitedOrders": "Unlimited orders",
+"feature_multiCashierLogin": "Multi-cashier login",
+"feature_salesReports": "Sales reports",
+"feature_inventoryManagement": "Inventory management",
+"feature_excelPdfExport": "Excel/PDF export",
+"feature_prioritySupport": "Priority support",
 		  "basicPlanName": "Basic Standard",
   "proPlanName": "Pro Professional",
   "perMonth": "per month",
@@ -1441,8 +1468,33 @@ i18n
 "cartEmpty": "购物车是空的",
 "submitFailed": "送出失败，请稍后再试",
 "deleteCategoryConfirm": "删除分类\"{{cat}}\"？该分类下的商品将移至“其他”。",
-	
-		  
+	// 免费版
+"feature_orders30": "每日30单",
+"feature_basicPOS": "基础收银功能",
+"feature_singleDevice": "单设备使用",
+"feature_standardSupport": "标准支持",
+
+// Lite 版
+"feature_orders300": "每日300单",
+"feature_membershipDiscounts": "会员与折扣",
+"feature_qrSelfOrdering": "扫码自助点餐",
+"feature_pushNotifications": "推送通知",
+"feature_orderAmendment": "订单修改",
+"feature_multiDeviceSync": "多设备同步",
+"feature_kitchenView": "厨房出餐屏",
+
+// Pro 版
+"feature_everythingLite": "包含 Lite 全部功能",
+"feature_unlimitedOrders": "无限订单",
+"feature_multiCashierLogin": "多收银员登录",
+"feature_salesReports": "销售报表",
+"feature_inventoryManagement": "库存管理",
+"feature_excelPdfExport": "导出 Excel/PDF",
+"feature_prioritySupport": "优先客服支持",
+		 // Chinese
+"downgradeToFree": "切换为免费版",
+"downgradeSuccess": "✅ 已成功降级为 Free 套餐",
+"downgradeFailed": "❌ 降级失败", 
   // 其他
   "orderLimitReached": "🚫 免费版每日订单已达上限，请升级套餐。",
   "imgCompressing": "图片压缩中...",
@@ -2487,136 +2539,148 @@ function updateUpgradeButton() {
 }
 // ==================== 套餐卡片配置 ====================
 const PLAN_DETAILS = {
-    basic: {
-        name: 'Basic 标准版',
-        priceRM: 29,
-        priceUSD: 7,
-        features: [
-            'unlimitedOrders',
-            'cloudSync',
-            'multiDevice',
-            'basicReport',
-            'receiptPrint',
-            'memberDiscount'
-        ],
-        color: '#4CAF84'
-    },
-    pro: {
-        name: 'Pro 专业版',
-        priceRM: 69,
-        priceUSD: 17,
-        features: [
-            'basicAll',
-            'inventory',
-            'staffPermission',
-            'multiShop',
-            'dataExport',
-            'customReceipt',
-            'foodOrdering'
-        ],
-        color: '#E8784A'
-    }
+  free: {
+    name: 'Free',
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    features: [
+      'orders30',
+      'basicPOS',
+      'singleDevice',
+      'standardSupport'
+    ],
+    color: '#9E9E9E'   // grey
+  },
+  lite: {
+    name: 'Lite',
+    monthlyPrice: 9,
+    yearlyPrice: 86.4,   // 9 * 12 * 0.8
+    features: [
+      'orders300',
+      'membershipDiscounts',
+      'qrSelfOrdering',
+      'pushNotifications',
+      'orderAmendment',
+      'multiDeviceSync',
+      'kitchenView'
+    ],
+    color: '#F59E0B'   // amber
+  },
+  pro: {
+    name: 'Pro',
+    monthlyPrice: 15,
+    yearlyPrice: 144,    // 15 * 12 * 0.8
+    features: [
+      'everythingLite',
+      'unlimitedOrders',
+      'multiCashierLogin',
+      'salesReports',
+      'inventoryManagement',
+      'excelPdfExport',
+      'prioritySupport'
+    ],
+    color: '#E8784A'   // persimmon
+  }
 };
 // 当前选中的计费周期，默认为 monthly
-let selectedBilling = 'monthly';
+let selectedBilling = 'yearly';
 
 function setBilling(billing) {
-    selectedBilling = billing;
-    // 更新按钮样式
-    const monthlyBtn = document.getElementById('billingMonthly');
-    const yearlyBtn = document.getElementById('billingYearly');
-    if (billing === 'monthly') {
-        monthlyBtn.style.background = 'var(--persimmon)';
-        monthlyBtn.style.color = 'white';
-        monthlyBtn.style.borderColor = 'var(--persimmon)';
-        yearlyBtn.style.background = 'transparent';
-        yearlyBtn.style.color = 'var(--text-light)';
-        yearlyBtn.style.borderColor = 'var(--border)';
-    } else {
-        yearlyBtn.style.background = 'var(--persimmon)';
-        yearlyBtn.style.color = 'white';
-        yearlyBtn.style.borderColor = 'var(--persimmon)';
-        monthlyBtn.style.background = 'transparent';
-        monthlyBtn.style.color = 'var(--text-light)';
-        monthlyBtn.style.borderColor = 'var(--border)';
-    }
-    updatePlanPrices();  // 更新价格显示
+  selectedBilling = billing;
+  const monthlyBtn = document.getElementById('billingMonthly');
+  const yearlyBtn = document.getElementById('billingYearly');
+  if (billing === 'monthly') {
+    monthlyBtn.style.background = 'var(--persimmon)';
+    monthlyBtn.style.color = 'white';
+    monthlyBtn.style.borderColor = 'var(--persimmon)';
+    yearlyBtn.style.background = 'transparent';
+    yearlyBtn.style.color = 'var(--text-light)';
+    yearlyBtn.style.borderColor = 'var(--border)';
+  } else {
+    yearlyBtn.style.background = 'var(--persimmon)';
+    yearlyBtn.style.color = 'white';
+    yearlyBtn.style.borderColor = 'var(--persimmon)';
+    monthlyBtn.style.background = 'transparent';
+    monthlyBtn.style.color = 'var(--text-light)';
+    monthlyBtn.style.borderColor = 'var(--border)';
+  }
+  updatePlanPrices();
 }
 function updatePlanPrices() {
-    const billing = selectedBilling;  // 直接使用全局变量
-    const monthlyBasic = 29;
-    const yearlyBasic = 278.4;
-    const monthlyPro = 69;
-    const yearlyPro = 662.4;
-    
-    document.querySelectorAll('#planCards .plan-price').forEach(el => {
-        const plan = el.dataset.plan;
-        if (plan === 'basic') {
-            el.textContent = billing === 'monthly' 
-                ? `RM ${monthlyBasic}` 
-                : `RM ${yearlyBasic}`;
-        } else if (plan === 'pro') {
-            el.textContent = billing === 'monthly' 
-                ? `RM ${monthlyPro}` 
-                : `RM ${yearlyPro}`;
-        }
-    });
+  document.querySelectorAll('#planCards .plan-price').forEach(el => {
+    const plan = el.dataset.plan;
+    const detail = PLAN_DETAILS[plan];
+    if (!detail) return;
+    const price = selectedBilling === 'monthly' ? detail.monthlyPrice : detail.yearlyPrice;
+    el.textContent = price === 0 ? 'RM 0' : `RM ${price}`;
+  });
 }
-
 function openPricingModal() {
-    // 初始化账单周期为月付
-    if (typeof setBilling === 'function') {
-        setBilling('monthly');
-    } else {
-        selectedBilling = 'monthly';
-    }
+  // 默认年付（确保按钮样式同步）
+  setBilling('yearly');
 
-    const currentPlan = APP_STATE.currentPlan || 'free';
+  const currentPlan = APP_STATE.currentPlan || 'free';
 
-    // 1. 设置当前套餐翻译文本
-    const label = document.getElementById('currentPlanLabel');
-    if (label) {
-        // 使用翻译函数，键为 'freePlan', 'basicPlan', 'proPlan'
-        label.textContent = i18n.t(currentPlan + 'Plan');
-    }
+  // 设置当前套餐标签
+  const label = document.getElementById('currentPlanLabel');
+  if (label) {
+    label.textContent = i18n.t(currentPlan + 'Plan');
+  }
 
-    // 2. 生成套餐卡片
-    const planCardsHTML = Object.keys(PLAN_DETAILS).map(planId => {
-        const plan = PLAN_DETAILS[planId];
-        const billing = selectedBilling;
-        const price = billing === 'monthly'
-            ? (planId === 'basic' ? 29 : 69)
-            : (planId === 'basic' ? 278.4 : 662.4);
-        const isCurrent = currentPlan === planId;
+  // 生成卡片
+  const cards = Object.keys(PLAN_DETAILS).map(planId => {
+    const detail = PLAN_DETAILS[planId];
+    const price = selectedBilling === 'monthly' ? detail.monthlyPrice : detail.yearlyPrice;
+    const isCurrent = currentPlan === planId;
 
-        // 特性列表翻译
-        const featuresList = plan.features.map(f => {
-            const translated = i18n.exists('feature_' + f) ? i18n.t('feature_' + f) : f;
-            return `<li style="padding:4px 0;">✅ ${translated}</li>`;
-        }).join('');
-
-        return `
-        <div style="border:2px solid ${plan.color};border-radius:var(--radius-sm);padding:16px;text-align:center;background:white;display:flex;flex-direction:column;justify-content:space-between;">
-            <div>
-                <h4 style="color:${plan.color};margin-bottom:8px;">${plan.name}</h4>
-                <div class="plan-price" data-plan="${planId}" style="font-size:1.8rem;font-weight:800;">RM ${price}</div>
-                <div data-i18n="${billing === 'monthly' ? 'perMonth' : 'perYear'}" style="font-size:0.75rem;color:var(--text-lighter);">${i18n.t(billing === 'monthly' ? 'perMonth' : 'perYear')}</div>
-                <ul style="list-style:none;padding:0;margin:12px 0;text-align:left;font-size:0.8rem;">
-                    ${featuresList}
-                </ul>
-            </div>
-            <button class="btn btn-primary btn-sm"
-                onclick="handlePlanSelection('${planId}')"
-                ${isCurrent ? 'disabled' : ''}
-                style="margin-top:8px;background:${plan.color};box-shadow:none;border:none;color:white;">
-                ${isCurrent ? i18n.t('currentPlanLabel') : i18n.t('choosePlanLabel')}
-            </button>
-        </div>`;
+    const featuresList = detail.features.map(f => {
+      const translated = i18n.exists('feature_' + f) ? i18n.t('feature_' + f) : f;
+      return `<li style="padding:4px 0;">✅ ${translated}</li>`;
     }).join('');
 
-    document.getElementById('planCards').innerHTML = planCardsHTML;
-    applyLanguage();
-    document.getElementById('pricingModal').style.display = 'flex';
+    // 按钮逻辑
+    let btnHtml = '';
+    if (isCurrent) {
+      btnHtml = `<button class="btn btn-primary btn-sm" disabled
+          style="margin-top:8px; background:${detail.color}; box-shadow:none; border:none; color:white; opacity:0.7;">
+          ${i18n.t('currentPlanLabel')}</button>`;
+    } else {
+      if (planId === 'free') {
+        // 降级到 Free
+        btnHtml = `<button class="btn btn-outline btn-sm"
+            onclick="downgradeToFree()"
+            style="margin-top:8px; border-color:${detail.color}; color:${detail.color};">
+            ${i18n.t('downgradeToFree')}</button>`;
+      } else {
+        // 升级按钮
+        btnHtml = `<button class="btn btn-primary btn-sm"
+            onclick="handlePlanSelection('${planId}')"
+            style="margin-top:8px; background:${detail.color}; box-shadow:none; border:none; color:white;">
+            ${i18n.t('choosePlanLabel')}</button>`;
+      }
+    }
+
+    return `
+    <div style="border:2px solid ${detail.color}; border-radius:var(--radius-sm); padding:16px; text-align:center; background:white; display:flex; flex-direction:column; justify-content:space-between;">
+      <div>
+        <h4 style="color:${detail.color}; margin-bottom:8px;">${detail.name}</h4>
+        <div class="plan-price" data-plan="${planId}" style="font-size:1.8rem; font-weight:800;">
+          ${price === 0 ? 'RM 0' : `RM ${price}`}
+        </div>
+        <div data-i18n="${selectedBilling === 'monthly' ? 'perMonth' : 'perYear'}" style="font-size:0.75rem; color:var(--text-lighter);">
+          ${i18n.t(selectedBilling === 'monthly' ? 'perMonth' : 'perYear')}
+        </div>
+        <ul style="list-style:none; padding:0; margin:12px 0; text-align:left; font-size:0.8rem;">
+          ${featuresList}
+        </ul>
+      </div>
+      ${btnHtml}
+    </div>`;
+  }).join('');
+
+  document.getElementById('planCards').innerHTML = cards;
+  applyLanguage();
+  document.getElementById('pricingModal').style.display = 'flex';
 }
 function closePricingModal(event) {
     if (event && event.target !== document.getElementById('pricingModal')) return;
@@ -2669,12 +2733,27 @@ async function openStripeCheckout(priceId) {
 
 function getPriceId(plan, billing) {
   const prices = {
-    basic_monthly: 'price_1TVNQYGaRTxvbl03KFoCksKP',   // 替换为你的 Stripe 价格 ID
-    basic_yearly: 'price_1TVNR5GaRTxvbl03PXhN4s4R',
+    lite_monthly: 'price_1TVNQYGaRTxvbl03KFoCksKP',   // 替换为你的 Stripe 价格 ID
+    lite_yearly: 'price_1TVNR5GaRTxvbl03PXhN4s4R',
     pro_monthly: 'price_1TVNR5GaRTxvbl03PXhN4s4R',
     pro_yearly: 'price_1TVNSIGaRTxvbl03XMTaS2Kx'
   };
   return prices[`${plan}_${billing}`];
+}
+	async function downgradeToFree() {
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ plan_id: 'free' })
+    .eq('id', APP_STATE.currentUser.id);
+  if (error) {
+    console.error('Downgrade error:', error);
+    showToast('downgradeFailed');
+    return;
+  }
+  APP_STATE.currentPlan = 'free';
+  updateUpgradeButton();
+  closePricingModal();
+  showToast('downgradeSuccess');
 }
         // ==================== QR CODE ====================
         function updateQRCode() {
