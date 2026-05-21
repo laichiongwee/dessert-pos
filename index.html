@@ -2554,7 +2554,7 @@ const PLAN_DETAILS = {
   lite: {
     name: 'Lite',
     monthlyPrice: 9,
-    yearlyPrice: 86.4,   // 9 * 12 * 0.8
+    yearlyPrice: 90,   // 9 * 12 * 0.8
     features: [
       'orders300',
       'membershipDiscounts',
@@ -2569,7 +2569,7 @@ const PLAN_DETAILS = {
   pro: {
     name: 'Pro',
     monthlyPrice: 15,
-    yearlyPrice: 144,    // 15 * 12 * 0.8
+    yearlyPrice: 150,    // 15 * 12 * 0.8
     features: [
       'everythingLite',
       'unlimitedOrders',
@@ -2604,6 +2604,10 @@ function setBilling(billing) {
     monthlyBtn.style.color = 'var(--text-light)';
     monthlyBtn.style.borderColor = 'var(--border)';
   }
+	  // Update per month/year text immediately
+  document.querySelectorAll('#planCards [data-i18n="perMonth"], #planCards [data-i18n="perYear"]').forEach(el => {
+    el.textContent = i18n.t(billing === 'monthly' ? 'perMonth' : 'perYear');
+  });
   updatePlanPrices();
 }
 function updatePlanPrices() {
@@ -2612,7 +2616,7 @@ function updatePlanPrices() {
     const detail = PLAN_DETAILS[plan];
     if (!detail) return;
     const price = selectedBilling === 'monthly' ? detail.monthlyPrice : detail.yearlyPrice;
-    el.textContent = price === 0 ? 'RM 0' : `RM ${price}`;
+    el.textContent = price === 0 ? '$0' : `$${price}`;
   });
 }
 function openPricingModal() {
@@ -2631,6 +2635,7 @@ function openPricingModal() {
   const cards = Object.keys(PLAN_DETAILS).map(planId => {
     const detail = PLAN_DETAILS[planId];
     const price = selectedBilling === 'monthly' ? detail.monthlyPrice : detail.yearlyPrice;
+const priceDisplay = price === 0 ? '$0' : `$${price}`;
     const isCurrent = currentPlan === planId;
 
     const featuresList = detail.features.map(f => {
@@ -2664,12 +2669,13 @@ function openPricingModal() {
     <div style="border:2px solid ${detail.color}; border-radius:var(--radius-sm); padding:16px; text-align:center; background:white; display:flex; flex-direction:column; justify-content:space-between;">
       <div>
         <h4 style="color:${detail.color}; margin-bottom:8px;">${detail.name}</h4>
-        <div class="plan-price" data-plan="${planId}" style="font-size:1.8rem; font-weight:800;">
-          ${price === 0 ? 'RM 0' : `RM ${price}`}
-        </div>
-        <div data-i18n="${selectedBilling === 'monthly' ? 'perMonth' : 'perYear'}" style="font-size:0.75rem; color:var(--text-lighter);">
-          ${i18n.t(selectedBilling === 'monthly' ? 'perMonth' : 'perYear')}
-        </div>
+<div class="plan-price" data-plan="${planId}" style="font-size:1.8rem; font-weight:800;">
+  ${priceDisplay}
+</div>
+<div data-i18n="${selectedBilling === 'monthly' ? 'perMonth' : 'perYear'}" 
+     style="font-size:0.75rem; color:var(--text-lighter);">
+  ${i18n.t(selectedBilling === 'monthly' ? 'perMonth' : 'perYear')}
+</div>
         <ul style="list-style:none; padding:0; margin:12px 0; text-align:left; font-size:0.8rem;">
           ${featuresList}
         </ul>
