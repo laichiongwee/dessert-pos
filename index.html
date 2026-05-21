@@ -270,6 +270,28 @@
 #upgradeBtn {
   white-space: nowrap;
 }
+		.daily-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.daily-report-table th {
+  background: var(--persimmon);
+  color: white;
+  padding: 8px;
+  text-align: left;
+}
+.daily-report-table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.report-highlight {
+  font-weight: 700;
+  color: var(--persimmon);
+}
+#reportPlanBadge.badge-free { background: #e0e0e0; color: #333; }
+#reportPlanBadge.badge-lite { background: #ffe5b4; color: #b45309; }
+#reportPlanBadge.badge-pro  { background: var(--persimmon); color: white; }
     </style>
 </head>
 <body>
@@ -623,16 +645,50 @@
     </div>
 </div>
 
-<!-- NEW: Daily Report Modal -->
+<!-- Reports Modal -->
 <div class="modal-overlay" id="reportModal" style="display:none;" onclick="closeReportModal(event)">
-    <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
-        <h3 data-i18n="dailyReportTitle">📊 今日报表</h3>
-        <div id="dailyReportContent"></div>
-        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:10px;" onclick="closeDay()" data-i18n="closeDay">🔒 关闭今日账目</button>
-        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeReportModal()" data-i18n="close">关闭</button>
-    </div>
-</div>
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:680px;">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="dailyReportTitle">📊 报表</h3>
 
+    <!-- Plan badge -->
+    <div style="text-align:right; margin-bottom:8px;">
+      <span id="reportPlanBadge" style="display:inline-block; padding:2px 12px; border-radius:12px; font-size:0.75rem; font-weight:600;"></span>
+    </div>
+
+    <!-- Tab navigation (Lite/Pro only) -->
+    <div id="reportTabs" style="display:none; margin-bottom:12px; flex-wrap:wrap; gap:4px;">
+      <button class="cat-tab active" onclick="switchReportTab('daily')" data-i18n="daily">Daily</button>
+      <button class="cat-tab" onclick="switchReportTab('weekly')" data-i18n="weekly">Weekly</button>
+      <button class="cat-tab" onclick="switchReportTab('items')" data-i18n="items">Items</button>
+      <button class="cat-tab" onclick="switchReportTab('members')" data-i18n="members">Members</button>
+      <!-- Pro only tabs -->
+      <button class="cat-tab pro-only" onclick="switchReportTab('inventory')" data-i18n="inventory" style="display:none;">Inventory</button>
+      <button class="cat-tab pro-only" onclick="switchReportTab('cashiers')" data-i18n="cashiers" style="display:none;">Cashiers</button>
+    </div>
+
+    <!-- Date range filter (Lite/Pro) -->
+    <div id="reportDateRange" style="display:none; margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <input type="date" id="reportStartDate" style="padding:6px; border-radius:12px; border:1px solid var(--border);">
+      <span>—</span>
+      <input type="date" id="reportEndDate" style="padding:6px; border-radius:12px; border:1px solid var(--border);">
+      <button class="btn btn-xs btn-outline" onclick="loadReport()" data-i18n="apply">Apply</button>
+    </div>
+
+    <!-- Report content -->
+    <div id="dailyReportContent" style="overflow-x:auto;"></div>
+
+    <!-- Export buttons (Lite/Pro) -->
+    <div id="reportExportButtons" style="display:none; margin-top:12px; text-align:right;">
+      <button class="btn btn-xs btn-outline" onclick="exportReportPDF()" data-i18n="exportPDF">📄 PDF</button>
+      <button class="btn btn-xs btn-outline pro-only" onclick="exportReportExcel()" data-i18n="exportExcel" style="display:none;">📊 Excel</button>
+    </div>
+
+    <!-- Close Day button (all plans) -->
+    <button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px;" onclick="closeDay()" data-i18n="closeDay">🔒 关闭今日账目</button>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeReportModal()" data-i18n="close">关闭</button>
+  </div>
+</div>
 <div id="toastContainer"></div>
 
 <!-- Menu Edit Modal -->
@@ -1065,7 +1121,16 @@ i18n
   "submitOrder": "✅ Submit Order",
   "continueOrdering": "Continue Ordering",
   "orderSubmitted": "Order submitted! Please wait for your number.",
-
+// Reports
+"daily": "Daily",
+"weekly": "Weekly",
+"items": "Items",
+"members": "Members",
+"inventory": "Inventory",
+"cashiers": "Cashiers",
+"apply": "Apply",
+"exportPDF": "📄 PDF",
+"exportExcel": "📊 Excel",
   // 套餐选择
   "pricingTitle": "⭐ Upgrade Plan",
   "currentPlan": "Current Plan:",
@@ -1409,7 +1474,16 @@ i18n
 		  "noUnpaidOrders": "暂无待付款订单",
 "customerLabel": "顾客",
 "collectPayment": "收款",
-	
+	// Reports
+"daily": "日报",
+"weekly": "周报",
+"items": "菜品",
+"members": "会员",
+"inventory": "库存",
+"cashiers": "员工",
+"apply": "应用",
+"exportPDF": "📄 PDF",
+"exportExcel": "📊 Excel",
   // 套餐选择
   "pricingTitle": "⭐ 升级套餐",
   "currentPlan": "当前套餐：",
@@ -2460,78 +2534,229 @@ async function deleteDiscountRule(id) {
     renderDiscountRulesList();
 }
 
-// ==================== DAILY REPORT ====================
+// ==================== REPORT STATE ====================
+APP_STATE.reportTab = 'daily';           // current active tab
+APP_STATE.reportStartDate = new Date().toISOString().slice(0,10);
+APP_STATE.reportEndDate = new Date().toISOString().slice(0,10);
+
+// ==================== MODAL OPEN / CLOSE ====================
 function openReportModal() {
-    document.getElementById('reportModal').style.display='flex';
-    const today = new Date().toISOString().slice(0,10);
-    const todayOrders = APP_STATE.orders.filter(o=>o.date.startsWith(today));
-    const totalSales = todayOrders.reduce((s,o)=>s+Number(o.total),0);
-    const cashTotal = todayOrders.filter(o=>o.paymentMethod==='cash').reduce((s,o)=>s+Number(o.total),0);
-    const cardTotal = todayOrders.filter(o=>o.paymentMethod==='card').reduce((s,o)=>s+Number(o.total),0);
-    const onlineTotal = todayOrders.filter(o=>o.paymentMethod==='online').reduce((s,o)=>s+Number(o.total),0);
-    const discountTotal = todayOrders.reduce((s,o)=>s+(Number(o.discountApplied)||0),0);
-    document.getElementById('dailyReportContent').innerHTML = `
-        <table class="daily-report-table">
-            <tr><td>${i18n.t('date')}</td><td>${today}</td></tr>
-        <tr><td>${i18n.t('orderCount')}</td><td>${todayOrders.length}</td></tr>
-        <tr><td>${i18n.t('totalSales')}</td><td>RM ${totalSales.toFixed(2)}</td></tr>
-        <tr><td>${i18n.t('cashTotal')}</td><td>RM ${cashTotal.toFixed(2)}</td></tr>
-        <tr><td>${i18n.t('cardTotal')}</td><td>RM ${cardTotal.toFixed(2)}</td></tr>
-        <tr><td>${i18n.t('onlineTotal')}</td><td>RM ${onlineTotal.toFixed(2)}</td></tr>
-        <tr><td>${i18n.t('discountTotal')}</td><td>RM ${discountTotal.toFixed(2)}</td></tr>
-        </table>`;
+  const plan = APP_STATE.currentPlan || 'free';
+  const isLite = plan === 'lite' || plan === 'pro';
+  const isPro  = plan === 'pro';
+
+  // Plan badge
+  const badge = document.getElementById('reportPlanBadge');
+  badge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+  badge.className = 'badge-' + plan;
+
+  // Show/hide advanced UI
+  document.getElementById('reportTabs').style.display = isLite ? 'flex' : 'none';
+  document.getElementById('reportDateRange').style.display = isLite ? 'flex' : 'none';
+  document.getElementById('reportExportButtons').style.display = isLite ? 'flex' : 'none';
+
+  // Pro‑only elements
+  document.querySelectorAll('.pro-only').forEach(el => el.style.display = isPro ? 'inline-block' : 'none');
+
+  // Reset to daily tab and today's dates
+  switchReportTab('daily');
+  document.getElementById('reportStartDate').value = APP_STATE.reportStartDate;
+  document.getElementById('reportEndDate').value = APP_STATE.reportEndDate;
+
+  loadReport();
+  document.getElementById('reportModal').style.display = 'flex';
 }
+
+function closeReportModal(e) {
+  if (e && e.target !== document.getElementById('reportModal')) return;
+  document.getElementById('reportModal').style.display = 'none';
+}
+
+// Tab switching
+function switchReportTab(tab) {
+  APP_STATE.reportTab = tab;
+  document.querySelectorAll('#reportTabs .cat-tab').forEach(b => b.classList.remove('active'));
+  const activeTab = document.querySelector(`#reportTabs .cat-tab[onclick*="${tab}"]`);
+  if (activeTab) activeTab.classList.add('active');
+  loadReport();
+}
+
+// Load data based on active tab
+function loadReport() {
+  const start = document.getElementById('reportStartDate')?.value || new Date().toISOString().slice(0,10);
+  const end   = document.getElementById('reportEndDate')?.value || start;
+
+  switch (APP_STATE.reportTab) {
+    case 'daily':   renderDailyReport(start, end); break;
+    case 'weekly':  renderWeeklyReport(start, end); break;
+    case 'items':   renderItemsReport(start, end); break;
+    case 'members': renderMembersReport(start, end); break;
+    case 'inventory': renderInventoryReport(start, end); break;
+    case 'cashiers': renderCashierReport(start, end); break;
+    default: renderDailyReport(start, end);
+  }
+}
+
+// ==================== REPORT RENDERERS ====================
+
+// FREE & ALL: Basic daily summary
+function renderDailyReport(start, end) {
+  const orders = getOrdersInRange(start, end);
+  const totalSales = orders.reduce((s,o) => s + Number(o.total), 0);
+  const cashTotal = orders.filter(o => o.paymentMethod === 'cash').reduce((s,o) => s + Number(o.total), 0);
+  const cardTotal = orders.filter(o => o.paymentMethod === 'card').reduce((s,o) => s + Number(o.total), 0);
+  const onlineTotal = orders.filter(o => o.paymentMethod === 'online').reduce((s,o) => s + Number(o.total), 0);
+  const discountTotal = orders.reduce((s,o) => s + (Number(o.discountApplied) || 0), 0);
+  const content = `
+    <table class="daily-report-table">
+      <tr><td>${i18n.t('date')}</td><td>${start} ${start !== end ? '→ ' + end : ''}</td></tr>
+      <tr><td>${i18n.t('orderCount')}</td><td class="report-highlight">${orders.length}</td></tr>
+      <tr><td>${i18n.t('totalSales')}</td><td class="report-highlight">RM ${totalSales.toFixed(2)}</td></tr>
+      <tr><td>${i18n.t('cashTotal')}</td><td>RM ${cashTotal.toFixed(2)}</td></tr>
+      <tr><td>${i18n.t('cardTotal')}</td><td>RM ${cardTotal.toFixed(2)}</td></tr>
+      <tr><td>${i18n.t('onlineTotal')}</td><td>RM ${onlineTotal.toFixed(2)}</td></tr>
+      <tr><td>${i18n.t('discountTotal')}</td><td>RM ${discountTotal.toFixed(2)}</td></tr>
+    </table>`;
+  document.getElementById('dailyReportContent').innerHTML = content;
+}
+
+// LITE: Weekly summary (aggregated by day)
+function renderWeeklyReport(start, end) {
+  const orders = getOrdersInRange(start, end);
+  const grouped = {};
+  orders.forEach(o => {
+    const day = o.date.slice(0,10);
+    if (!grouped[day]) grouped[day] = { orders: 0, total: 0 };
+    grouped[day].orders++;
+    grouped[day].total += Number(o.total);
+  });
+  const rows = Object.entries(grouped).sort().map(([day, data]) =>
+    `<tr><td>${day}</td><td>${data.orders}</td><td>RM ${data.total.toFixed(2)}</td></tr>`
+  ).join('');
+  document.getElementById('dailyReportContent').innerHTML = `
+    <table class="daily-report-table">
+      <thead><tr><th>Date</th><th>Orders</th><th>Total Sales</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="3">No data</td></tr>'}</tbody>
+    </table>`;
+}
+
+// LITE: Top selling items
+function renderItemsReport(start, end) {
+  const orders = getOrdersInRange(start, end);
+  const itemsMap = {};
+  orders.forEach(o => {
+    (o.items || []).forEach(item => {
+      itemsMap[item.name] = (itemsMap[item.name] || 0) + (item.qty || 1);
+    });
+  });
+  const sorted = Object.entries(itemsMap).sort((a,b) => b[1] - a[1]);
+  document.getElementById('dailyReportContent').innerHTML = `
+    <table class="daily-report-table">
+      <thead><tr><th>Item</th><th>Qty Sold</th></tr></thead>
+      <tbody>${sorted.map(([name,qty]) => `<tr><td>${name}</td><td class="report-highlight">${qty}</td></tr>`).join('') || '<tr><td colspan="2">No items sold</td></tr>'}</tbody>
+    </table>`;
+}
+
+// LITE: Member / customer spend
+function renderMembersReport(start, end) {
+  const orders = getOrdersInRange(start, end);
+  const memberMap = {};
+  orders.forEach(o => {
+    const name = o.memberName || 'Walk-in';
+    if (!memberMap[name]) memberMap[name] = { orders: 0, total: 0 };
+    memberMap[name].orders++;
+    memberMap[name].total += Number(o.total);
+  });
+  const rows = Object.entries(memberMap).map(([name, data]) =>
+    `<tr><td>${name}</td><td>${data.orders}</td><td>RM ${data.total.toFixed(2)}</td></tr>`
+  ).join('');
+  document.getElementById('dailyReportContent').innerHTML = `
+    <table class="daily-report-table">
+      <thead><tr><th>Customer</th><th>Orders</th><th>Total Spent</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="3">No member data</td></tr>'}</tbody>
+    </table>`;
+}
+
+// PRO: Inventory usage (placeholder)
+function renderInventoryReport(start, end) {
+  document.getElementById('dailyReportContent').innerHTML = `
+    <p style="color:var(--text-lighter); text-align:center; padding:20px;">
+      📦 Inventory tracking coming soon. All current menu items are considered active.
+    </p>`;
+}
+
+// PRO: Cashier performance (placeholder)
+function renderCashierReport(start, end) {
+  const orders = getOrdersInRange(start, end);
+  const cashierMap = {};
+  orders.forEach(o => {
+    const cashier = o.closedBy || 'Unknown';
+    if (!cashierMap[cashier]) cashierMap[cashier] = { orders: 0, total: 0 };
+    cashierMap[cashier].orders++;
+    cashierMap[cashier].total += Number(o.total);
+  });
+  const rows = Object.entries(cashierMap).map(([name, data]) =>
+    `<tr><td>${name}</td><td>${data.orders}</td><td>RM ${data.total.toFixed(2)}</td></tr>`
+  ).join('');
+  document.getElementById('dailyReportContent').innerHTML = `
+    <table class="daily-report-table">
+      <thead><tr><th>Cashier</th><th>Orders</th><th>Total Sales</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="3">No cashier data</td></tr>'}</tbody>
+    </table>`;
+}
+
+// Helper: filter orders by date range
+function getOrdersInRange(start, end) {
+  return APP_STATE.orders.filter(o => {
+    const orderDate = o.date ? o.date.slice(0,10) : '';
+    return orderDate >= start && orderDate <= end;
+  });
+}
+
+// ==================== EXPORT ====================
+function exportReportPDF() {
+  const content = document.getElementById('dailyReportContent').innerHTML;
+  const printWin = window.open('', '_blank', 'width=800,height=600');
+  printWin.document.write(`
+    <html><head><title>Report</title>
+    <style>
+      body { font-family: 'Nunito', sans-serif; padding:20px; }
+      table { border-collapse: collapse; width:100%; }
+      th, td { padding:8px; border-bottom:1px solid #ddd; text-align:left; }
+      th { background:#E8784A; color:white; }
+    </style></head>
+    <body>${content}</body></html>
+  `);
+  printWin.document.close();
+  printWin.print();
+}
+
+function exportReportExcel() {
+  // Placeholder – you can integrate SheetJS later
+  alert('Excel export requires additional library (SheetJS).');
+}
+
+// ==================== CLOSE DAY ====================
 async function closeDay() {
-    const today = new Date().toISOString().slice(0, 10);
-    const todayOrders = APP_STATE.orders.filter(o => o.date?.startsWith(today));
-    const report = {
-        date: today,
-        totalSales: todayOrders.reduce((s, o) => s + Number(o.total), 0),
-        cashTotal: todayOrders.filter(o => o.paymentMethod === 'cash').reduce((s, o) => s + Number(o.total), 0),
-        cardTotal: todayOrders.filter(o => o.paymentMethod === 'card').reduce((s, o) => s + Number(o.total), 0),
-        onlineTotal: todayOrders.filter(o => o.paymentMethod === 'online').reduce((s, o) => s + Number(o.total), 0),
-        orderCount: todayOrders.length,
-        discountTotal: todayOrders.reduce((s, o) => s + (Number(o.discountApplied) || 0), 0),
-        closedBy: 'Cashier',
-  store_id: APP_STATE.storeId
-    };
-    
-    const { error } = await supabaseClient.from('daily_reports').insert([report]);
-    if (error) console.error('Save daily report error:', error);
-    
-    document.getElementById('reportModal').style.display = 'none';
-    showToast('dayClosed');
-}
-function closeReportModal(e) { if(e&&e.target!==document.getElementById('reportModal'))return; document.getElementById('reportModal').style.display='none'; }
-document.getElementById('reportModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
-        // ==================== MODE SWITCH ====================
-   function switchMode(mode) {
-    APP_STATE.mode = mode;
-    document.querySelectorAll('#modeSwitcher button').forEach(b => b.classList.remove('active'));
-    const activeBtn = document.querySelector(`#modeSwitcher button[data-mode="${mode}"]`);
-    if (activeBtn) activeBtn.classList.add('active');
-    
-    document.getElementById('cashierView').classList.toggle('active', mode === 'cashier');
-    const fulfillView = document.getElementById('fulfillmentView');
-    if (fulfillView) fulfillView.classList.toggle('active', mode === 'fulfillment');
-    
-    if (mode === 'cashier') {
-        renderCategoryTabs();
-        renderMenuGrid();
-        renderOrderPanel();
-		applyLanguage(); 
-    } else if (mode === 'fulfillment') {
-        renderFulfillmentView();
-        if (APP_STATE.adminUnlocked) {
-            renderAdminMenuGrid();
-            document.getElementById('adminBar').style.display = 'flex';
-            document.getElementById('unlockBtn').style.display = 'none';
-        } else {
-            document.getElementById('adminBar').style.display = 'none';
-            document.getElementById('unlockBtn').style.display = 'block';
-            document.getElementById('adminMenuGrid').innerHTML = '';
-        }
-    }
+  const today = new Date().toISOString().slice(0,10);
+  const todayOrders = getOrdersInRange(today, today);
+  const report = {
+    date: today,
+    totalSales: todayOrders.reduce((s, o) => s + Number(o.total), 0),
+    cashTotal: todayOrders.filter(o => o.paymentMethod === 'cash').reduce((s, o) => s + Number(o.total), 0),
+    cardTotal: todayOrders.filter(o => o.paymentMethod === 'card').reduce((s, o) => s + Number(o.total), 0),
+    onlineTotal: todayOrders.filter(o => o.paymentMethod === 'online').reduce((s, o) => s + Number(o.total), 0),
+    orderCount: todayOrders.length,
+    discountTotal: todayOrders.reduce((s, o) => s + (Number(o.discountApplied) || 0), 0),
+    closedBy: APP_STATE.userProfile?.full_name || 'Cashier',
+    store_id: APP_STATE.storeId
+  };
+
+  const { error } = await supabaseClient.from('daily_reports').insert([report]);
+  if (error) console.error('Save daily report error:', error);
+
+  document.getElementById('reportModal').style.display = 'none';
+  showToast('dayClosed');
 }
 function updateUpgradeButton() {
   const btn = document.getElementById('upgradeBtn');
