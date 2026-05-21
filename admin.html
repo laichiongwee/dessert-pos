@@ -67,31 +67,40 @@
 
         let allUsers = [];
 
-        async function adminLogin() {
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value;
-            document.getElementById('loginError').textContent = '';
+async function adminLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  document.getElementById('loginError').textContent = '';
 
-            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) {
-                document.getElementById('loginError').textContent = '登录失败: ' + error.message;
-            } else {
-                // Check if user is superadmin
-                const { data: profile } = await supabaseClient
-                    .from('profiles')
-                    .select('is_superadmin')
-                    .eq('id', supabaseClient.auth.user().id)
-                    .single();
-                if (!profile?.is_superadmin) {
-                    document.getElementById('loginError').textContent = '权限不足：您不是超级管理员';
-                    await supabaseClient.auth.signOut();
-                    return;
-                }
-                document.getElementById('loginSection').classList.add('hidden');
-                document.getElementById('mainSection').classList.remove('hidden');
-                loadUsers();
-            }
-        }
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById('loginError').textContent = '登录失败: ' + error.message;
+  } else {
+    // ✅ v2 way to get the logged-in user
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      document.getElementById('loginError').textContent = '无法获取用户信息';
+      return;
+    }
+
+    // Check if user is superadmin
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('is_superadmin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_superadmin) {
+      document.getElementById('loginError').textContent = '权限不足：您不是超级管理员';
+      await supabaseClient.auth.signOut();
+      return;
+    }
+
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('mainSection').classList.remove('hidden');
+    loadUsers();
+  }
+}
 
         async function loadUsers() {
             const { data, error } = await supabaseClient.rpc('get_all_profiles_admin');
