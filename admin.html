@@ -6,30 +6,51 @@
     <title>套餐管理 - 柿柿润糖水</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; margin: 2rem; background: #fff5ef; }
-        table { border-collapse: collapse; width: 100%; max-width: 800px; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #e8784a; color: white; }
-        select, button { padding: 6px 12px; border-radius: 8px; border: 1px solid #ddd; }
-        button { background: #e8784a; color: white; border: none; cursor: pointer; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 2rem; background: #fff5ef; }
+        table { border-collapse: collapse; width: 100%; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #e8784a; color: white; font-weight: 600; }
+        tr:hover { background: #fef9f6; }
+        select, button, input { padding: 8px 14px; border-radius: 8px; border: 1px solid #ddd; font-size: 0.9rem; }
+        button { background: #e8784a; color: white; border: none; cursor: pointer; font-weight: 600; }
         button:hover { opacity: 0.9; }
-        input[type="password"] { padding: 10px; width: 250px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ddd; }
+        input[type="email"], input[type="password"] { padding: 10px; width: 280px; margin-bottom: 16px; border-radius: 8px; border: 1px solid #ddd; }
         .hidden { display: none; }
+        .login-card { max-width: 400px; margin: 80px auto; background: white; padding: 32px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; }
+        .login-card h2 { color: #e8784a; margin-bottom: 24px; }
+        .login-card input { width: 100%; }
+        .logout { float: right; margin-bottom: 16px; background: #666; font-size: 0.85rem; }
+        .search-box { margin: 16px 0; display: flex; gap: 8px; }
+        .search-box input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+        .badge-free { background: #e0e0e0; color: #333; }
+        .badge-lite { background: #ffe5b4; color: #b45309; }
+        .badge-pro { background: #e8784a; color: white; }
+        .plan-select { padding: 4px 8px; }
     </style>
 </head>
 <body>
-    <h2>🔐 套餐管理</h2>
-    <div id="loginSection">
-        <input type="password" id="adminPassword" placeholder="请输入管理密码">
-        <button onclick="login()">登录</button>
+    <div id="loginSection" class="login-card">
+        <h2>🔐 管理员登录</h2>
+        <input type="email" id="loginEmail" placeholder="管理员邮箱" autocomplete="email">
+        <input type="password" id="loginPassword" placeholder="密码" autocomplete="current-password">
+        <button onclick="adminLogin()" style="width:100%">登录</button>
+        <p id="loginError" style="color:red; margin-top:12px; font-size:0.9rem;"></p>
     </div>
 
     <div id="mainSection" class="hidden">
-        <button onclick="loadUsers()">刷新列表</button>
+        <button class="logout" onclick="logout()">🚪 退出</button>
+        <h2>📊 用户套餐管理</h2>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="搜索姓名 / 邮箱 / 手机号..." oninput="filterTable()">
+            <button onclick="loadUsers()">🔄 刷新</button>
+        </div>
         <table id="userTable">
             <thead>
                 <tr>
                     <th>邮箱</th>
+                    <th>姓名</th>
+                    <th>手机号</th>
                     <th>当前套餐</th>
                     <th>订阅状态</th>
                     <th>操作</th>
@@ -40,49 +61,64 @@
     </div>
 
     <script>
-        // ========== 配置 (必须替换) ==========
         const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
-        const ADMIN_PASSWORD = 'mypassword123';   // ⚠️ 一定要修改为强密码！
-
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        async function login() {
-            const pwd = document.getElementById('adminPassword').value;
-            if (pwd !== ADMIN_PASSWORD) {
-                alert('密码错误');
-                return;
+        let allUsers = [];
+
+        async function adminLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            document.getElementById('loginError').textContent = '';
+
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                document.getElementById('loginError').textContent = '登录失败: ' + error.message;
+            } else {
+                // Check if user is superadmin
+                const { data: profile } = await supabaseClient
+                    .from('profiles')
+                    .select('is_superadmin')
+                    .eq('id', supabaseClient.auth.user().id)
+                    .single();
+                if (!profile?.is_superadmin) {
+                    document.getElementById('loginError').textContent = '权限不足：您不是超级管理员';
+                    await supabaseClient.auth.signOut();
+                    return;
+                }
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('mainSection').classList.remove('hidden');
+                loadUsers();
             }
-            document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('mainSection').classList.remove('hidden');
-            loadUsers();
         }
 
         async function loadUsers() {
-            const { data: profiles, error } = await supabaseClient
-                .from('profiles')
-                .select('id, plan_id, subscription_status');
+            const { data, error } = await supabaseClient.rpc('get_all_profiles_admin');
             if (error) {
-                console.error('Error loading users:', error);
+                alert('加载用户失败: ' + error.message);
                 return;
             }
-            // 获取邮箱需要额外步骤：通过 auth.admin.listUsers() 查询，但 anon key 权限不足。
-            // 简便方法：只显示用户 ID 的部分信息，或要求用户输入邮箱手动修改。
-            // 如果你想显示邮箱，需要让这个页面以管理员身份登录，或使用 service_role key（不推荐在前端）。
-            // 这里提供一个简化版本：显示用户 ID 的前8位，并提供修改套餐。
+            allUsers = data;
+            renderTable(data);
+        }
+
+        function renderTable(users) {
             const tbody = document.querySelector('#userTable tbody');
-            tbody.innerHTML = profiles.map(p => `
+            tbody.innerHTML = users.map(user => `
                 <tr>
-                    <td>${p.id.substring(0, 8)}...</td>
-                    <td>${p.plan_id}</td>
-                    <td>${p.subscription_status ?? 'active'}</td>
+                    <td>${user.email || ''}</td>
+                    <td>${user.full_name || '-'}</td>
+                    <td>${user.phone || '-'}</td>
+                    <td><span class="badge badge-${user.plan_id}">${user.plan_id.charAt(0).toUpperCase() + user.plan_id.slice(1)}</span></td>
+                    <td>${user.subscription_status || 'active'}</td>
                     <td>
-                        <select id="plan_${p.id}">
-                            <option value="free" ${p.plan_id === 'free' ? 'selected' : ''}>Free</option>
-                            <option value="basic" ${p.plan_id === 'basic' ? 'selected' : ''}>Basic</option>
-                            <option value="pro" ${p.plan_id === 'pro' ? 'selected' : ''}>Pro</option>
+                        <select id="plan_${user.id}" class="plan-select">
+                            <option value="free" ${user.plan_id === 'free' ? 'selected' : ''}>Free</option>
+                            <option value="lite" ${user.plan_id === 'lite' ? 'selected' : ''}>Lite</option>
+                            <option value="pro" ${user.plan_id === 'pro' ? 'selected' : ''}>Pro</option>
                         </select>
-                        <button onclick="updatePlan('${p.id}')">更新</button>
+                        <button onclick="updatePlan('${user.id}')">更新</button>
                     </td>
                 </tr>
             `).join('');
@@ -90,16 +126,31 @@
 
         async function updatePlan(userId) {
             const newPlan = document.getElementById(`plan_${userId}`).value;
-            const { error } = await supabaseClient
-                .from('profiles')
-                .update({ plan_id: newPlan })
-                .eq('id', userId);
+            const { error } = await supabaseClient.rpc('update_user_plan', {
+                target_user_id: userId,
+                new_plan: newPlan
+            });
             if (error) {
                 alert('更新失败: ' + error.message);
             } else {
-                alert('套餐已更新！用户需要重新登录或刷新页面。');
+                alert('套餐已更新！');
                 loadUsers();
             }
+        }
+
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allUsers.filter(u =>
+                (u.email || '').toLowerCase().includes(query) ||
+                (u.full_name || '').toLowerCase().includes(query) ||
+                (u.phone || '').includes(query)
+            );
+            renderTable(filtered);
+        }
+
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            location.reload();
         }
     </script>
 </body>
