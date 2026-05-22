@@ -466,6 +466,7 @@
     <span data-i18n="adminModeLabel">🔓 管理模式</span>
     <input type="file" id="logoUpload" accept="image/*" style="display:none;" onchange="uploadLogo()">
     <button class="btn btn-xs btn-outline" data-i18n="storeSettings" onclick="openStoreSettingsModal()">🏪 店铺设置</button>
+	<button class="btn btn-xs btn-outline" onclick="openTaxSettingsModal()" data-i18n="taxSettings">🧾 税务设置</button>
     <button class="btn btn-xs btn-outline" data-i18n="discountRules" onclick="openDiscountRulesModal()">🏷️ 优惠规则</button>
     <button class="btn btn-xs btn-outline" data-i18n="manageCategory" onclick="openCategoryModal()">📂 管理分类</button>
     <button class="btn btn-xs btn-outline" data-i18n="addMenuItem" onclick="openMenuEditModal()">＋菜品<span id="menuItemCount">(12 max for Free)</span></button>
@@ -864,7 +865,55 @@
     </div>
   </div>
 </div>
+ <!-- Tax Setting Modal -->
+	<div class="modal-overlay" id="taxSettingsModal" style="display:none;" onclick="closeTaxSettingsModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:500px;">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="taxSettingsTitle">🧾 税务设置</h3>
 
+    <!-- Inclusive / Exclusive Toggle -->
+    <div style="margin-bottom:20px; padding:12px; background:var(--gold-light); border-radius:12px;">
+      <label style="font-weight:700; display:block; margin-bottom:6px;" data-i18n="pricesIncludeTax">价格含税</label>
+      <select id="pricesInclusiveSelect" style="width:100%; padding:8px; border-radius:16px; border:1.5px solid var(--border); font-family:inherit;">
+        <option value="true" data-i18n="inclusive">含税 (Inclusive)</option>
+        <option value="false" data-i18n="exclusive">未税 (Exclusive)</option>
+      </select>
+      <p style="font-size:0.7rem; color:var(--text-lighter); margin-top:4px;" data-i18n="inclusiveDesc">
+        若选择含税，菜单价格已包含下方所有税费；结账时系统会自动拆分税费金额。
+      </p>
+    </div>
+
+    <!-- Tax 1 -->
+    <div style="margin-bottom:16px; border:1px solid var(--border); border-radius:12px; padding:12px;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="tax1Enabled" onchange="toggleTaxRow('tax1')"> 
+        <span data-i18n="tax1Label">销售税</span>
+      </label>
+      <div id="tax1Fields" style="margin-top:8px; display:none;">
+        <div class="payment-detail-row"><label data-i18n="taxName">名称</label><input type="text" id="tax1Name" placeholder="e.g., SST Sales Tax" style="flex:1; padding:6px; border-radius:16px; border:1.5px solid var(--border);"></div>
+        <div class="payment-detail-row"><label data-i18n="taxRate">税率 (%)</label><input type="number" id="tax1Rate" step="0.01" placeholder="6" style="flex:1; padding:6px; border-radius:16px; border:1.5px solid var(--border);"></div>
+      </div>
+    </div>
+
+    <!-- Tax 2 -->
+    <div style="margin-bottom:20px; border:1px solid var(--border); border-radius:12px; padding:12px;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="tax2Enabled" onchange="toggleTaxRow('tax2')"> 
+        <span data-i18n="tax2Label">服务税</span>
+      </label>
+      <div id="tax2Fields" style="margin-top:8px; display:none;">
+        <div class="payment-detail-row"><label data-i18n="taxName">名称</label><input type="text" id="tax2Name" placeholder="e.g., SST Service Tax" style="flex:1;"></div>
+        <div class="payment-detail-row"><label data-i18n="taxRate">税率 (%)</label><input type="number" id="tax2Rate" step="0.01" placeholder="6" style="flex:1;"></div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary btn-sm" onclick="saveTaxSettings()" style="flex:1;" data-i18n="save">💾 保存</button>
+      <button class="btn btn-outline btn-sm" onclick="closeTaxSettingsModal()" style="flex:1;" data-i18n="cancel">取消</button>
+    </div>
+  </div>
+</div>
+	
 	<!-- Upgrade Prompt Modal -->
 <div class="modal-overlay" id="upgradePromptModal" style="display:none;" onclick="closeUpgradePrompt()">
   <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:380px; text-align:center; padding:28px 24px;">
@@ -1101,7 +1150,19 @@ i18n
   "statusCompleted": "Completed",
   "notYetPaid": "⏳ Not Paid",
 "orderCleared": "Order cleared",
-		  
+		  "taxFeatureLocked": "Tax settings are only available on Lite and Pro plans.",
+		  // EN
+"taxSettings": "🧾 Tax",
+"taxSettingsTitle": "🧾 Tax Settings",
+"pricesIncludeTax": "Prices include tax",
+"inclusive": "Inclusive (含税)",
+"exclusive": "Exclusive (未税)",
+"inclusiveDesc": "When enabled, menu prices already include all taxes below. The system will break out the tax amounts on the receipt.",
+"tax1Label": "Tax 1 (e.g., Sales Tax)",
+"tax2Label": "Tax 2 (e.g., Service Tax)",
+"taxName": "Name",
+"taxRate": "Rate (%)",
+"taxSettingsSaved": "✅ Tax settings updated",
 		  "receiptStoreName": "Persimmon Dessert",
 "callNumberLabel": "Call Number",
 "printReceipt": "Print Receipt",
@@ -1343,7 +1404,18 @@ i18n
 "memberSearch": "📞 会员手机号查找...",
 "clear": "清除",
 "addMember": "＋ 添加",
-
+// ZH-CN
+"taxSettings": "🧾 税务",
+"taxSettingsTitle": "🧾 税务设置",
+"pricesIncludeTax": "价格含税",
+"inclusive": "含税",
+"exclusive": "未税",
+"inclusiveDesc": "开启后，菜单价格已包含下方所有税费；结账时系统会自动拆分税费金额。",
+"tax1Label": "税种1（如销售税）",
+"tax2Label": "税种2（如服务税）",
+"taxName": "名称",
+"taxRate": "税率 (%)",
+"taxSettingsSaved": "✅ 税务设置已更新",
 		  "receiptStoreName": "柿柿润糖水",
 "callNumberLabel": "叫号号码",
 "printReceipt": "打印收据",
@@ -1403,7 +1475,7 @@ i18n
   "perYear": "每年",
   "currentPlanLabel": "当前套餐",
   "choosePlanLabel": "选择此套餐",
-	  
+	  "taxFeatureLocked": "税务设置仅限 Lite 或 Pro 套餐使用。",
   // 折扣规则
   "discountRulesTitle": "🏷️ 优惠规则",
   "ruleType": "类型 (percentage/fixed)",
@@ -1749,7 +1821,8 @@ const PLAN_PERMISSIONS = {
     dataExport: false,
 	foodOrdering: false,       // QR self-order
     memberDiscount: false,     // membership & discounts
-    customReceipt: false
+    taxSettings: false,
+	  customReceipt: false
 	  
   },
   lite: {
@@ -1764,6 +1837,7 @@ const PLAN_PERMISSIONS = {
     dataExport: false,
 	      foodOrdering: true,
     memberDiscount: true,
+	  taxSettings: true,
     customReceipt: true
   },
   pro: {
@@ -1778,6 +1852,7 @@ const PLAN_PERMISSIONS = {
     dataExport: true,
 	      foodOrdering: true,
     memberDiscount: true,
+	  taxSettings: true,
     customReceipt: true
   }
 };
@@ -1941,16 +2016,129 @@ async function fetchAllData() {
     }
 }
 
+		
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     APP_STATE.supabaseReady = true;
   } catch (e) {
     console.error('Supabase fetch error:', e);
     loadDemoData();
   }
+APP_STATE.taxSettings = {
+  pricesInclusive: false,      // default exclusive, but doesn't matter if all taxes off
+  tax1Enabled: false,
+  tax1Name: 'Sales Tax',
+  tax1Rate: 0,
+  tax2Enabled: false,
+  tax2Name: 'Service Tax',
+  tax2Rate: 0
+};
+
+// Override with loaded settings if they exist
+if (settingsRows) {
+  const getSetting = (key, fallback) => settingsRows.find(r => r.key === key)?.value ?? fallback;
+  APP_STATE.taxSettings.pricesInclusive = getSetting('pricesInclusive', 'false') !== 'false';
+  APP_STATE.taxSettings.tax1Enabled = getSetting('tax1Enabled', 'false') === 'true';
+  APP_STATE.taxSettings.tax1Name = getSetting('tax1Name', 'Sales Tax');
+  APP_STATE.taxSettings.tax1Rate = parseFloat(getSetting('tax1Rate', '0'));
+  APP_STATE.taxSettings.tax2Enabled = getSetting('tax2Enabled', 'false') === 'true';
+  APP_STATE.taxSettings.tax2Name = getSetting('tax2Name', 'Service Tax');
+  APP_STATE.taxSettings.tax2Rate = parseFloat(getSetting('tax2Rate', '0'));
+}
 }
 
-	
+function openTaxSettingsModal() {
+	  if (!requireFeature('taxSettings', 'taxFeatureLocked')) {
+    // requireFeature shows the upgrade prompt modal and returns false
+    return;
+  }
+  const ts = APP_STATE.taxSettings;
+  document.getElementById('pricesInclusiveSelect').value = ts.pricesInclusive ? 'true' : 'false';
+  document.getElementById('tax1Enabled').checked = ts.tax1Enabled;
+  document.getElementById('tax1Name').value = ts.tax1Name;
+  document.getElementById('tax1Rate').value = ts.tax1Rate;
+  document.getElementById('tax2Enabled').checked = ts.tax2Enabled;
+  document.getElementById('tax2Name').value = ts.tax2Name;
+  document.getElementById('tax2Rate').value = ts.tax2Rate;
+  toggleTaxRow('tax1');
+  toggleTaxRow('tax2');
+  document.getElementById('taxSettingsModal').style.display = 'flex';
+}
 
+function closeTaxSettingsModal(e) { ... }
+function toggleTaxRow(prefix) {
+  const enabled = document.getElementById(prefix + 'Enabled').checked;
+  document.getElementById(prefix + 'Fields').style.display = enabled ? 'block' : 'none';
+}	
+
+	async function saveTaxSettings() {
+  const ts = {
+    pricesInclusive: document.getElementById('pricesInclusiveSelect').value === 'true',
+    tax1Enabled: document.getElementById('tax1Enabled').checked,
+    tax1Name: document.getElementById('tax1Name').value.trim() || 'Sales Tax',
+    tax1Rate: parseFloat(document.getElementById('tax1Rate').value) || 0,
+    tax2Enabled: document.getElementById('tax2Enabled').checked,
+    tax2Name: document.getElementById('tax2Name').value.trim() || 'Service Tax',
+    tax2Rate: parseFloat(document.getElementById('tax2Rate').value) || 0
+  };
+
+  APP_STATE.taxSettings = ts;
+
+  const rows = [
+    { key: 'pricesInclusive', value: ts.pricesInclusive ? 'true' : 'false', store_id: APP_STATE.storeId },
+    { key: 'tax1Enabled', value: ts.tax1Enabled ? 'true' : 'false', store_id: APP_STATE.storeId },
+    { key: 'tax1Name', value: ts.tax1Name, store_id: APP_STATE.storeId },
+    { key: 'tax1Rate', value: String(ts.tax1Rate), store_id: APP_STATE.storeId },
+    { key: 'tax2Enabled', value: ts.tax2Enabled ? 'true' : 'false', store_id: APP_STATE.storeId },
+    { key: 'tax2Name', value: ts.tax2Name, store_id: APP_STATE.storeId },
+    { key: 'tax2Rate', value: String(ts.tax2Rate), store_id: APP_STATE.storeId }
+  ];
+
+  const { error } = await supabaseClient.from('settings').upsert(rows, { onConflict: 'key, store_id' });
+  if (error) console.error('Save tax settings error:', error);
+
+  closeTaxSettingsModal();
+  showToast('taxSettingsSaved');
+}
+
+	/**
+ * Calculates tax amounts based on current settings and a given subtotal.
+ * @param {number} subtotal - sum of item totals (may be inclusive or exclusive)
+ * @returns {{ subtotal: number, tax1Amount: number, tax2Amount: number, total: number, inclusive: boolean }}
+ */
+function calculateTaxes(subtotal) {
+  const ts = APP_STATE.taxSettings || {};
+  const inclusive = ts.pricesInclusive !== false;
+  const r1 = ts.tax1Enabled ? (ts.tax1Rate || 0) / 100 : 0;
+  const r2 = ts.tax2Enabled ? (ts.tax2Rate || 0) / 100 : 0;
+
+  let base = subtotal;
+  let tax1 = 0, tax2 = 0;
+  let total = subtotal;
+
+  if (inclusive && (r1 > 0 || r2 > 0)) {
+    // Extract base from inclusive price
+    const combinedFactor = (1 + r1) * (1 + r2);
+    base = subtotal / combinedFactor;
+    tax1 = base * r1;
+    tax2 = base * r2;
+    total = subtotal; // total unchanged
+  } else if (!inclusive) {
+    // Add taxes to exclusive base
+    tax1 = subtotal * r1;
+    tax2 = subtotal * r2;
+    total = subtotal + tax1 + tax2;
+  }
+
+  return {
+    subtotal: inclusive ? subtotal : base,   // displayable subtotal
+    base: base,                               // actual pre-tax amount
+    tax1Amount: Math.round(tax1 * 100) / 100,
+    tax2Amount: Math.round(tax2 * 100) / 100,
+    total: Math.round(total * 100) / 100,
+    inclusive
+  };
+}
+	
 // ==================== RENDER ====================
 function renderAll() {
     renderCategoryTabs();
@@ -2210,8 +2398,11 @@ function openPaymentModal(orderId) {
     } else {
         APP_STATE.selectedOrderForPayment = null;
     }
-    window.currentPayingOrderId = null;  // Reset customer order flag
+    window.currentPayingOrderId = null;
+    
+    // Calculate final total
     const total = payOrder ? Number(payOrder.total) : getOrderTotal();
+    
     document.getElementById('payTotalDisplay').textContent = `RM ${total.toFixed(2)}`;
     document.getElementById('paymentModal').style.display = 'flex';
     document.getElementById('paymentMethodSelect').value = 'cash';
@@ -2224,7 +2415,6 @@ function openPaymentModal(orderId) {
 function calculateChange() {
     let total;
     if (window.currentPayingOrderId) {
-        // Paying a customer order - get total from the order
         const order = APP_STATE.orders.find(o => o.id === window.currentPayingOrderId);
         total = order ? Number(order.total) : getOrderTotal();
     } else if (APP_STATE.selectedOrderForPayment) {
@@ -2255,7 +2445,7 @@ function showPaymentDetails() {
 
 function finalizePayment() {
     const method = document.getElementById('paymentMethodSelect').value;
-    const total = getOrderTotal();
+    const total = getOrderTotal();   // already includes tax
     let paymentDetails = { method };
     if (method === 'cash') {
         const received = parseFloat(document.getElementById('cashReceived').value) || 0;
@@ -2277,14 +2467,19 @@ function finalizePayment() {
 async function processPayment(method, total, paymentDetails = {}) {
     if (!checkOrderLimit()) return;
 
-    // 生成叫号号码
+    const subtotal = getOrderSubtotal();
+    const taxInfo = calculateTaxes(subtotal);
+    // total passed to this function is already final, but we can re-assure:
+    const finalTotal = taxInfo.total;
+
+    // Generate call number...
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
     APP_STATE.settings.callNumberCounter = callNum;
-    // 同步到 Supabase
     await supabaseClient.from('settings').upsert(
-    { key: 'callNumberCounter', value: String(callNum), store_id: APP_STATE.storeId },
-    { onConflict: 'key, store_id' }
-);
+        { key: 'callNumberCounter', value: String(callNum), store_id: APP_STATE.storeId },
+        { onConflict: 'key, store_id' }
+    );
+
     const orderId = String(++APP_STATE.orderIdCounter);
     localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
 
@@ -2292,34 +2487,34 @@ async function processPayment(method, total, paymentDetails = {}) {
         id: orderId,
         date: new Date().toISOString(),
         items: APP_STATE.cashierOrder.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
-        total: total,
+        subtotal: subtotal,
+        total: finalTotal,
         paymentMethod: method,
         memberPhone: APP_STATE.currentMember?.phone || '',
         memberName: APP_STATE.currentMember?.name || '',
         paymentDetails: paymentDetails,
         discountApplied: getDiscountAmount(),
+        taxDetails: taxInfo,              // store full breakdown
         status: 'pending',
         callNumber: String(callNum),
-  store_id: APP_STATE.storeId        // 支付时就分配叫号号码
+        store_id: APP_STATE.storeId
     };
 
-    // 本地添加
+    // ... rest unchanged: push order, clear cart, update members, show receipt
     APP_STATE.orders.unshift(order);
     APP_STATE.cashierOrder = [];
     APP_STATE.currentMember = null;
     document.getElementById('memberPhoneInput').value = '';
     renderOrderPanel();
 
-    // 写入 Supabase
     const { error } = await supabaseClient.from('orders').insert([order]);
     if (error) console.error('Order insert error:', error);
 
-    // 更新会员积分（如果有会员）
     if (order.memberPhone) {
         const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
         if (member) {
-            member.points += Math.floor(total);
-            member.totalSpent += Number(total);
+            member.points += Math.floor(finalTotal);
+            member.totalSpent += Number(finalTotal);
             await supabaseClient.from('members').update({
                 points: member.points,
                 totalSpent: member.totalSpent
@@ -2327,11 +2522,16 @@ async function processPayment(method, total, paymentDetails = {}) {
         }
     }
 
-    // 弹出收据
     showOrderReceipt(order);
 }
 
 function showOrderReceipt(order) {
+    const taxLines = order.taxDetails ? `
+        ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: RM ${order.taxDetails.tax1Amount.toFixed(2)}</div>` : ''}
+        ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: RM ${order.taxDetails.tax2Amount.toFixed(2)}</div>` : ''}
+        ${order.taxDetails.inclusive ? '<div style="font-size:0.7rem;color:var(--text-lighter);">(Included in price)</div>' : ''}
+    ` : '';
+
     const receiptHTML = `
     <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
         <h2 style="color:var(--persimmon);margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
@@ -2348,6 +2548,7 @@ function showOrderReceipt(order) {
             `).join('')}
         </table>
         <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
+        ${taxLines}
         <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
             <span>${i18n.t('total')}</span>
             <span>RM ${order.total.toFixed(2)}</span>
@@ -2361,31 +2562,26 @@ function showOrderReceipt(order) {
         <button class="btn btn-primary btn-sm" style="flex:1;" onclick="printReceipt('${order.id}')">🖨️ ${i18n.t('printReceipt')}</button>
         <button class="btn btn-outline btn-sm" style="flex:1;" onclick="closeReceiptModal()">${i18n.t('close')}</button>
     </div>`;
-
+    
     const modal = document.getElementById('receiptModal');
     modal.querySelector('.modal-sheet').innerHTML = receiptHTML;
     modal.style.display = 'flex';
 }
 
-	function printReceipt(orderId) {
+function printReceipt(orderId) {
     const order = APP_STATE.orders.find(o => o.id === orderId);
     if (!order) return;
+    const taxLines = order.taxDetails ? `
+        ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: RM ${order.taxDetails.tax1Amount.toFixed(2)}</div>` : ''}
+        ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: RM ${order.taxDetails.tax2Amount.toFixed(2)}</div>` : ''}
+        ${order.taxDetails.inclusive ? '<div style="font-size:0.7rem;color:#6B4E4E;">(Included in price)</div>' : ''}
+    ` : '';
+
     const printContent = `
         <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
-            <h2 style="color:#E8784A;margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
-            <div style="font-size:0.8rem;color:#6B4E4E;margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
-            <div style="font-size:3rem;font-weight:800;color:#E85555;margin:12px 0;">🔔 ${order.callNumber}</div>
-            <div style="font-size:0.85rem;color:#6B4E4E;">${i18n.t('callNumberLabel')}</div>
+            ... (same as before until items table)
             <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
-            <table style="width:100%;font-size:0.8rem;text-align:left;border-collapse:collapse;">
-                ${order.items.map(item => `
-                    <tr>
-                        <td style="padding:4px 0;">${item.name} x${item.qty}</td>
-                        <td style="text-align:right;">RM ${(item.price * item.qty).toFixed(2)}</td>
-                    </tr>
-                `).join('')}
-            </table>
-            <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
+            ${taxLines}
             <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
                 <span>${i18n.t('total')}</span>
                 <span>RM ${order.total.toFixed(2)}</span>
@@ -2441,10 +2637,18 @@ function renderPaymentDetailsLine(order) {
 function closeReceiptModal() {
     document.getElementById('receiptModal').style.display = 'none';
 }
+// Returns the subtotal after any member discount (pre‑tax)
+function getOrderSubtotal() {
+  const rawSubtotal = APP_STATE.cashierOrder.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
+  const discount = getDiscountAmount();
+  return Math.max(0, rawSubtotal - discount);
+}
+
+// Returns the final total after taxes (used for payment)
 function getOrderTotal() {
-    const subtotal = APP_STATE.cashierOrder.reduce((s,e)=>s+e.menuItem.price*e.quantity,0);
-    const discount = getDiscountAmount();
-    return Math.max(0, subtotal - discount);
+  const subtotal = getOrderSubtotal();
+  const taxInfo = calculateTaxes(subtotal);
+  return taxInfo.total;
 }
 function getDiscountAmount() {
     if (!APP_STATE.currentMember) return 0;
