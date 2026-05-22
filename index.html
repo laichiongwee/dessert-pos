@@ -2064,7 +2064,13 @@ function openTaxSettingsModal() {
   document.getElementById('taxSettingsModal').style.display = 'flex';
 }
 
-function closeTaxSettingsModal(e) { ... }
+function closeTaxSettingsModal(e) {
+    if (e && e.target !== document.getElementById('taxSettingsModal')) return;
+    document.getElementById('taxSettingsModal').style.display = 'none';
+}
+document.getElementById('taxSettingsModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
 function toggleTaxRow(prefix) {
   const enabled = document.getElementById(prefix + 'Enabled').checked;
   document.getElementById(prefix + 'Fields').style.display = enabled ? 'block' : 'none';
@@ -2571,6 +2577,7 @@ function showOrderReceipt(order) {
 function printReceipt(orderId) {
     const order = APP_STATE.orders.find(o => o.id === orderId);
     if (!order) return;
+
     const taxLines = order.taxDetails ? `
         ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: RM ${order.taxDetails.tax1Amount.toFixed(2)}</div>` : ''}
         ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: RM ${order.taxDetails.tax2Amount.toFixed(2)}</div>` : ''}
@@ -2579,7 +2586,19 @@ function printReceipt(orderId) {
 
     const printContent = `
         <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
-            ... (same as before until items table)
+            <h2 style="color:#E8784A;margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
+            <div style="font-size:0.8rem;color:#6B4E4E;margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
+            <div style="font-size:3rem;font-weight:800;color:#E85555;margin:12px 0;">🔔 ${order.callNumber}</div>
+            <div style="font-size:0.85rem;color:#6B4E4E;">${i18n.t('callNumberLabel')}</div>
+            <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
+            <table style="width:100%;font-size:0.8rem;text-align:left;border-collapse:collapse;">
+                ${order.items.map(item => `
+                    <tr>
+                        <td style="padding:4px 0;">${item.name} x${item.qty}</td>
+                        <td style="text-align:right;">RM ${(item.price * item.qty).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </table>
             <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
             ${taxLines}
             <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
