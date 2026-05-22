@@ -611,10 +611,14 @@
         </div>
         <!-- Cash details -->
         <div id="cashDetails" style="display:block;">
-            <div class="payment-detail-row"><label data-i18n="amountDue">应收：</label><span id="payTotalDisplay" style="font-weight:800;"></span></div>
-            <div class="payment-detail-row"><label data-i18n="amountReceived">实收：</label><input type="number" id="cashReceived" placeholder="0.00" step="0.01" oninput="calculateChange()"></div>
-            <div class="payment-detail-row"><label data-i18n="change">找零：</label><span id="changeDisplay" style="font-weight:800;">RM 0.00</span></div>
-        </div>
+    <div class="payment-detail-row"><label data-i18n="amountDue">应收：</label><span id="payTotalDisplay" style="font-weight:800;"></span></div>
+    
+    <!-- New: Tax breakdown (hidden if no tax) -->
+    <div id="paymentTaxBreakdown" style="margin: 8px 0; font-size:0.85rem; color:var(--text-light); text-align:left;"></div>
+
+    <div class="payment-detail-row"><label data-i18n="amountReceived">实收：</label><input type="number" id="cashReceived" placeholder="0.00" step="0.01" oninput="calculateChange()"></div>
+    <div class="payment-detail-row"><label data-i18n="change">找零：</label><span id="changeDisplay" style="font-weight:800;">RM 0.00</span></div>
+</div>
         <!-- Card details -->
         <div id="cardDetails" style="display:none;">
             <div class="payment-detail-row"><label data-i18n="cardType">卡类型：</label><select id="cardType"><option>Visa</option><option>Mastercard</option><option>Amex</option></select></div>
@@ -869,7 +873,7 @@
 	<div class="modal-overlay" id="taxSettingsModal" style="display:none;" onclick="closeTaxSettingsModal(event)">
   <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:500px;">
     <div class="modal-handle"></div>
-    <h3 data-i18n="taxSettingsTitle">🧾 税务设置</h3>
+    <h3 data-i18n="taxPaymentSettingsTitle">🧾 税务与付款设置</h3>
 
     <!-- Inclusive / Exclusive Toggle -->
     <div style="margin-bottom:20px; padding:12px; background:var(--gold-light); border-radius:12px;">
@@ -906,7 +910,17 @@
         <div class="payment-detail-row"><label data-i18n="taxRate">税率 (%)</label><input type="number" id="tax2Rate" step="0.01" placeholder="6" style="flex:1;"></div>
       </div>
     </div>
-
+<!-- New: Rounding Adjustment -->
+<div style="margin-bottom:20px; padding:12px; background:var(--gold-light); border-radius:12px;">
+  <label style="font-weight:700; display:block; margin-bottom:6px;" data-i18n="roundingAdjustment">四舍五入调整</label>
+  <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+    <input type="checkbox" id="roundingEnabled" checked> 
+    <span data-i18n="roundingEnabledDesc">对最终金额进行 0.05 马币四舍五入</span>
+  </label>
+  <p style="font-size:0.7rem; color:var(--text-lighter); margin-top:4px;" data-i18n="roundingNote">
+    例如：RM 10.12 → RM 10.10，RM 10.13 → RM 10.15
+  </p>
+</div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary btn-sm" onclick="saveTaxSettings()" style="flex:1;" data-i18n="save">💾 保存</button>
       <button class="btn btn-outline btn-sm" onclick="closeTaxSettingsModal()" style="flex:1;" data-i18n="cancel">取消</button>
@@ -1252,7 +1266,10 @@ i18n
   "perYear": "per year",
   "currentPlanLabel": "Current Plan",
   "choosePlanLabel": "Choose Plan",
-
+"taxPaymentSettingsTitle": "🧾 Tax & Payment Settings",
+"roundingAdjustment": "Rounding Adjustment",
+"roundingEnabledDesc": "Round final total to nearest RM 0.05",
+"roundingNote": "e.g., RM 10.12 → RM 10.10, RM 10.13 → RM 10.15",
 		  "noUnpaidOrders": "No unpaid orders",
 "customerLabel": "Customer",
 "collectPayment": "Collect",
@@ -1542,7 +1559,10 @@ i18n
   "submitOrder": "✅ 提交订单",
   "continueOrdering": "继续点餐",
   "orderSubmitted": "订单已提交！请等待叫号。",
-
+"taxPaymentSettingsTitle": "🧾 税务与付款设置",
+"roundingAdjustment": "四舍五入调整",
+"roundingEnabledDesc": "最终金额四舍五入至最近的 0.05 马币",
+"roundingNote": "例如：RM 10.12 → RM 10.10，RM 10.13 → RM 10.15",
 		  "noUnpaidOrders": "暂无待付款订单",
 "customerLabel": "顾客",
 "collectPayment": "收款",
@@ -2028,6 +2048,7 @@ async function fetchAllData() {
       APP_STATE.taxSettings.tax2Enabled = getSetting('tax2Enabled', 'false') === 'true';
       APP_STATE.taxSettings.tax2Name = getSetting('tax2Name', 'Service Tax');
       APP_STATE.taxSettings.tax2Rate = parseFloat(getSetting('tax2Rate', '0'));
+		APP_STATE.taxSettings.roundingEnabled = getSetting('roundingEnabled', 'true') !== 'false';
     }
 
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
@@ -2037,7 +2058,9 @@ async function fetchAllData() {
     loadDemoData();
   }
 }
-
+function roundToNearest5sen(amount) {
+  return Math.round(amount * 20) / 20;
+}
 function openTaxSettingsModal() {
 	  if (!requireFeature('taxSettings', 'taxFeatureLocked')) {
     // requireFeature shows the upgrade prompt modal and returns false
@@ -2053,6 +2076,7 @@ function openTaxSettingsModal() {
   document.getElementById('tax2Rate').value = ts.tax2Rate;
   toggleTaxRow('tax1');
   toggleTaxRow('tax2');
+	document.getElementById('roundingEnabled').checked = APP_STATE.taxSettings.roundingEnabled !== false;
   document.getElementById('taxSettingsModal').style.display = 'flex';
 }
 
@@ -2076,7 +2100,8 @@ function toggleTaxRow(prefix) {
     tax1Rate: parseFloat(document.getElementById('tax1Rate').value) || 0,
     tax2Enabled: document.getElementById('tax2Enabled').checked,
     tax2Name: document.getElementById('tax2Name').value.trim() || 'Service Tax',
-    tax2Rate: parseFloat(document.getElementById('tax2Rate').value) || 0
+    tax2Rate: parseFloat(document.getElementById('tax2Rate').value) || 0,
+	  roundingEnabled: document.getElementById('roundingEnabled').checked
   };
 
   APP_STATE.taxSettings = ts;
@@ -2088,7 +2113,8 @@ function toggleTaxRow(prefix) {
     { key: 'tax1Rate', value: String(ts.tax1Rate), store_id: APP_STATE.storeId },
     { key: 'tax2Enabled', value: ts.tax2Enabled ? 'true' : 'false', store_id: APP_STATE.storeId },
     { key: 'tax2Name', value: ts.tax2Name, store_id: APP_STATE.storeId },
-    { key: 'tax2Rate', value: String(ts.tax2Rate), store_id: APP_STATE.storeId }
+    { key: 'tax2Rate', value: String(ts.tax2Rate), store_id: APP_STATE.storeId },
+	  { key: 'roundingEnabled', value: ts.roundingEnabled ? 'true' : 'false', store_id: APP_STATE.storeId }
   ];
 
   const { error } = await supabaseClient.from('settings').upsert(rows, { onConflict: 'key, store_id' });
@@ -2111,28 +2137,36 @@ function calculateTaxes(subtotal) {
 
   let base = subtotal;
   let tax1 = 0, tax2 = 0;
-  let total = subtotal;
+  let preRoundTotal = subtotal;
 
   if (inclusive && (r1 > 0 || r2 > 0)) {
-    // Extract base from inclusive price
     const combinedFactor = (1 + r1) * (1 + r2);
     base = subtotal / combinedFactor;
     tax1 = base * r1;
     tax2 = base * r2;
-    total = subtotal; // total unchanged
+    preRoundTotal = subtotal;
   } else if (!inclusive) {
-    // Add taxes to exclusive base
     tax1 = subtotal * r1;
     tax2 = subtotal * r2;
-    total = subtotal + tax1 + tax2;
+    preRoundTotal = subtotal + tax1 + tax2;
+  }
+
+  // Rounding adjustment (default enabled)
+  let roundingAdjustment = 0;
+  let finalTotal = preRoundTotal;
+  if (ts.roundingEnabled !== false) {  // true by default
+    finalTotal = roundToNearest5sen(preRoundTotal);
+    roundingAdjustment = finalTotal - preRoundTotal;
   }
 
   return {
-    subtotal: inclusive ? subtotal : base,   // displayable subtotal
-    base: base,                               // actual pre-tax amount
+    subtotal: inclusive ? subtotal : base,
+    base: base,
     tax1Amount: Math.round(tax1 * 100) / 100,
     tax2Amount: Math.round(tax2 * 100) / 100,
-    total: Math.round(total * 100) / 100,
+    preRoundTotal: preRoundTotal,
+    roundingAdjustment: Math.round(roundingAdjustment * 100) / 100,
+    total: finalTotal,
     inclusive
   };
 }
@@ -2397,11 +2431,27 @@ function openPaymentModal(orderId) {
         APP_STATE.selectedOrderForPayment = null;
     }
     window.currentPayingOrderId = null;
-    
-    // Calculate final total
-    const total = payOrder ? Number(payOrder.total) : getOrderTotal();
-    
+
+    // Calculate final total and tax breakdown
+    let total, taxInfo;
+    if (payOrder) {
+        total = Number(payOrder.total);
+        taxInfo = payOrder.taxDetails || calculateTaxes(payOrder.subtotal);
+    } else {
+        const subtotal = getOrderSubtotal();
+        taxInfo = calculateTaxes(subtotal);
+        total = taxInfo.total;
+    }
+
     document.getElementById('payTotalDisplay').textContent = `RM ${total.toFixed(2)}`;
+    // Show tax breakdown
+    const taxLines = [];
+    if (taxInfo.tax1Amount > 0) taxLines.push(`${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: RM ${taxInfo.tax1Amount.toFixed(2)}`);
+    if (taxInfo.tax2Amount > 0) taxLines.push(`${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: RM ${taxInfo.tax2Amount.toFixed(2)}`);
+    if (taxInfo.roundingAdjustment !== 0) taxLines.push(`Rounding Adjustment: RM ${taxInfo.roundingAdjustment.toFixed(2)}`);
+    const taxBreakdownHtml = taxLines.length > 0 ? taxLines.join('<br>') + (taxInfo.inclusive ? '<br><span style="font-size:0.7rem;">(Included in price)</span>' : '') : '';
+    document.getElementById('paymentTaxBreakdown').innerHTML = taxBreakdownHtml;
+
     document.getElementById('paymentModal').style.display = 'flex';
     document.getElementById('paymentMethodSelect').value = 'cash';
     document.getElementById('cashReceived').value = '';
@@ -2464,11 +2514,17 @@ function finalizePayment() {
 
 async function processPayment(method, total, paymentDetails = {}) {
     if (!checkOrderLimit()) return;
+    let finalTotal, taxInfo;
+    if (APP_STATE.selectedOrderForPayment) {
+        // Paying an existing unpaid order – keep its original totals
+        finalTotal = Number(APP_STATE.selectedOrderForPayment.total);
+        taxInfo = APP_STATE.selectedOrderForPayment.taxDetails || { total: finalTotal };
+    } else {
+        const subtotal = getOrderSubtotal();
+        taxInfo = calculateTaxes(subtotal);
+        finalTotal = taxInfo.total;
+    }
 
-    const subtotal = getOrderSubtotal();
-    const taxInfo = calculateTaxes(subtotal);
-    // total passed to this function is already final, but we can re-assure:
-    const finalTotal = taxInfo.total;
 
     // Generate call number...
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
@@ -2529,7 +2585,9 @@ function showOrderReceipt(order) {
         ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: RM ${order.taxDetails.tax2Amount.toFixed(2)}</div>` : ''}
         ${order.taxDetails.inclusive ? '<div style="font-size:0.7rem;color:var(--text-lighter);">(Included in price)</div>' : ''}
     ` : '';
-
+const roundingLine = (order.taxDetails && order.taxDetails.roundingAdjustment !== 0)
+  ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">Rounding Adjustment: RM ${order.taxDetails.roundingAdjustment.toFixed(2)}</div>`
+  : '';
     const receiptHTML = `
     <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
         <h2 style="color:var(--persimmon);margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
@@ -2545,8 +2603,9 @@ function showOrderReceipt(order) {
                 </tr>
             `).join('')}
         </table>
-        <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
+                <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
         ${taxLines}
+        ${roundingLine}
         <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
             <span>${i18n.t('total')}</span>
             <span>RM ${order.total.toFixed(2)}</span>
@@ -2575,7 +2634,9 @@ function printReceipt(orderId) {
         ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: RM ${order.taxDetails.tax2Amount.toFixed(2)}</div>` : ''}
         ${order.taxDetails.inclusive ? '<div style="font-size:0.7rem;color:#6B4E4E;">(Included in price)</div>' : ''}
     ` : '';
-
+    const roundingLine = (order.taxDetails && order.taxDetails.roundingAdjustment !== 0)
+      ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">Rounding Adjustment: RM ${order.taxDetails.roundingAdjustment.toFixed(2)}</div>`
+      : '';
     const printContent = `
         <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
             <h2 style="color:#E8784A;margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
@@ -2591,8 +2652,9 @@ function printReceipt(orderId) {
                     </tr>
                 `).join('')}
             </table>
-            <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
+                        <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
             ${taxLines}
+            ${roundingLine}
             <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
                 <span>${i18n.t('total')}</span>
                 <span>RM ${order.total.toFixed(2)}</span>
