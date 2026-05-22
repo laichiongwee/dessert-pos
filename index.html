@@ -1972,23 +1972,23 @@ function loadDemoData() {
 async function fetchAllData() {
   if (!APP_STATE.storeId) {
     console.warn('storeId 为空，跳过数据加载');
-    loadDemoData();   // 或者显示空数据
+    loadDemoData();
     return;
   }
-	try {
+  try {
     const [
-  { data: menu },
-  { data: members },
-  { data: orders },
-  { data: discountRules },
-  { data: settingsRows }
-] = await Promise.all([
-  supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId),
-  supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId),
-  supabaseClient.from('orders').select('*').order('date', { ascending: false }).eq('store_id', APP_STATE.storeId),
-  supabaseClient.from('discount_rules').select('*').eq('store_id', APP_STATE.storeId),
-  supabaseClient.from('settings').select('*').eq('store_id', APP_STATE.storeId)
-]);
+      { data: menu },
+      { data: members },
+      { data: orders },
+      { data: discountRules },
+      { data: settingsRows }          // ← must match the variable name you use later
+    ] = await Promise.all([
+      supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('orders').select('*').order('date', { ascending: false }).eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('discount_rules').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('settings').select('*').eq('store_id', APP_STATE.storeId)   // ← this line must exist
+    ]);
 
     APP_STATE.menu = menu.map(item => ({
       ...item,
@@ -2003,47 +2003,39 @@ async function fetchAllData() {
     }));
     APP_STATE.orders = orders || [];
     APP_STATE.discountRules = discountRules || [];
-    APP_STATE.settings = {};
-    if (settingsRows) {
-    settingsRows.forEach(row => {
-        APP_STATE.settings[row.key] = row.value;
-    });
-    // ✅ 确保 autoAddMember 默认值为 true 如果数据库中不存在
-    if (APP_STATE.settings.autoAddMember === undefined) {
-        APP_STATE.settings.autoAddMember = true;
-    } else {
-        APP_STATE.settings.autoAddMember = APP_STATE.settings.autoAddMember === 'true' || APP_STATE.settings.autoAddMember === true;
-    }
-}
 
-		
+    // Initialize tax settings with defaults
+    APP_STATE.taxSettings = {
+      pricesInclusive: false,
+      tax1Enabled: false,
+      tax1Name: 'Sales Tax',
+      tax1Rate: 0,
+      tax2Enabled: false,
+      tax2Name: 'Service Tax',
+      tax2Rate: 0
+    };
+
+    // Override from database if rows exist
+    if (settingsRows && settingsRows.length > 0) {
+      const getSetting = (key, fallback) => {
+        const row = settingsRows.find(r => r.key === key);
+        return row ? row.value : fallback;
+      };
+      APP_STATE.taxSettings.pricesInclusive = getSetting('pricesInclusive', 'false') !== 'false';
+      APP_STATE.taxSettings.tax1Enabled = getSetting('tax1Enabled', 'false') === 'true';
+      APP_STATE.taxSettings.tax1Name = getSetting('tax1Name', 'Sales Tax');
+      APP_STATE.taxSettings.tax1Rate = parseFloat(getSetting('tax1Rate', '0'));
+      APP_STATE.taxSettings.tax2Enabled = getSetting('tax2Enabled', 'false') === 'true';
+      APP_STATE.taxSettings.tax2Name = getSetting('tax2Name', 'Service Tax');
+      APP_STATE.taxSettings.tax2Rate = parseFloat(getSetting('tax2Rate', '0'));
+    }
+
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     APP_STATE.supabaseReady = true;
   } catch (e) {
     console.error('Supabase fetch error:', e);
     loadDemoData();
   }
-APP_STATE.taxSettings = {
-  pricesInclusive: false,      // default exclusive, but doesn't matter if all taxes off
-  tax1Enabled: false,
-  tax1Name: 'Sales Tax',
-  tax1Rate: 0,
-  tax2Enabled: false,
-  tax2Name: 'Service Tax',
-  tax2Rate: 0
-};
-
-// Override with loaded settings if they exist
-if (settingsRows) {
-  const getSetting = (key, fallback) => settingsRows.find(r => r.key === key)?.value ?? fallback;
-  APP_STATE.taxSettings.pricesInclusive = getSetting('pricesInclusive', 'false') !== 'false';
-  APP_STATE.taxSettings.tax1Enabled = getSetting('tax1Enabled', 'false') === 'true';
-  APP_STATE.taxSettings.tax1Name = getSetting('tax1Name', 'Sales Tax');
-  APP_STATE.taxSettings.tax1Rate = parseFloat(getSetting('tax1Rate', '0'));
-  APP_STATE.taxSettings.tax2Enabled = getSetting('tax2Enabled', 'false') === 'true';
-  APP_STATE.taxSettings.tax2Name = getSetting('tax2Name', 'Service Tax');
-  APP_STATE.taxSettings.tax2Rate = parseFloat(getSetting('tax2Rate', '0'));
-}
 }
 
 function openTaxSettingsModal() {
