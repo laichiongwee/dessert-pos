@@ -495,6 +495,7 @@
             <h3 data-i18n="cartTitle">🛒 我的購物車</h3>
             <div id="publicCartItems"></div>
             <div style="border-top:2px solid #F0D8C8; padding-top:10px; margin-top:8px;">
+				<div id="publicTaxBreakdown" style="margin:8px 0; font-size:0.85rem; color:var(--text-light); text-align:left;"></div>
                 <div style="display:flex; justify-content:space-between; font-weight:800;">
                     <span data-i18n="total">總計</span><span id="publicCartTotal">RM 0.00</span>
                 </div>
@@ -3484,7 +3485,9 @@ function toggleCustomerCart() {
 
 function renderPublicCart() {
     const container = document.getElementById('publicCartItems');
-    const total = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
+    const subtotal = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
+    const taxInfo = calculateTaxes(subtotal);
+
     container.innerHTML = APP_STATE.publicCart.map((entry, idx) => `
         <div class="order-item-row">
             <span class="oi-name">${entry.menuItem.name}</span>
@@ -3493,10 +3496,19 @@ function renderPublicCart() {
                 <span>${entry.quantity}</span>
                 <button onclick="adjustPublicCart(${idx}, 1)">+</button>
             </div>
-            <span class="oi-price">RM ${(entry.menuItem.price * entry.quantity).toFixed(2)}</span>
+            <span class="oi-price">${formatCurrency(entry.menuItem.price * entry.quantity)}</span>
         </div>
     `).join('');
-    document.getElementById('publicCartTotal').textContent = `RM ${total.toFixed(2)}`;
+
+    // Build tax breakdown HTML
+    const taxLines = [];
+    if (taxInfo.tax1Amount > 0) taxLines.push(`${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: ${formatCurrency(taxInfo.tax1Amount)}`);
+    if (taxInfo.tax2Amount > 0) taxLines.push(`${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: ${formatCurrency(taxInfo.tax2Amount)}`);
+    if (taxInfo.roundingAdjustment !== 0) taxLines.push(`Rounding Adjustment: ${formatCurrency(taxInfo.roundingAdjustment)}`);
+    if (taxInfo.inclusive && taxLines.length > 0) taxLines.push('<span style="font-size:0.7rem;">(Included in price)</span>');
+    document.getElementById('publicTaxBreakdown').innerHTML = taxLines.join('<br>');
+
+    document.getElementById('publicCartTotal').textContent = formatCurrency(taxInfo.total);
 }
 
 function adjustPublicCart(index, delta) {
@@ -3521,22 +3533,28 @@ async function submitPublicOrder() {
     if (!name) { showToast('enterName'); return; }
     if (APP_STATE.publicCart.length === 0) { showToast('cartEmpty'); return; }
     const phone = document.getElementById('publicCustomerPhone').value.trim();
-    const total = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
+    const subtotal = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
+    const taxInfo = calculateTaxes(subtotal);
+    const finalTotal = taxInfo.total;
+
     const orderId = 'PUB-' + Date.now();
     const order = {
         id: orderId,
         date: new Date().toISOString(),
         items: APP_STATE.publicCart.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
-        total: total,
+        subtotal: subtotal,
+        total: finalTotal,
         paymentMethod: 'customer_order',
         memberPhone: phone,
         memberName: name,
         paymentDetails: {},
         discountApplied: 0,
+        taxDetails: taxInfo,
         status: 'pending_payment',
         callNumber: '',
-  store_id: APP_STATE.storeId
+        store_id: APP_STATE.storeId
     };
+
     const { error } = await supabaseClient.from('orders').insert([order]);
     if (error) {
         console.error('Order insert error:', error);
