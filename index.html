@@ -2187,7 +2187,35 @@ function calculateTaxes(subtotal) {
     inclusive
   };
 }
-	
+
+	function switchMode(mode) {
+    APP_STATE.mode = mode;
+    document.querySelectorAll('#modeSwitcher button').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.querySelector(`#modeSwitcher button[data-mode="${mode}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    document.getElementById('cashierView').classList.toggle('active', mode === 'cashier');
+    const fulfillView = document.getElementById('fulfillmentView');
+    if (fulfillView) fulfillView.classList.toggle('active', mode === 'fulfillment');
+    
+    if (mode === 'cashier') {
+        renderCategoryTabs();
+        renderMenuGrid();
+        renderOrderPanel();
+        applyLanguage(); 
+    } else if (mode === 'fulfillment') {
+        renderFulfillmentView();
+        if (APP_STATE.adminUnlocked) {
+            renderAdminMenuGrid();
+            document.getElementById('adminBar').style.display = 'flex';
+            document.getElementById('unlockBtn').style.display = 'none';
+        } else {
+            document.getElementById('adminBar').style.display = 'none';
+            document.getElementById('unlockBtn').style.display = 'block';
+            document.getElementById('adminMenuGrid').innerHTML = '';
+        }
+    }
+}
 // ==================== RENDER ====================
 function renderAll() {
     renderCategoryTabs();
@@ -4207,7 +4235,7 @@ function addToOrder(itemId) {
         APP_STATE.cashierOrder.push({ menuItem: item, quantity: 1 });
     }
     renderOrderPanel();
-    showToast(`已添加: ${item.name}`);
+    showToast('addedItem', { name: item.name });
 }
 
 function adjustOrderQty(index, delta) {
