@@ -334,45 +334,47 @@
 .member-search button {
   flex: 0 0 auto;
 }
+/* ========= CASHIER VIEW ONLY ========= */
+
+/* On small screens, stack the menu panel above the order panel */
+@media (max-width: 768px) {
+  #cashierView .cashier-layout {
+    flex-direction: column;
+  }
+  #cashierView .menu-panel {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+  #cashierView .order-panel {
+    flex: 1 1 auto;
+    width: 100%;
+    margin-top: 16px;
+  }
+  /* Menu grid: 2 columns on mobile */
+  #cashierView .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  #cashierView .menu-card {
+    min-width: 0;          /* allow cards to shrink */
+    padding: 8px;
+  }
+}
+
+/* On very narrow screens, you could even go to 1 column (optional) */
+@media (max-width: 400px) {
+  #cashierView .menu-grid {
+    grid-template-columns: 1fr;
+  }
+}
 		.menu-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
-
-/* On screens narrower than 600px, use 2 columns */
-@media (max-width: 600px) {
-  .menu-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-		@media (max-width: 600px) {
-  .menu-card {
-    min-width: 0;          /* allow cards to shrink */
-    padding: 10px;         /* slightly tighter */
-    font-size: 0.9rem;
-  }
-}
-		.cashier-layout {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.menu-panel {
-  flex: 1 1 100%;   /* full width on small screens */
-}
-
-.order-panel {
-  flex: 1 1 300px;  /* minimum 300px, then share space */
-}
-
-@media (min-width: 768px) {
-  .menu-panel {
-    flex: 2;        /* menu takes more space on tablets+ */
-  }
-  .order-panel {
-    flex: 1;
-  }
+.menu-card {
+  min-width: 0;          /* already helps avoid overflow */
+  box-sizing: border-box;
 }
     </style>
 </head>
