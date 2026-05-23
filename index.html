@@ -2135,6 +2135,9 @@ if (counterDate !== today) {
 		APP_STATE.taxSettings.roundingEnabled = getSetting('roundingEnabled', 'true') !== 'false';
 		APP_STATE.settings.currencySymbol = getSetting('currencySymbol', '$');
 		APP_STATE.settings.callNumberCounter = getSetting('callNumberCounter', '0'); 
+		 // 🆕 Load store branding
+      APP_STATE.settings.storeName = getSetting('storeName', 'Dessert POS');
+      APP_STATE.settings.logoUrl  = getSetting('logoUrl', '');
     }
 
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
@@ -3633,9 +3636,7 @@ await supabaseClient.from('settings').upsert([
   { key: 'logoUrl', value: APP_STATE.settings.logoUrl, store_id: APP_STATE.storeId }
 ], { onConflict: 'key, store_id' });
 
-updateStoreBranding();   // instantly refreshes all headers & title
-closeStoreSettingsModal();
-showToast('storeSettingsSaved');
+
   
   // Handle logo upload if new file selected
   if (window._newLogoFile) {
@@ -3662,7 +3663,7 @@ showToast('storeSettingsSaved');
       console.error(err);
     }
   }
-  
+  updateStoreBranding();   // instantly refreshes all headers & title
   closeStoreSettingsModal();
   showToast('storeSettingsSaved');
 }
