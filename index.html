@@ -2531,17 +2531,20 @@ function finalizePayment() {
 
 async function processPayment(method, total, paymentDetails = {}) {
     if (!checkOrderLimit()) return;
-    let finalTotal, taxInfo;
+
+    let subtotal, taxInfo, finalTotal;
+
     if (APP_STATE.selectedOrderForPayment) {
-        // Paying an existing unpaid order – keep its original totals
+        // Paying an existing unpaid order – use its stored values
         finalTotal = Number(APP_STATE.selectedOrderForPayment.total);
+        subtotal = Number(APP_STATE.selectedOrderForPayment.subtotal) || finalTotal;
         taxInfo = APP_STATE.selectedOrderForPayment.taxDetails || { total: finalTotal };
     } else {
-        const subtotal = getOrderSubtotal();
+        // New order from cashier – calculate from cart
+        subtotal = getOrderSubtotal();
         taxInfo = calculateTaxes(subtotal);
         finalTotal = taxInfo.total;
     }
-
 
     // Generate call number...
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
@@ -2558,20 +2561,19 @@ async function processPayment(method, total, paymentDetails = {}) {
         id: orderId,
         date: new Date().toISOString(),
         items: APP_STATE.cashierOrder.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
-        subtotal: subtotal,
+        subtotal: subtotal,                    // now always defined
         total: finalTotal,
         paymentMethod: method,
         memberPhone: APP_STATE.currentMember?.phone || '',
         memberName: APP_STATE.currentMember?.name || '',
         paymentDetails: paymentDetails,
         discountApplied: getDiscountAmount(),
-        taxDetails: taxInfo,              // store full breakdown
+        taxDetails: taxInfo,
         status: 'pending',
         callNumber: String(callNum),
         store_id: APP_STATE.storeId
     };
 
-    // ... rest unchanged: push order, clear cart, update members, show receipt
     APP_STATE.orders.unshift(order);
     APP_STATE.cashierOrder = [];
     APP_STATE.currentMember = null;
@@ -2595,7 +2597,6 @@ async function processPayment(method, total, paymentDetails = {}) {
 
     showOrderReceipt(order);
 }
-
 function showOrderReceipt(order) {
     const taxLines = order.taxDetails ? `
         ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: RM ${order.taxDetails.tax1Amount.toFixed(2)}</div>` : ''}
