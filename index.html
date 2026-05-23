@@ -334,51 +334,27 @@
 .member-search button {
   flex: 0 0 auto;
 }
-/* ========= CASHIER VIEW ONLY ========= */
+/* ========== MENU GRID (all views) ========== */
+.menu-grid {
+  display: grid;
+  gap: 12px;
+}
 
-/* On small screens, stack the menu panel above the order panel */
+/* Desktop: 3 columns */
+@media (min-width: 769px) {
+  .menu-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Mobile: 2 columns (both cashier and customer) */
 @media (max-width: 768px) {
-  #cashierView .cashier-layout {
-    flex-direction: column;
-  }
-  #cashierView .menu-panel {
-    flex: 1 1 auto;
-    width: 100%;
-  }
-  #cashierView .order-panel {
-    flex: 1 1 auto;
-    width: 100%;
-    margin-top: 16px;
-  }
-  /* Menu grid: 2 columns on mobile */
-  #cashierView .menu-grid {
+  .menu-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
-  #cashierView .menu-card {
-    min-width: 0;          /* allow cards to shrink */
-    padding: 8px;
-  }
-}
 
-/* On very narrow screens, you could even go to 1 column (optional) */
-@media (max-width: 400px) {
-  #cashierView .menu-grid {
-    grid-template-columns: 1fr;
-  }
-}
-		.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-.menu-card {
-  min-width: 0;          /* already helps avoid overflow */
-  box-sizing: border-box;
-}
-		/* ---- Cashier view only: 2 columns on mobile ---- */
-@media (max-width: 768px) {
-  /* Stack menu panel above order panel */
+  /* Stack the cashier layout (menu above order panel) */
   #cashierView .cashier-layout {
     flex-direction: column;
   }
@@ -389,21 +365,6 @@
   }
   #cashierView .order-panel {
     margin-top: 16px;
-  }
-
-  /* Cashier menu grid: exactly 2 columns */
-  #cashierView .menu-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-  #cashierView .menu-card {
-    min-width: 0;
-    padding: 10px 8px;
-  }
-}
-		@media (max-width: 400px) {
-  #cashierView .menu-grid {
-    grid-template-columns: 1fr;
   }
 }
     </style>
@@ -529,8 +490,23 @@
                 <div style="display:flex; justify-content:space-between; font-weight:800;">
                     <span data-i18n="total">總計</span><span id="publicCartTotal">RM 0.00</span>
                 </div>
-                <input type="text" id="publicCustomerName" data-i18n-placeholder="customerName" placeholder="👤 姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:8px;">
-                <input type="tel" id="publicCustomerPhone" data-i18n-placeholder="customerPhone" placeholder="📞 手機號碼（選填）" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:6px;">
+                <div style="margin-top:12px; text-align:left;">
+  <label for="publicCustomerName" style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:4px;">
+    👤 <span data-i18n="customerName">Your Name</span> <span style="color:var(--red);">*</span>
+  </label>
+  <input type="text" id="publicCustomerName" data-i18n-placeholder="customerName" placeholder="e.g. John" 
+         style="width:100%;padding:12px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;font-size:0.95rem;box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:border 0.2s;"
+         onfocus="this.style.borderColor='var(--persimmon)'" onblur="this.style.borderColor='var(--border)'">
+</div>
+
+<div style="margin-top:10px; text-align:left;">
+  <label for="publicCustomerPhone" style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:4px;">
+    📞 <span data-i18n="customerPhone">Phone (optional)</span>
+  </label>
+  <input type="tel" id="publicCustomerPhone" data-i18n-placeholder="customerPhone" placeholder="e.g. 012-3456789"
+         style="width:100%;padding:12px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;font-size:0.95rem;box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:border 0.2s;"
+         onfocus="this.style.borderColor='var(--persimmon)'" onblur="this.style.borderColor='var(--border)'">
+</div><p style="font-size:0.7rem; color:var(--text-lighter); margin:4px 0 0 4px;" data-i18n="phoneHint">For order updates & membership rewards</p>
                 <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="submitPublicOrder()" data-i18n="submitOrder">✅ 送出訂單</button>
                 <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closePublicCartModal()" data-i18n="continueOrdering">繼續點餐</button>
             </div>
