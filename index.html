@@ -334,6 +334,46 @@
 .member-search button {
   flex: 0 0 auto;
 }
+		.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* On screens narrower than 600px, use 2 columns */
+@media (max-width: 600px) {
+  .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+		@media (max-width: 600px) {
+  .menu-card {
+    min-width: 0;          /* allow cards to shrink */
+    padding: 10px;         /* slightly tighter */
+    font-size: 0.9rem;
+  }
+}
+		.cashier-layout {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.menu-panel {
+  flex: 1 1 100%;   /* full width on small screens */
+}
+
+.order-panel {
+  flex: 1 1 300px;  /* minimum 300px, then share space */
+}
+
+@media (min-width: 768px) {
+  .menu-panel {
+    flex: 2;        /* menu takes more space on tablets+ */
+  }
+  .order-panel {
+    flex: 1;
+  }
+}
     </style>
 </head>
 <body>
@@ -2594,7 +2634,7 @@ const PLAN_DETAILS = {
   }
 };
 // 当前选中的计费周期，默认为 monthly
-let selectedBilling = 'yearly';
+let selectedBilling = 'monthly';
 
 function setBilling(billing) {
   selectedBilling = billing;
