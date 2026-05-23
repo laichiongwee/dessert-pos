@@ -1215,7 +1215,7 @@ i18n
   "newCategory": "New Category",
   "addCategory": "＋ Add Category",
   "deleteCategoryConfirm": "Delete category? Items will be moved to 'Other'.",
-
+"categoryAdded": "✅ Category added",
   // 出餐
   "preparing": "⏳ Preparing",
   "completed": "✅ Completed",
@@ -1608,7 +1608,7 @@ i18n
   "newCategory": "新分类名",
   "addCategory": "＋ 添加分类",
   "deleteCategoryConfirm": "删除此分类？该分类下的商品将移至“其他”。",
-
+"categoryAdded": "✅ 分类已添加",
   // 出餐
   "preparing": "⏳ 制作中",
   "completed": "✅ 已取餐",
@@ -4636,7 +4636,7 @@ async function addNewMenuItem() {
     const { error } = await supabaseClient.from('menu').insert([newItem]);
     if (error) console.error('Add menu item error:', error);
     renderAdminMenuGrid();
-    showToast('菜品已添加');
+    showToast('itemSaved');
 }
 
 function addNewCategory() {
@@ -4967,7 +4967,7 @@ async function addNewCategory() {
   // update datalist
   const dl = document.getElementById('categoryList');
   dl.innerHTML = APP_STATE.categories.map(c => `<option value="${c}">`).join('');
-  showToast('分类已添加');
+  showToast('categoryAdded');
 }
 
 	function openUnpaidOrdersModal() {
