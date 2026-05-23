@@ -292,6 +292,33 @@
 #reportPlanBadge.badge-free { background: #e0e0e0; color: #333; }
 #reportPlanBadge.badge-lite { background: #ffe5b4; color: #b45309; }
 #reportPlanBadge.badge-pro  { background: var(--persimmon); color: white; }
+		.alphabet-char {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.alphabet-char:hover {
+  background: var(--gold-light);
+}
+.member-manager-item {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.15s;
+}
+.member-manager-item:hover {
+  background: var(--gold-light);
+}
+.member-manager-name {
+  font-weight: 600;
+}
+.member-manager-phone {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
     </style>
 </head>
 <body>
@@ -496,6 +523,7 @@
         <div class="member-dropdown" id="memberDropdown"></div>
         <button class="btn btn-xs btn-outline" onclick="clearMember()" data-i18n="clear">清除</button>
         <button class="btn btn-xs btn-primary" onclick="openAddMemberModal()" data-i18n="addMember">＋ 添加</button>
+		<button class="btn btn-xs btn-outline" onclick="openMemberManagerModal()" title="Manage Members" style="margin-left:2px;">👥</button>
     </div>
     <div id="memberInfoDisplay" style="margin-top:6px;font-size:0.75rem;color:var(--text-light);"></div>
 </div>
@@ -948,6 +976,33 @@
     <button class="btn btn-outline btn-sm" style="width:100%;" onclick="closeUpgradePrompt()" data-i18n="maybeLater">Maybe Later</button>
   </div>
 </div>
+
+	<!-- Member Manager Modal -->
+<div class="modal-overlay" id="memberManagerModal" style="display:none;" onclick="closeMemberManagerModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:500px; max-height:80vh; display:flex; flex-direction:column;">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="memberManagerTitle">👥 会员管理</h3>
+    
+    <!-- Search field -->
+    <input type="text" id="memberSearchField" placeholder="搜索姓名或手机号..." 
+           style="width:100%; padding:10px; border-radius:20px; border:1.5px solid var(--border); margin-bottom:12px;"
+           oninput="filterMemberList()" autocomplete="off">
+    
+    <div style="display:flex; flex:1; overflow:hidden;">
+      <!-- Scrollable member list -->
+      <div id="memberListContainer" style="flex:1; overflow-y:auto; max-height:60vh; padding-right:8px;">
+        <div id="memberListInner"></div>
+      </div>
+      
+      <!-- Alphabet index -->
+      <div id="alphabetIndex" style="width:30px; display:flex; flex-direction:column; align-items:center; padding:4px 0; overflow-y:auto; max-height:60vh; font-size:0.7rem; color:var(--persimmon); font-weight:600;">
+        <!-- dynamically filled -->
+      </div>
+    </div>
+    
+    <button class="btn btn-outline btn-sm" style="width:100%; margin-top:8px;" onclick="closeMemberManagerModal()" data-i18n="close">关闭</button>
+  </div>
+</div>
 	
 <script>
 	const i18n = i18next.createInstance();
@@ -1001,7 +1056,7 @@ i18n
   "cashierMode": "💰 Cashier",
   "customerMode": "📱 Customer",
   "fulfillmentMode": "📦 Kitchen",
-
+"memberManagerTitle": "👥 Manage Members",
 		  "autoAddMemberTitle": "Auto-add member for customer orders",
 "autoAddMemberDesc": "When enabled, the system will automatically create a member using the phone number provided during QR ordering.",
 		  "checkEmailTitle": "Confirmation Email Sent!",
@@ -1520,7 +1575,7 @@ i18n
   "onlineTotal": "线上收款",
   "discountTotal": "折扣总额",
   "closeDay": "🔒 关闭今日账目",
-
+"memberManagerTitle": "👥 会员管理",
   // 菜品编辑
   "editItemTitle": "✏️ 编辑菜品",
   "itemName": "名称",
@@ -2067,6 +2122,7 @@ if (counterDate !== today) {
       APP_STATE.taxSettings.tax2Rate = parseFloat(getSetting('tax2Rate', '0'));
 		APP_STATE.taxSettings.roundingEnabled = getSetting('roundingEnabled', 'true') !== 'false';
 		APP_STATE.settings.currencySymbol = getSetting('currencySymbol', '$');
+		APP_STATE.settings.callNumberCounter = getSetting('callNumberCounter', '0'); 
     }
 
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
@@ -2474,6 +2530,100 @@ async function submitNewMember() {
     document.getElementById('memberPhoneInput').value = newMember.phone;
     updateMemberDisplay();
 }
+
+	// ==================== MEMBER MANAGER MODAL ====================
+
+// Gate the feature (Lite / Pro only)
+function openMemberManagerModal() {
+  if (!requireFeature('memberDiscount', 'memberFeatureLocked')) return;
+  
+  // Build the member list
+  renderMemberManagerList(APP_STATE.members);
+  
+  // Build alphabet index
+  buildAlphabetIndex(APP_STATE.members);
+  
+  document.getElementById('memberManagerModal').style.display = 'flex';
+  document.getElementById('memberSearchField').value = '';
+  // Ensure the list starts scrolled to top
+  document.getElementById('memberListContainer').scrollTop = 0;
+}
+
+function closeMemberManagerModal(e) {
+  if (e && e.target !== document.getElementById('memberManagerModal')) return;
+  document.getElementById('memberManagerModal').style.display = 'none';
+}
+document.getElementById('memberManagerModal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// Render member items
+function renderMemberManagerList(members) {
+  const sorted = [...members].sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+  const html = sorted.map(m => `
+    <div class="member-manager-item" data-member-id="${m.id}" onclick="selectMemberFromManager('${m.id}')">
+      <div>
+        <div class="member-manager-name">${m.name}</div>
+        <div class="member-manager-phone">${m.phone || ''}</div>
+      </div>
+      <div style="color:var(--text-lighter);">${m.points || 0} pts</div>
+    </div>
+  `).join('');
+  document.getElementById('memberListInner').innerHTML = html || '<p style="text-align:center; padding:20px;">暂无会员</p>';
+}
+
+// Build alphabet index based on first letter of name
+function buildAlphabetIndex(members) {
+  const letters = new Set();
+  members.forEach(m => {
+    const first = (m.name || 'A').charAt(0).toUpperCase();
+    if (/[A-Z]/.test(first)) letters.add(first);
+  });
+  const sortedLetters = [...letters].sort();
+  
+  const indexDiv = document.getElementById('alphabetIndex');
+  indexDiv.innerHTML = sortedLetters.map(l => 
+    `<span class="alphabet-char" onclick="scrollToLetter('${l}')">${l}</span>`
+  ).join('');
+}
+
+// Scroll the member list to the first item starting with the chosen letter
+function scrollToLetter(letter) {
+  const container = document.getElementById('memberListContainer');
+  const items = container.querySelectorAll('.member-manager-item');
+  for (let item of items) {
+    const name = item.querySelector('.member-manager-name')?.textContent || '';
+    if (name.charAt(0).toUpperCase() === letter) {
+      item.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      break;
+    }
+  }
+}
+
+// Filter member list based on search input
+function filterMemberList() {
+  const query = document.getElementById('memberSearchField').value.trim().toLowerCase();
+  const allMembers = APP_STATE.members;
+  if (!query) {
+    renderMemberManagerList(allMembers);
+    buildAlphabetIndex(allMembers);
+    return;
+  }
+  const filtered = allMembers.filter(m => 
+    (m.name && m.name.toLowerCase().includes(query)) ||
+    (m.phone && m.phone.includes(query))
+  );
+  renderMemberManagerList(filtered);
+  // Keep alphabet index based on filtered results
+  buildAlphabetIndex(filtered);
+}
+
+// Select a member from the manager modal (same as clicking in dropdown)
+function selectMemberFromManager(memberId) {
+  selectMemberById(memberId);      // reuses existing member selection logic
+  closeMemberManagerModal();
+}
+	
 function openPaymentModal(orderId) {
     let payOrder = null;
     if (orderId) {
