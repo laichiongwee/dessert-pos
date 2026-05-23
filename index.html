@@ -342,11 +342,11 @@
     flex-direction: column;
   }
   #cashierView .menu-panel {
-    flex: 2 1 auto;
+    flex: 1 1 auto;
     width: 100%;
   }
   #cashierView .order-panel {
-    flex: 2 1 auto;
+    flex: 1 1 auto;
     width: 100%;
     margin-top: 16px;
   }
@@ -375,6 +375,36 @@
 .menu-card {
   min-width: 0;          /* already helps avoid overflow */
   box-sizing: border-box;
+}
+		/* ---- Cashier view only: 2 columns on mobile ---- */
+@media (max-width: 768px) {
+  /* Stack menu panel above order panel */
+  #cashierView .cashier-layout {
+    flex-direction: column;
+  }
+  #cashierView .menu-panel,
+  #cashierView .order-panel {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+  #cashierView .order-panel {
+    margin-top: 16px;
+  }
+
+  /* Cashier menu grid: exactly 2 columns */
+  #cashierView .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  #cashierView .menu-card {
+    min-width: 0;
+    padding: 10px 8px;
+  }
+}
+		@media (max-width: 400px) {
+  #cashierView .menu-grid {
+    grid-template-columns: 1fr;
+  }
 }
     </style>
 </head>
@@ -1225,6 +1255,14 @@ function closeUpgradePrompt() {
 const SUPABASE_URL = 'https://tpisbuxzbnmoaowtlbyu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaXNidXh6Ym5tb2Fvd3RsYnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzg5MzUsImV4cCI6MjA5MzkxNDkzNX0.48SvZUSPSbh7UvuC8ExHNA63c3iX5i-y9t6HrTFw3sQ';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+	// Public client – never attaches a user token (used for QR menu & settings)
+const supabasePublicClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false
+  }
+});
 const stripe = Stripe('pk_test_51TVNNWGaRTxvbl03MtFuj3oMYc8mfFD8rOs6el6tVc2ppw9RMG3HXik9gOgIzaquz3mqWUM3bEKJ6PjAu7JI8Tyx00XZKfqIe4');
 // ==================== 套餐权限 JSON ====================
 const PLAN_PERMISSIONS = {
@@ -3360,41 +3398,44 @@ async function logout() {
     await supabaseClient.auth.signOut();
     checkUser();
 }
-	async function fetchPublicMenu() {
-    const { data: menu } = await supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId);
-    if (menu) {
-        APP_STATE.menu = menu.map(item => ({
-            ...item,
-            price: Number(item.price),
-            available: item.available === true || item.available === 'TRUE'
-        }));
-        APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
-    }
+async function fetchPublicMenu() {
+  const { data: menu } = await supabasePublicClient
+    .from('menu')
+    .select('*')
+    .eq('store_id', APP_STATE.storeId);
+  if (menu) {
+    APP_STATE.menu = menu.map(item => ({
+      ...item,
+      price: Number(item.price),
+      available: item.available === true || item.available === 'TRUE'
+    }));
+    APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
+  }
 }
 async function loadPublicSettings() {
-    const storeId = APP_STATE.storeId;
-    const { data: settingsRows, error } = await supabaseClient
-        .from('settings')
-        .select('*')
-        .eq('store_id', storeId)                // ← 新增
-        .in('key', ['autoAddMember']);
+  const storeId = APP_STATE.storeId;
+  const { data: settingsRows, error } = await supabasePublicClient
+    .from('settings')
+    .select('*')
+    .eq('store_id', storeId)
+    .in('key', ['autoAddMember', 'storeName', 'logoUrl', 'currencySymbol', 'pricesInclusive', 'tax1Enabled', 'tax1Name', 'tax1Rate', 'tax2Enabled', 'tax2Name', 'tax2Rate', 'roundingEnabled']);
 
-    if (error) {
-        console.error('Load public settings error:', error);
-        return;
+  if (error) {
+    console.error('Load public settings error:', error);
+    return;
+  }
+  if (settingsRows) {
+    settingsRows.forEach(row => {
+      APP_STATE.settings[row.key] = row.value;
+    });
+    // Boolean conversions
+    if (APP_STATE.settings.autoAddMember !== undefined) {
+      APP_STATE.settings.autoAddMember = APP_STATE.settings.autoAddMember === 'true' || APP_STATE.settings.autoAddMember === true;
+    } else {
+      APP_STATE.settings.autoAddMember = true;
     }
-    if (settingsRows) {
-        settingsRows.forEach(row => {
-            APP_STATE.settings[row.key] = row.value;
-        });
-        // 布尔转换保持不变
-        if (APP_STATE.settings.autoAddMember !== undefined) {
-            APP_STATE.settings.autoAddMember =
-                APP_STATE.settings.autoAddMember === 'true' || APP_STATE.settings.autoAddMember === true;
-        } else {
-            APP_STATE.settings.autoAddMember = true;
-        }
-    }
+    // … (other boolean settings if needed)
+  }
 }
 function renderPublicMenu() {
     const activeCat = APP_STATE.activeCategory || '全部';
