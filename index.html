@@ -2435,27 +2435,35 @@ document.getElementById('totalDisplay').textContent = formatCurrency(subtotal - 
 
 // ==================== MEMBER SEARCH WITH DROPDOWN ====================
 function searchMemberSuggestions() {
-    const phone = document.getElementById('memberPhoneInput').value.trim();
+    const query = document.getElementById('memberPhoneInput').value.trim().toLowerCase();
     const dropdown = document.getElementById('memberDropdown');
-    if (phone.length < 3) {
+
+    if (query.length < 2) {                // start searching after 2 characters
         dropdown.style.display = 'none';
         APP_STATE.currentMember = null;
         updateMemberDisplay();
         return;
     }
-    const matches = APP_STATE.members.filter(m => String(m.phone).includes(phone));
+
+    const matches = APP_STATE.members.filter(m => {
+        const name  = (m.name  || '').toLowerCase();
+        const phone = (m.phone || '').toLowerCase();
+        return name.includes(query) || phone.includes(query);
+    });
+
     if (matches.length === 0) {
         dropdown.style.display = 'none';
         APP_STATE.currentMember = null;
     } else {
-        dropdown.innerHTML = matches.map(m => 
+        dropdown.innerHTML = matches.map(m =>
             `<div class="member-dropdown-item" 
                 onclick="event.stopPropagation(); selectMemberById('${m.id}');"
                 onmousedown="event.preventDefault();"
-            >${m.name} - ${m.phone}</div>`
+            ><strong>${m.name}</strong> – ${m.phone}</div>`
         ).join('');
         dropdown.style.display = 'block';
     }
+
     updateMemberDisplay();
 }
 
