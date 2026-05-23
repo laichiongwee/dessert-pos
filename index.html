@@ -1896,7 +1896,7 @@ const APP_STATE = {
 	publicCart: [],
     settings: {},
     gasUrl: localStorage.getItem('gasUrl') || '',
-    orderIdCounter: parseInt(localStorage.getItem('orderIdCounter') || '1000'),
+    orderIdCounter: 1,
     adminUnlocked: false,
     postUrl: localStorage.getItem('postUrl') || '',
     imgbbKey: localStorage.getItem('imgbbKey') || '',
@@ -2019,7 +2019,14 @@ async function fetchAllData() {
       supabaseClient.from('discount_rules').select('*').eq('store_id', APP_STATE.storeId),
       supabaseClient.from('settings').select('*').eq('store_id', APP_STATE.storeId)   // ← this line must exist
     ]);
-
+// Daily order counter
+const counterDate = settingsRows?.find(r => r.key === 'orderIdDate')?.value || '';
+const today = new Date().toISOString().slice(0, 10);
+if (counterDate !== today) {
+  APP_STATE.orderIdCounter = 1;
+} else {
+  APP_STATE.orderIdCounter = parseInt(settingsRows?.find(r => r.key === 'orderIdCounter')?.value || '1');
+}
     APP_STATE.menu = menu.map(item => ({
       ...item,
       price: Number(item.price),
@@ -2573,7 +2580,7 @@ async function processPayment(method, total, paymentDetails = {}) {
         taxInfo = calculateTaxes(subtotal);
         finalTotal = taxInfo.total;
     }
-
+	
     // Generate call number...
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
     APP_STATE.settings.callNumberCounter = callNum;
@@ -2583,7 +2590,11 @@ async function processPayment(method, total, paymentDetails = {}) {
     );
 
     const orderId = String(++APP_STATE.orderIdCounter);
-    localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
+    const today = new Date().toISOString().slice(0, 10);
+await supabaseClient.from('settings').upsert([
+  { key: 'orderIdCounter', value: String(APP_STATE.orderIdCounter), store_id: APP_STATE.storeId },
+  { key: 'orderIdDate', value: today, store_id: APP_STATE.storeId }
+], { onConflict: 'key, store_id' });
 
     const order = {
         id: orderId,
