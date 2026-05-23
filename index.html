@@ -500,10 +500,10 @@
     <div id="memberInfoDisplay" style="margin-top:6px;font-size:0.75rem;color:var(--text-light);"></div>
 </div>
             <div class="order-summary">
-                <div style="display:flex;justify-content:space-between;"><span data-i18n="subtotal">小计</span><span id="subtotalDisplay">RM 0.00</span></div>
-                <div style="display:flex;justify-content:space-between;color:var(--green);" id="discountRow" hidden><span data-i18n="memberDiscount">会员折扣</span><span id="discountDisplay">-RM 0.00</span></div>
-                <div class="total-row"><span data-i18n="total">总计</span><span id="totalDisplay">RM 0.00</span></div>
-            </div>
+    <div style="display:flex;justify-content:space-between;"><span data-i18n="subtotal">小计</span><span id="subtotalDisplay">-</span></div>
+    <div style="display:flex;justify-content:space-between;color:var(--green);" id="discountRow" hidden><span data-i18n="memberDiscount">会员折扣</span><span id="discountDisplay">-</span></div>
+    <div class="total-row"><span data-i18n="total">总计</span><span id="totalDisplay">-</span></div>
+</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
                 <button class="btn btn-outline btn-sm" onclick="clearOrder()" style="flex:1;" data-i18n="clearOrder">🗑️ 清空</button>
                 <button class="btn btn-primary btn-sm" onclick="openPaymentModal()" style="flex:2;" data-i18n="checkout">💳 结算</button>
@@ -2491,16 +2491,16 @@ function openPaymentModal(orderId) {
     document.getElementById('payTotalDisplay').textContent = formatCurrency(total);
     // Show tax breakdown
     const taxLines = [];
-    if (taxInfo.tax1Amount > 0) taxLines.push(`${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: RM ${taxInfo.tax1Amount.toFixed(2)}`);
-    if (taxInfo.tax2Amount > 0) taxLines.push(`${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: RM ${taxInfo.tax2Amount.toFixed(2)}`);
-    if (taxInfo.roundingAdjustment !== 0) taxLines.push(`Rounding Adjustment: RM ${taxInfo.roundingAdjustment.toFixed(2)}`);
+    if (taxInfo.tax1Amount > 0) taxLines.push(`${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: ${formatCurrency(taxInfo.tax1Amount)}`);
+if (taxInfo.tax2Amount > 0) taxLines.push(`${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: ${formatCurrency(taxInfo.tax2Amount)}`);
+if (taxInfo.roundingAdjustment !== 0) taxLines.push(`Rounding Adjustment: ${formatCurrency(taxInfo.roundingAdjustment)}`);
     const taxBreakdownHtml = taxLines.length > 0 ? taxLines.join('<br>') + (taxInfo.inclusive ? '<br><span style="font-size:0.7rem;">(Included in price)</span>' : '') : '';
     document.getElementById('paymentTaxBreakdown').innerHTML = taxBreakdownHtml;
 
     document.getElementById('paymentModal').style.display = 'flex';
     document.getElementById('paymentMethodSelect').value = 'cash';
     document.getElementById('cashReceived').value = '';
-    document.getElementById('changeDisplay').textContent = 'RM 0.00';
+    document.getElementById('changeDisplay').textContent = formatCurrency(0);
     showPaymentDetails();
     calculateChange();
 }
@@ -3530,6 +3530,7 @@ async function checkUser() {
         document.getElementById('mainApp').style.display = 'none';
         await fetchPublicMenu();
         await loadPublicSettings();
+		updateOrderTotals()
         renderPublicMenu();
         updatePublicCartCount();
 		updateStoreBranding();
