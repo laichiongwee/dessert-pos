@@ -2349,10 +2349,10 @@ function updateOrderTotals() {
         }
         discount = Math.min(discount, subtotal);
     }
-    document.getElementById('subtotalDisplay').textContent = `${formatCurrency(subtotal)}`;
+    document.getElementById('subtotalDisplay').textContent = formatCurrency(subtotal);
     document.getElementById('discountRow').hidden = discount === 0;
-    document.getElementById('discountDisplay').textContent = `-RM ${discount.toFixed(2)}`;
-    document.getElementById('totalDisplay').textContent = `RM ${(subtotal - discount).toFixed(2)}`;
+    document.getElementById('discountDisplay').textContent = `-${formatCurrency(discount)}`;
+document.getElementById('totalDisplay').textContent = formatCurrency(subtotal - discount);
 }
 
 // ==================== MEMBER SEARCH WITH DROPDOWN ====================
@@ -2627,13 +2627,13 @@ async function processPayment(method, total, paymentDetails = {}) {
 }
 function showOrderReceipt(order) {
     const taxLines = order.taxDetails ? `
-        ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: RM ${order.taxDetails.tax1Amount.toFixed(2)}</div>` : ''}
-        ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: RM ${order.taxDetails.tax2Amount.toFixed(2)}</div>` : ''}
+        ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: ${formatCurrency(order.taxDetails.tax1Amount)}</div>` : ''}
+        ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: ${formatCurrency(order.taxDetails.tax2Amount)}</div>` : ''}
         ${order.taxDetails.inclusive ? '<div style="font-size:0.7rem;color:var(--text-lighter);">(Included in price)</div>' : ''}
     ` : '';
-const roundingLine = (order.taxDetails && order.taxDetails.roundingAdjustment !== 0)
-  ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">Rounding Adjustment: RM ${order.taxDetails.roundingAdjustment.toFixed(2)}</div>`
-  : '';
+    const roundingLine = (order.taxDetails && order.taxDetails.roundingAdjustment !== 0)
+      ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">Rounding Adjustment: ${formatCurrency(order.taxDetails.roundingAdjustment)}</div>`
+      : '';
     const receiptHTML = `
     <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
         <h2 style="color:var(--persimmon);margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
@@ -2645,11 +2645,11 @@ const roundingLine = (order.taxDetails && order.taxDetails.roundingAdjustment !=
             ${order.items.map(item => `
                 <tr>
                     <td style="padding:4px 0;">${item.name} x${item.qty}</td>
-                    <td style="text-align:right;">RM ${(item.price * item.qty).toFixed(2)}</td>
+                    <td style="text-align:right;">${formatCurrency(item.price * item.qty)}</td>
                 </tr>
             `).join('')}
         </table>
-                <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
+        <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
         ${taxLines}
         ${roundingLine}
         <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
@@ -2676,12 +2676,12 @@ function printReceipt(orderId) {
     if (!order) return;
 
     const taxLines = order.taxDetails ? `
-        ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: RM ${order.taxDetails.tax1Amount.toFixed(2)}</div>` : ''}
-        ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: RM ${order.taxDetails.tax2Amount.toFixed(2)}</div>` : ''}
+        ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: ${formatCurrency(order.taxDetails.tax1Amount)}</div>` : ''}
+        ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: ${formatCurrency(order.taxDetails.tax2Amount)}</div>` : ''}
         ${order.taxDetails.inclusive ? '<div style="font-size:0.7rem;color:#6B4E4E;">(Included in price)</div>' : ''}
     ` : '';
     const roundingLine = (order.taxDetails && order.taxDetails.roundingAdjustment !== 0)
-      ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">Rounding Adjustment: RM ${order.taxDetails.roundingAdjustment.toFixed(2)}</div>`
+      ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">Rounding Adjustment: ${formatCurrency(order.taxDetails.roundingAdjustment)}</div>`
       : '';
     const printContent = `
         <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
@@ -2694,16 +2694,16 @@ function printReceipt(orderId) {
                 ${order.items.map(item => `
                     <tr>
                         <td style="padding:4px 0;">${item.name} x${item.qty}</td>
-                        <td style="text-align:right;">RM ${(item.price * item.qty).toFixed(2)}</td>
+                        <td style="text-align:right;">${formatCurrency(item.price * item.qty)}</td>
                     </tr>
                 `).join('')}
             </table>
-                        <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
+            <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
             ${taxLines}
             ${roundingLine}
             <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
                 <span>${i18n.t('total')}</span>
-                <span>RM ${order.total.toFixed(2)}</span>
+                <span>${formatCurrency(order.total)}</span>
             </div>
             <div style="font-size:0.8rem;color:#6B4E4E;text-align:left;line-height:1.6;">
                 <div>${i18n.t('paymentMethod')}：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
@@ -2739,8 +2739,8 @@ function getPaymentMethodLabel(method) {
 function renderPaymentDetailsLine(order) {
     const details = order.paymentDetails || {};
     if (order.paymentMethod === 'cash' && details.amountTendered) {
-        return `<div>${i18n.t('amountReceived')}：RM ${details.amountTendered.toFixed(2)}</div>
-                <div>${i18n.t('change')}：RM ${details.change.toFixed(2)}</div>`;
+        return `<div>${i18n.t('amountReceived')}：${formatCurrency(details.amountTendered)}</div>
+                <div>${i18n.t('change')}：${formatCurrency(details.change)}</div>`;
     }
     if (order.paymentMethod === 'card' && details.cardLast4) {
         return `<div>${i18n.t('cardLast4')}：**** ${details.cardLast4}</div>
