@@ -109,7 +109,8 @@ window.__i18n_zhCN = {
   clearOrderConfirm: "确定清空订单？",
   clickToAdd: "点击菜单添加商品",
   orderCleared: "订单已清空",
-
+  phoneHint: "用于订单通知和会员积分",
+  
   // === 会员 ===
   memberSearch: "📞 搜索会员手机号或名字...",
   memberInfo: "会员信息",
