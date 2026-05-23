@@ -466,7 +466,7 @@
     <span data-i18n="adminModeLabel">🔓 管理模式</span>
     <input type="file" id="logoUpload" accept="image/*" style="display:none;" onchange="uploadLogo()">
     <button class="btn btn-xs btn-outline" data-i18n="storeSettings" onclick="openStoreSettingsModal()">🏪 店铺设置</button>
-	<button class="btn btn-xs btn-outline" onclick="openTaxSettingsModal()" data-i18n="taxSettings">🧾 税务设置</button>
+	<button class="btn btn-xs btn-outline" onclick="openTaxSettingsModal()" data-i18n="taxPaymentSettingsTitle">🧾 税务与付款设置</button>
     <button class="btn btn-xs btn-outline" data-i18n="discountRules" onclick="openDiscountRulesModal()">🏷️ 优惠规则</button>
     <button class="btn btn-xs btn-outline" data-i18n="manageCategory" onclick="openCategoryModal()">📂 管理分类</button>
     <button class="btn btn-xs btn-outline" data-i18n="addMenuItem" onclick="openMenuEditModal()">＋菜品<span id="menuItemCount">(12 max for Free)</span></button>
@@ -921,6 +921,14 @@
     例如：RM 10.12 → RM 10.10，RM 10.13 → RM 10.15
   </p>
 </div>
+	  <div style="margin-bottom:16px;">
+  <label style="font-weight:700;" data-i18n="currencySymbol">货币符号</label>
+  <input type="text" id="currencySymbolInput" placeholder="e.g. RM, $, €" 
+         style="width:100%; padding:8px; border-radius:16px; border:1.5px solid var(--border); font-family:inherit;">
+  <p style="font-size:0.7rem; color:var(--text-lighter); margin-top:4px;" data-i18n="currencySymbolDesc">
+    用于所有价格、收据与报表的显示
+  </p>
+</div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary btn-sm" onclick="saveTaxSettings()" style="flex:1;" data-i18n="save">💾 保存</button>
       <button class="btn btn-outline btn-sm" onclick="closeTaxSettingsModal()" style="flex:1;" data-i18n="cancel">取消</button>
@@ -987,7 +995,8 @@ i18n
 "sendResetLink": "📧 Send reset link",
 "backToLogin": "Back to login",
 "addedItem": "Added: {{name}}",
-	
+	"currencySymbol": "Currency Symbol",
+"currencySymbolDesc": "Used for all prices, receipts, and reports",
   // 模式切换
   "cashierMode": "💰 Cashier",
   "customerMode": "📱 Customer",
@@ -1485,7 +1494,8 @@ i18n
   "onlinePlatform": "平台：",
   "payNow": "✅ 确认收款",
 		  "insufficientAmount": "⚠️ 实收金额不足",
-
+"currencySymbol": "货币符号",
+"currencySymbolDesc": "用于所有价格、收据与报表的显示",
 		  "basicPlanName": "Basic 标准版",
   "proPlanName": "Pro 专业版",
   "perMonth": "每月",
@@ -2049,6 +2059,7 @@ async function fetchAllData() {
       APP_STATE.taxSettings.tax2Name = getSetting('tax2Name', 'Service Tax');
       APP_STATE.taxSettings.tax2Rate = parseFloat(getSetting('tax2Rate', '0'));
 		APP_STATE.taxSettings.roundingEnabled = getSetting('roundingEnabled', 'true') !== 'false';
+		APP_STATE.settings.currencySymbol = getSetting('currencySymbol', '$');
     }
 
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
@@ -2077,6 +2088,7 @@ function openTaxSettingsModal() {
   toggleTaxRow('tax1');
   toggleTaxRow('tax2');
 	document.getElementById('roundingEnabled').checked = APP_STATE.taxSettings.roundingEnabled !== false;
+	document.getElementById('currencySymbolInput').value = APP_STATE.settings.currencySymbol || '$';
   document.getElementById('taxSettingsModal').style.display = 'flex';
 }
 
@@ -2105,7 +2117,7 @@ function toggleTaxRow(prefix) {
   };
 
   APP_STATE.taxSettings = ts;
-
+APP_STATE.settings.currencySymbol = document.getElementById('currencySymbolInput').value.trim() || '$';
   const rows = [
     { key: 'pricesInclusive', value: ts.pricesInclusive ? 'true' : 'false', store_id: APP_STATE.storeId },
     { key: 'tax1Enabled', value: ts.tax1Enabled ? 'true' : 'false', store_id: APP_STATE.storeId },
@@ -2114,7 +2126,8 @@ function toggleTaxRow(prefix) {
     { key: 'tax2Enabled', value: ts.tax2Enabled ? 'true' : 'false', store_id: APP_STATE.storeId },
     { key: 'tax2Name', value: ts.tax2Name, store_id: APP_STATE.storeId },
     { key: 'tax2Rate', value: String(ts.tax2Rate), store_id: APP_STATE.storeId },
-	  { key: 'roundingEnabled', value: ts.roundingEnabled ? 'true' : 'false', store_id: APP_STATE.storeId }
+	  { key: 'roundingEnabled', value: ts.roundingEnabled ? 'true' : 'false', store_id: APP_STATE.storeId },
+	  { key: 'currencySymbol', value: document.getElementById('currencySymbolInput').value.trim() || '$', store_id: APP_STATE.storeId }
   ];
 
   const { error } = await supabaseClient.from('settings').upsert(rows, { onConflict: 'key, store_id' });
@@ -2124,6 +2137,10 @@ function toggleTaxRow(prefix) {
   showToast('taxSettingsSaved');
 }
 
+	function formatCurrency(amount) {
+  const symbol = APP_STATE.settings.currencySymbol || '$';
+  return `${symbol} ${Number(amount).toFixed(2)}`;
+}
 	/**
  * Calculates tax amounts based on current settings and a given subtotal.
  * @param {number} subtotal - sum of item totals (may be inclusive or exclusive)
@@ -2234,7 +2251,7 @@ function renderMenuGrid() {
             <div class="item-name">${item.name}</div>
             <div class="item-desc">${item.description || ''}</div>
             <div class="item-price">
-                RM ${Number(item.price).toFixed(2)}
+                ${formatCurrency(item.price)}
                 ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
             </div>
         </div>`;
@@ -2265,7 +2282,7 @@ function renderCustomerMenuGrid() {
             <div class="item-name">${item.name}</div>
             <div class="item-desc">${item.description || ''}</div>
             <div class="item-price">
-                RM ${Number(item.price).toFixed(2)}
+                ${formatCurrency(item.price)}
                 ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
             </div>
         </div>`;
@@ -2285,7 +2302,7 @@ function renderOrderPanel() {
                 <span>${entry.quantity}</span>
                 <button onclick="adjustOrderQty(${idx}, 1)">+</button>
             </div>
-            <span class="oi-price">RM ${(Number(entry.menuItem.price) * entry.quantity).toFixed(2)}</span>
+            <span class="oi-price">${formatCurrency(Number(entry.menuItem.price) * entry.quantity)}</span>
             <button class="oi-del" onclick="removeFromOrder(${idx})">✕</button>
         </div>
         `).join('');
@@ -2304,7 +2321,7 @@ function updateOrderTotals() {
         }
         discount = Math.min(discount, subtotal);
     }
-    document.getElementById('subtotalDisplay').textContent = `RM ${subtotal.toFixed(2)}`;
+    document.getElementById('subtotalDisplay').textContent = `${formatCurrency(subtotal)}`;
     document.getElementById('discountRow').hidden = discount === 0;
     document.getElementById('discountDisplay').textContent = `-RM ${discount.toFixed(2)}`;
     document.getElementById('totalDisplay').textContent = `RM ${(subtotal - discount).toFixed(2)}`;
@@ -2369,7 +2386,7 @@ function updateMemberDisplay() {
             <div>
                 <strong>${APP_STATE.currentMember.name}</strong> 
                 · ${i18n.t('points')}: ${points} · 
-                ${i18n.t('totalSpent')}: RM ${totalSpent}
+                ${i18n.t('totalSpent')}: ${formatCurrency(totalSpent)}
                 ${redeemText ? ' ' + redeemText : ''}
             </div>
         </div>`;
@@ -2443,7 +2460,7 @@ function openPaymentModal(orderId) {
         total = taxInfo.total;
     }
 
-    document.getElementById('payTotalDisplay').textContent = `RM ${total.toFixed(2)}`;
+    document.getElementById('payTotalDisplay').textContent = formatCurrency(total);
     // Show tax breakdown
     const taxLines = [];
     if (taxInfo.tax1Amount > 0) taxLines.push(`${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: RM ${taxInfo.tax1Amount.toFixed(2)}`);
@@ -2472,7 +2489,7 @@ function calculateChange() {
     }
     const received = parseFloat(document.getElementById('cashReceived').value) || 0;
     const change = Math.max(0, received - total);
-    document.getElementById('changeDisplay').textContent = `RM ${change.toFixed(2)}`;
+    document.getElementById('changeDisplay').textContent = formatCurrency(change);
 }
 
 function closePaymentModal(e) { 
@@ -2608,7 +2625,7 @@ const roundingLine = (order.taxDetails && order.taxDetails.roundingAdjustment !=
         ${roundingLine}
         <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
             <span>${i18n.t('total')}</span>
-            <span>RM ${order.total.toFixed(2)}</span>
+            <span>${formatCurrency(order.total)}</span>
         </div>
         <div style="font-size:0.8rem;color:var(--text-light);text-align:left;line-height:1.6;">
             <div>${i18n.t('paymentMethod')}：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
@@ -2886,14 +2903,14 @@ function renderDailyReport(start, end) {
   const discountTotal = orders.reduce((s,o) => s + (Number(o.discountApplied) || 0), 0);
   const content = `
     <table class="daily-report-table">
-      <tr><td>${i18n.t('date')}</td><td>${start} ${start !== end ? '→ ' + end : ''}</td></tr>
-      <tr><td>${i18n.t('orderCount')}</td><td class="report-highlight">${orders.length}</td></tr>
-      <tr><td>${i18n.t('totalSales')}</td><td class="report-highlight">RM ${totalSales.toFixed(2)}</td></tr>
-      <tr><td>${i18n.t('cashTotal')}</td><td>RM ${cashTotal.toFixed(2)}</td></tr>
-      <tr><td>${i18n.t('cardTotal')}</td><td>RM ${cardTotal.toFixed(2)}</td></tr>
-      <tr><td>${i18n.t('onlineTotal')}</td><td>RM ${onlineTotal.toFixed(2)}</td></tr>
-      <tr><td>${i18n.t('discountTotal')}</td><td>RM ${discountTotal.toFixed(2)}</td></tr>
-    </table>`;
+  <tr><td>${i18n.t('date')}</td><td>${start} ${start !== end ? '→ ' + end : ''}</td></tr>
+  <tr><td>${i18n.t('orderCount')}</td><td class="report-highlight">${orders.length}</td></tr>
+  <tr><td>${i18n.t('totalSales')}</td><td class="report-highlight">${formatCurrency(totalSales)}</td></tr>
+  <tr><td>${i18n.t('cashTotal')}</td><td>${formatCurrency(cashTotal)}</td></tr>
+  <tr><td>${i18n.t('cardTotal')}</td><td>${formatCurrency(cardTotal)}</td></tr>
+  <tr><td>${i18n.t('onlineTotal')}</td><td>${formatCurrency(onlineTotal)}</td></tr>
+  <tr><td>${i18n.t('discountTotal')}</td><td>${formatCurrency(discountTotal)}</td></tr>
+</table>`;
   document.getElementById('dailyReportContent').innerHTML = content;
 }
 
@@ -2908,7 +2925,7 @@ function renderWeeklyReport(start, end) {
     grouped[day].total += Number(o.total);
   });
   const rows = Object.entries(grouped).sort().map(([day, data]) =>
-    `<tr><td>${day}</td><td>${data.orders}</td><td>RM ${data.total.toFixed(2)}</td></tr>`
+    `<tr><td>${day}</td><td>${data.orders}</td><td>${formatCurrency(data.total)}</td></tr>`
   ).join('');
   document.getElementById('dailyReportContent').innerHTML = `
     <table class="daily-report-table">
@@ -2945,7 +2962,7 @@ function renderMembersReport(start, end) {
     memberMap[name].total += Number(o.total);
   });
   const rows = Object.entries(memberMap).map(([name, data]) =>
-    `<tr><td>${name}</td><td>${data.orders}</td><td>RM ${data.total.toFixed(2)}</td></tr>`
+    `<tr><td>${name}</td><td>${data.orders}</td><td>${formatCurrency(data.total)}</td></tr>`
   ).join('');
   document.getElementById('dailyReportContent').innerHTML = `
     <table class="daily-report-table">
@@ -2973,7 +2990,7 @@ function renderCashierReport(start, end) {
     cashierMap[cashier].total += Number(o.total);
   });
   const rows = Object.entries(cashierMap).map(([name, data]) =>
-    `<tr><td>${name}</td><td>${data.orders}</td><td>RM ${data.total.toFixed(2)}</td></tr>`
+    `<tr><td>${name}</td><td>${data.orders}</td><td>${formatCurrency(data.total)}</td></tr>`
   ).join('');
   document.getElementById('dailyReportContent').innerHTML = `
     <table class="daily-report-table">
@@ -3869,7 +3886,7 @@ function renderPublicMenu() {
             ${imageHTML}
             <span class="item-emoji" style="${emojiDisplay}">${item.emoji || '🍴'}</span>
             <div class="item-name">${item.name}</div>
-            <div class="item-price">RM ${Number(item.price).toFixed(2)}</div>
+            <div class="item-price">${formatCurrency(item.price)}</div>
         </div>`;
     }).join('');
 	updatePublicCartCount();
@@ -4619,7 +4636,7 @@ function renderAdminMenuGrid() {
             <span class="item-emoji">${item.emoji || ''}</span>
             <div class="item-name">${item.name}</div>
             <div style="font-size:0.78rem;color:var(--text-light);">${item.category || ''}</div>
-            <div class="item-price">RM ${Number(item.price).toFixed(2)}</div>
+            <div class="item-price">${formatCurrency(item.price)}</div>
             <div style="font-size:0.75em;color:#c45a2e">${availableText}</div>
         </div>`;
     }).join('') + `
@@ -4784,7 +4801,7 @@ function renderUnpaidOrdersList() {
             <div><strong>#${order.id}</strong> · ${order.memberName || i18n.t('customerLabel')}</div>
             <div style="font-size:0.75rem;">${items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
             <div class="flex-row" style="margin-top:4px;">
-                <span style="font-weight:800;">RM ${Number(order.total).toFixed(2)}</span>
+                <span style="font-weight:800;">${formatCurrency(order.total)}</span>
                 <button class="btn btn-xs btn-primary" onclick="payCustomerOrder('${order.id}')">💳 ${i18n.t('collectPayment')}</button>
             </div>
         </div>`;
