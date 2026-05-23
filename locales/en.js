@@ -109,6 +109,7 @@ window.__i18n_en = {
   clearOrderConfirm: "Clear order?",
   clickToAdd: "Click menu to add item",
   orderCleared: "Order cleared",
+  phoneHint: "For order updates & membership rewards",
 
   // === Members ===
   memberSearch: "📞 Search member phone or name...",
