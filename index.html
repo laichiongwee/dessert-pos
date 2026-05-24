@@ -367,6 +367,10 @@
     margin-top: 16px;
   }
 }
+		#namePromptModal {
+  backdrop-filter: blur(4px);
+  background: rgba(255,245,239,0.7);
+}
     </style>
 </head>
 <body>
@@ -1067,7 +1071,19 @@
     <button class="btn btn-outline btn-sm" style="width:100%; margin-top:8px;" onclick="closeMemberManagerModal()" data-i18n="close">关闭</button>
   </div>
 </div>
-	
+
+	<!-- Friendly name prompt (public view) -->
+<div class="modal-overlay" id="namePromptModal" style="display:none; z-index:10000;" onclick="closeNamePrompt()">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px; text-align:center; padding:28px 24px; background:white; border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
+    <div style="font-size:2.5rem; margin-bottom:8px;">😊</div>
+    <h4 style="margin-bottom:6px; color:var(--persimmon);" data-i18n="namePromptTitle">What should we call you?</h4>
+    <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:20px;" data-i18n="namePromptSub">We’ll use this to call you when your order is ready.</p>
+    <input type="text" id="namePromptInput" placeholder="Your name" 
+           style="width:100%; padding:12px; border-radius:16px; border:1.5px solid var(--border); font-size:1rem; text-align:center; margin-bottom:16px;"
+           onkeydown="if(event.key==='Enter') confirmNamePrompt()">
+    <button class="btn btn-primary" style="width:100%; background:var(--persimmon);" onclick="confirmNamePrompt()" data-i18n="continue">Continue</button>
+  </div>
+</div>
 <script>
 const i18n = i18next.createInstance();
 i18n
@@ -3547,7 +3563,10 @@ function closePublicCartModal(event) {
 
 async function submitPublicOrder() {
     const name = document.getElementById('publicCustomerName').value.trim();
-    if (!name) { showToast('enterName'); return; }
+    if (!name) {
+        showNamePrompt();
+        return;
+    }
     if (APP_STATE.publicCart.length === 0) { showToast('cartEmpty'); return; }
     const phone = document.getElementById('publicCustomerPhone').value.trim();
     const subtotal = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
@@ -3578,7 +3597,29 @@ async function submitPublicOrder() {
         showToast('submitFailed');
         return;
     }
+// Show the friendly name prompt
+function showNamePrompt() {
+  document.getElementById('namePromptInput').value = '';
+  document.getElementById('namePromptModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('namePromptInput').focus(), 100);
+}
 
+// Close the prompt (if user clicks outside)
+function closeNamePrompt() {
+  document.getElementById('namePromptModal').style.display = 'none';
+}
+
+// Confirm the name and submit
+function confirmNamePrompt() {
+  const name = document.getElementById('namePromptInput').value.trim();
+  if (!name) {
+    showToast('enterName');   // optional gentle reminder
+    return;
+  }
+  document.getElementById('publicCustomerName').value = name;
+  closeNamePrompt();
+  submitPublicOrder();        // now the name is filled, so submission succeeds
+}
     // ==================== 自动添加会员（新增）====================
     // 条件：设置了自动添加（默认为 true）、填写了电话、该电话尚未注册为会员
     const autoAdd = APP_STATE.settings.autoAddMember !== false; // 默认为 true
