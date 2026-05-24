@@ -1297,7 +1297,7 @@ const PLAN_PERMISSIONS = {
 const APP_STATE = {
     mode: 'cashier',
     menu: [], categories: [], activeCategory: '全部',
-    cashierOrder: [], customerCart: [],
+    cashierOrder: [],
     members: [], currentMember: null,
     orders: [], discountRules: [],
 	publicCart: [],
@@ -1639,11 +1639,7 @@ function renderAll() {
     renderCategoryTabs();
     renderMenuGrid();
     renderOrderPanel();
-    if (APP_STATE.mode === 'customer') {
-        renderCustomerCategoryTabs();
-        renderCustomerMenuGrid();
-        updateCartBadge();
-    }
+    
 }
 	function updateMenuItemCountDisplay() {
   const span = document.getElementById('menuItemCount');
@@ -3055,6 +3051,33 @@ async function checkUser() {
     }
 }
 
+	async function openCustomerView() {
+  // Make sure we have a storeId – if not, read from the current logged‑in store
+  if (!APP_STATE.storeId && APP_STATE.currentUser) {
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('store_id')
+      .eq('id', APP_STATE.currentUser.id)
+      .single();
+    APP_STATE.storeId = profile?.store_id || null;
+  }
+
+  if (!APP_STATE.storeId) {
+    showToast('missingStoreId');
+    return;
+  }
+
+  document.getElementById('authContainer').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('publicCustomerView').style.display = 'block';
+
+  await fetchPublicMenu();
+  await loadPublicSettings();
+  renderPublicMenu();
+  updatePublicCartCount();
+  updateStoreBranding();
+}
+	
 async function initRealtime() {
     if (realtimeSubscription) {
         await supabaseClient.removeChannel(realtimeSubscription);
@@ -3614,12 +3637,11 @@ async function submitPublicOrder() {
 	
         // ==================== URL PARAM CHECK ====================
         function checkUrlParams() {
-            const params = new URLSearchParams(window.location.search);
-            const mode = params.get('mode');
-            if (mode === 'customer') {
-                switchMode('customer');
-            }
-        }
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('mode') === 'customer') {
+    openCustomerView();
+  }
+}
 
         // ==================== KEYBOARD SHORTCUTS ====================
         document.addEventListener('keydown', function(e) {
@@ -3628,9 +3650,9 @@ async function submitPublicOrder() {
                 switchMode('cashier');
             }
             if (e.key === 'F2') {
-                e.preventDefault();
-                switchMode('customer');
-            }
+  e.preventDefault();
+  openCustomerView();
+}
             if (e.key === 'F8' && APP_STATE.mode === 'cashier') {
                 e.preventDefault();
                 quickPayment('cash');
@@ -3841,7 +3863,6 @@ async function deleteMenuItem(id) {
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
     renderAdminMenuGrid();
     renderMenuGrid();
-    if (APP_STATE.mode === 'customer') renderCustomerMenuGrid();
     showToast('itemDeleted');
 }
 
@@ -4019,7 +4040,6 @@ async function saveMenuItem() {
     document.getElementById('menuEditModal').style.display = 'none';
     renderCategoryTabs();
     renderMenuGrid();
-    if (APP_STATE.mode === 'customer') renderCustomerMenuGrid();
     if (APP_STATE.adminUnlocked) renderAdminMenuGrid();
     showToast('itemSaved');
 }
