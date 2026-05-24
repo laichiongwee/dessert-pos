@@ -260,6 +260,9 @@ window.__i18n_zhCN = {
   pleasePayCounter: "请前往柜台付款",
   viewOrderStatus: "查看订单状态 →",
   qrLoading: "QR码生成中...<br><small>请确保网络连接正常</small>",
+  namePromptTitle: "该怎么称呼您？",
+  namePromptSub: "我们会在取餐时称呼您。",
+  continue: "继续",
 
   // === 升级 / 套餐 ===
   pricingTitle: "⭐ 升级套餐",
