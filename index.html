@@ -517,6 +517,18 @@
         </div>
     </div>
 </div>
+<!-- Friendly name prompt modal -->
+<div class="modal-overlay" id="namePromptModal" style="display:none; z-index:10000;" onclick="closeNamePrompt()">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px; text-align:center; padding:28px 24px; background:white; border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
+    <div style="font-size:2.5rem; margin-bottom:8px;">😊</div>
+    <h4 style="margin-bottom:6px; color:var(--persimmon);" data-i18n="namePromptTitle">What should we call you?</h4>
+    <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:20px;" data-i18n="namePromptSub">We’ll use this to call you when your order is ready.</p>
+    <input type="text" id="namePromptInput" placeholder="Your name" 
+           style="width:100%; padding:12px; border-radius:16px; border:1.5px solid var(--border); font-size:1rem; text-align:center; margin-bottom:16px;"
+           onkeydown="if(event.key==='Enter') confirmNamePrompt()">
+    <button class="btn btn-primary" style="width:100%; background:var(--persimmon);" onclick="confirmNamePrompt()" data-i18n="continue">Continue</button>
+  </div>
+</div>
 	
 <!-- 主应用（默认隐藏） -->
 <div id="mainApp" style="display:none;">
@@ -633,19 +645,6 @@
     </div>
 </div>
 
-<!-- Customer Cart Modal -->
-<div class="modal-overlay" id="customerCartModal" style="display:none;" onclick="closeCustomerCartModal(event)">
-    <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
-        <h3 data-i18n="cartTitle">🛒 我的购物车</h3><div id="customerCartItems"></div>
-        <div style="border-top:2px solid #F0D8C8;padding-top:10px;margin-top:8px;">
-            <div style="display:flex;justify-content:space-between;font-weight:800;"><span data-i18n="total">总计</span><span id="customerCartTotal">RM 0.00</span></div>
-            <input type="text" id="customerNameInput" data-i18n-placeholder="customerName" placeholder="👤 您的姓名" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:8px;font-family:inherit;">
-            <input type="tel" id="customerPhoneInput" data-i18n-placeholder="customerPhone" placeholder="📞 手机号" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-top:6px;font-family:inherit;">
-            <button class="btn btn-primary" style="width:100%;margin-top:10px;justify-content:center;" onclick="submitCustomerOrder()" data-i18n="submitOrder">✅ 提交订单</button>
-            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeCustomerCartModal()" data-i18n="continueOrdering">继续点餐</button>
-        </div>
-    </div>
-</div>
 
 <!-- Settings Modal -->
 <div class="modal-overlay" id="settingsModal" style="display:none;" onclick="closeSettingsModal(event)">
@@ -1072,18 +1071,7 @@
   </div>
 </div>
 
-	<!-- Friendly name prompt (public view) -->
-<div class="modal-overlay" id="namePromptModal" style="display:none; z-index:10000;" onclick="closeNamePrompt()">
-  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px; text-align:center; padding:28px 24px; background:white; border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
-    <div style="font-size:2.5rem; margin-bottom:8px;">😊</div>
-    <h4 style="margin-bottom:6px; color:var(--persimmon);" data-i18n="namePromptTitle">What should we call you?</h4>
-    <p style="font-size:0.85rem; color:var(--text-light); margin-bottom:20px;" data-i18n="namePromptSub">We’ll use this to call you when your order is ready.</p>
-    <input type="text" id="namePromptInput" placeholder="Your name" 
-           style="width:100%; padding:12px; border-radius:16px; border:1.5px solid var(--border); font-size:1rem; text-align:center; margin-bottom:16px;"
-           onkeydown="if(event.key==='Enter') confirmNamePrompt()">
-    <button class="btn btn-primary" style="width:100%; background:var(--persimmon);" onclick="confirmNamePrompt()" data-i18n="continue">Continue</button>
-  </div>
-</div>
+
 <script>
 const i18n = i18next.createInstance();
 i18n
@@ -1715,37 +1703,7 @@ function renderMenuGrid() {
         </div>`;
     }).join('');
 }
-function renderCustomerMenuGrid() {
-    const grid = document.getElementById('customerMenuGrid');
-    if (!grid) return;
-    const items = getFilteredMenu();
-    grid.innerHTML = items.map(item => {
-        const hasSale = item.originalPrice && Number(item.originalPrice) > Number(item.price);
-        
-        let imageHTML = '';
-        let emojiDisplay = 'display:block;';
-        if (item.imageUrl || item.image) {
-            const url = item.imageUrl || item.image;
-            if (url && url.trim() !== '') {
-                imageHTML = `<img src="${url}" class="item-img" alt="${item.name}" loading="lazy" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">`;
-                emojiDisplay = 'display:none;';
-            }
-        }
-        
-        return `
-        <div class="menu-card${item.available ? '' : ' out-of-stock'}" onclick="${item.available ? `addToCustomerCart('${item.id}')` : ''}">
-            ${hasSale ? '<span class="badge-sale">优惠</span>' : ''}
-            ${imageHTML}
-            <span class="item-emoji" style="font-size:2.5rem;${emojiDisplay}">${item.emoji || '🍴'}</span>
-            <div class="item-name">${item.name}</div>
-            <div class="item-desc">${item.description || ''}</div>
-            <div class="item-price">
-                ${formatCurrency(item.price)}
-                ${hasSale ? `<span class="original">RM ${Number(item.originalPrice).toFixed(2)}</span>` : ''}
-            </div>
-        </div>`;
-    }).join('');
-}
+
 	
 function renderOrderPanel() {
     const container = document.getElementById('orderItems');
@@ -3561,6 +3519,28 @@ function closePublicCartModal(event) {
     document.getElementById('publicCartModal').style.display = 'none';
 }
 
+// ✅ THE THREE FUNCTIONS GO HERE (global scope)
+function showNamePrompt() {
+    document.getElementById('namePromptInput').value = '';
+    document.getElementById('namePromptModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('namePromptInput').focus(), 100);
+}
+
+function closeNamePrompt() {
+    document.getElementById('namePromptModal').style.display = 'none';
+}
+
+function confirmNamePrompt() {
+    const name = document.getElementById('namePromptInput').value.trim();
+    if (!name) {
+        showToast('enterName');
+        return;
+    }
+    document.getElementById('publicCustomerName').value = name;
+    closeNamePrompt();
+    submitPublicOrder();
+}
+
 async function submitPublicOrder() {
     const name = document.getElementById('publicCustomerName').value.trim();
     if (!name) {
@@ -3597,29 +3577,7 @@ async function submitPublicOrder() {
         showToast('submitFailed');
         return;
     }
-// Show the friendly name prompt
-function showNamePrompt() {
-  document.getElementById('namePromptInput').value = '';
-  document.getElementById('namePromptModal').style.display = 'flex';
-  setTimeout(() => document.getElementById('namePromptInput').focus(), 100);
-}
 
-// Close the prompt (if user clicks outside)
-function closeNamePrompt() {
-  document.getElementById('namePromptModal').style.display = 'none';
-}
-
-// Confirm the name and submit
-function confirmNamePrompt() {
-  const name = document.getElementById('namePromptInput').value.trim();
-  if (!name) {
-    showToast('enterName');   // optional gentle reminder
-    return;
-  }
-  document.getElementById('publicCustomerName').value = name;
-  closeNamePrompt();
-  submitPublicOrder();        // now the name is filled, so submission succeeds
-}
     // ==================== 自动添加会员（新增）====================
     // 条件：设置了自动添加（默认为 true）、填写了电话、该电话尚未注册为会员
     const autoAdd = APP_STATE.settings.autoAddMember !== false; // 默认为 true
@@ -3706,13 +3664,7 @@ document.getElementById('addMemberModal').addEventListener('click', function(e) 
 });
 
 // ==================== RENDERING HELPERS ====================
-function renderCustomerCategoryTabs() {
-    document.getElementById('customerCategoryTabs').innerHTML = APP_STATE.categories.map(cat => {
-        const displayText = cat === '全部' ? i18n.t('allCategories') : cat;
-        return `<button class="cat-tab${cat === APP_STATE.activeCategory ? ' active' : ''}" onclick="setCategory('${cat}')">${displayText}</button>`;
-    }).join('');
-}
-	
+
 
 function renderFulfillmentView() {
     const today = new Date().toISOString().slice(0, 10);
