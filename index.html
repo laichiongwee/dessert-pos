@@ -3749,13 +3749,7 @@ async function markCompleted(orderId) {
     await updateOrderStatus(orderId, 'completed');
     renderFulfillmentView();
 }
-function updateCartBadge() {
-    const count = APP_STATE.customerCart.reduce((sum, e) => sum + e.quantity, 0);
-    const badge = document.getElementById('cartCountBadge');
-    if (badge) badge.textContent = count;
-    const fab = document.getElementById('customerCartFab');
-    if (fab) fab.style.opacity = count ? '1' : '0.6';
-}
+
 // ==================== ORDER ACTIONS ====================
 function addToOrder(itemId) {
     const item = APP_STATE.menu.find(m => m.id === itemId);
@@ -3792,120 +3786,7 @@ function clearOrder() {
 }
 
 // ==================== CUSTOMER CART ====================
-function addToCustomerCart(itemId) {
-    const item = APP_STATE.menu.find(m => m.id === itemId);
-    if (!item || !item.available) return;
-    const existing = APP_STATE.customerCart.find(e => e.menuItem.id === itemId);
-    if (existing) {
-        existing.quantity++;
-    } else {
-        APP_STATE.customerCart.push({ menuItem: item, quantity: 1 });
-    }
-    updateCartBadge();
-    showToast(i18n.t('addedItem', { name: item.name }));
-}
 
-function openCustomerCart() {
-    if (APP_STATE.customerCart.length === 0) {
-        showToast('cartEmpty');
-        return;
-    }
-    renderCustomerCartModal();
-    document.getElementById('customerCartModal').style.display = 'flex';
-}
-
-function closeCustomerCartModal(event) {
-    if (event && event.target !== document.getElementById('customerCartModal')) return;
-    document.getElementById('customerCartModal').style.display = 'none';
-}
-document.getElementById('customerCartModal').addEventListener('click', function(e) {
-    if (e.target === this) this.style.display = 'none';
-});
-
-function renderCustomerCartModal() {
-    const container = document.getElementById('customerCartItems');
-    const total = APP_STATE.customerCart.reduce((sum, e) => sum + Number(e.menuItem.price) * e.quantity, 0);
-    container.innerHTML = APP_STATE.customerCart.map((entry, idx) => `
-        <div class="order-item-row">
-            <span class="oi-name">${entry.menuItem.name}</span>
-            <div class="oi-qty">
-                <button onclick="adjustCustomerCart(${idx}, -1)">−</button>
-                <span>${entry.quantity}</span>
-                <button onclick="adjustCustomerCart(${idx}, 1)">+</button>
-            </div>
-            <span class="oi-price">RM ${(Number(entry.menuItem.price) * entry.quantity).toFixed(2)}</span>
-        </div>
-    `).join('');
-    document.getElementById('customerCartTotal').textContent = `RM ${total.toFixed(2)}`;
-}
-
-function adjustCustomerCart(index, delta) {
-    APP_STATE.customerCart[index].quantity += delta;
-    if (APP_STATE.customerCart[index].quantity <= 0) {
-        APP_STATE.customerCart.splice(index, 1);
-    }
-    if (APP_STATE.customerCart.length === 0) {
-        document.getElementById('customerCartModal').style.display = 'none';
-    }
-    renderCustomerCartModal();
-    updateCartBadge();
-}
-
-function submitCustomerOrder() {
-	if (!checkOrderLimit()) return;
-    const name = document.getElementById('customerNameInput').value.trim();
-    if (!name) { showToast('⚠️ 请输入您的姓名'); return; }
-    if (APP_STATE.customerCart.length === 0) { showToast('⚠️ 购物车是空的'); return; }
-    
-    const phone = document.getElementById('customerPhoneInput').value.trim();
-    const total = APP_STATE.customerCart.reduce((sum, e) => sum + Number(e.menuItem.price) * e.quantity, 0);
-    const orderId = String(++APP_STATE.orderIdCounter);
-    localStorage.setItem('orderIdCounter', APP_STATE.orderIdCounter);
-    
-    let member = null;
-    if (phone) {
-        member = APP_STATE.members.find(m => String(m.phone).includes(phone));
-        if (member) {
-            member.points += Math.floor(total);
-            member.totalSpent += total;
-            supabaseClient.from('members').update({
-                points: member.points,
-                totalSpent: member.totalSpent
-            }).eq('id', member.id).then(({ error }) => {
-                if (error) console.error('Member update error:', error);
-            });
-        }
-    }
-    
-    const order = {
-        id: orderId,
-        date: new Date().toISOString(),
-        items: APP_STATE.customerCart.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: Number(e.menuItem.price) })),
-        total: total,
-        paymentMethod: 'customer_order',
-        memberPhone: member ? member.phone : phone,
-        memberName: member ? member.name : name,
-        paymentDetails: {},
-        discountApplied: 0,
-        status: 'pending_payment',
-        callNumber: '',
-  store_id: APP_STATE.storeId
-    };
-    
-    APP_STATE.orders.push(order);
-    
-    // 写入 Supabase
-    supabaseClient.from('orders').insert([order]).then(({ error }) => {
-        if (error) console.error('Customer order insert failed:', error);
-    });
-    
-    document.getElementById('customerCartModal').style.display = 'none';
-    APP_STATE.customerCart = [];
-    updateCartBadge();
-    document.getElementById('customerNameInput').value = '';
-    document.getElementById('customerPhoneInput').value = '';
-    showToast(i18n.t('orderSubmittedWithId', { orderId: orderId }));
-}
 // ==================== QUICK PAYMENT (for keyboard shortcut) ====================
 function quickPayment(method) {
     if (APP_STATE.cashierOrder.length === 0) { showToast('cartEmptyWarning'); return; }
