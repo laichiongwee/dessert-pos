@@ -260,6 +260,9 @@ window.__i18n_en = {
   pleasePayCounter: "Please pay at the counter",
   viewOrderStatus: "View order status →",
   qrLoading: "Generating QR code...<br><small>Please check your network</small>",
+  namePromptTitle: "What should we call you?",
+  namePromptSub: "We’ll use this to call you when your order is ready.",
+  continue: "Continue",
 
   // === Upgrade / Plans ===
   pricingTitle: "⭐ Upgrade Plan",
