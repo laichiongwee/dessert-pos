@@ -1430,11 +1430,17 @@ function loadDemoData() {
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i=>i.category))];
 }
 
-	// Show register button only for demo user
-const DEMO_EMAIL = 'demo@gmail.com';   // ← change to your actual demo email
-if (APP_STATE.currentUser?.email === DEMO_EMAIL) {
+// Show register button only for demo user
+const DEMO_EMAIL = 'demo@gmail.com';
+const currentEmail = (APP_STATE.currentUser?.email || '').trim().toLowerCase();
+if (currentEmail === DEMO_EMAIL) {
   const btn = document.getElementById('registerUserBtn');
-  if (btn) btn.style.display = 'inline-block';
+  if (btn) {
+    btn.style.display = 'inline-block';
+    console.log('Demo user detected – register button shown');
+  } else {
+    console.error('registerUserBtn element not found');
+  }
 }
 
 	function openRegisterUserModal() {
