@@ -1402,23 +1402,7 @@ function getDemoMembers() {
         { id: 'M006', name: '志伟', phone: '0112345678', points: 10, totalSpent: 20.00 }
     ];
 }
-	function seedDemoMenu(storeId) {
-  const prefix = storeId.replace(/-/g, '').slice(0, 6);
-  return getDemoMenu().map((item, i) => ({
-    ...item,
-    id: `${prefix}_${i+1}`,
-    store_id: storeId
-  }));
-}
 
-function seedDemoMembers(storeId) {
-  const prefix = storeId.replace(/-/g, '').slice(0, 6);
-  return getDemoMembers().map((m, i) => ({
-    ...m,
-    id: `${prefix}_M${i+1}`,
-    store_id: storeId
-  }));
-}
 function getDemoDiscountRules() { return []; }
 
 	function canAccess(feature) {
@@ -1469,7 +1453,7 @@ function loadDemoData() {
 
 }
 
-	async function resetDemoStore(silent = false) {
+async function resetDemoStore(silent = false) {
   if (!silent && !confirm(i18n.t('resetDemoConfirm'))) return;
 
   const storeId = APP_STATE.storeId;
@@ -1479,57 +1463,34 @@ function loadDemoData() {
   }
 
   try {
-    // Delete all orders for this store
-    const { error: delOrders } = await supabaseClient
-      .from('orders')
-      .delete()
-      .eq('store_id', storeId);
+    // Delete all existing data for this store
+    const { error: delOrders } = await supabaseClient.from('orders').delete().eq('store_id', storeId);
     if (delOrders) console.error('Delete orders error:', delOrders);
 
-    // Delete all menu items for this store
-    const { error: delMenu } = await supabaseClient
-      .from('menu')
-      .delete()
-      .eq('store_id', storeId);
+    const { error: delMenu } = await supabaseClient.from('menu').delete().eq('store_id', storeId);
     if (delMenu) console.error('Delete menu error:', delMenu);
 
-    // Delete all members for this store
-    const { error: delMembers } = await supabaseClient
-      .from('members')
-      .delete()
-      .eq('store_id', storeId);
+    const { error: delMembers } = await supabaseClient.from('members').delete().eq('store_id', storeId);
     if (delMembers) console.error('Delete members error:', delMembers);
 
-    // Insert default menu items
-    const defaultMenu = getDemoMenu().map(item => ({
-      ...item,
-      store_id: storeId
-    }));
-    const { error: insertMenu } = await supabaseClient
-      .from('menu')
-      .insert(defaultMenu);
+    // Insert default menu items (using unique per‑store IDs)
+    const defaultMenu = seedDemoMenu(storeId);
+    const { error: insertMenu } = await supabaseClient.from('menu').insert(defaultMenu);
     if (insertMenu) {
       console.error('Insert default menu error:', insertMenu);
       if (!silent) showToast('resetFailed');
       return;
     }
-// Insert default menu items
-const defaultMenu = seedDemoMenu(storeId);
-const { error: insertMenu } = await supabaseClient.from('menu').insert(defaultMenu);
-if (insertMenu) {
-  console.error('Insert default menu error:', insertMenu);
-  if (!silent) showToast('resetFailed');
-  return;
-}
 
-// Insert default members
-const defaultMembers = seedDemoMembers(storeId);
-const { error: insertMembers } = await supabaseClient.from('members').insert(defaultMembers);
-if (insertMembers) {
-  console.error('Insert default members error:', insertMembers);
-  // menu already inserted, so don't return – continue with reset
-}
-    // Reload all data
+    // Insert default members (using unique per‑store IDs)
+    const defaultMembers = seedDemoMembers(storeId);
+    const { error: insertMembers } = await supabaseClient.from('members').insert(defaultMembers);
+    if (insertMembers) {
+      console.error('Insert default members error:', insertMembers);
+      // menu already inserted, so we don’t return – continue with reset
+    }
+
+    // Reload all data from Supabase
     await fetchAllData();
 
     // Reset order ID counter
@@ -1551,6 +1512,25 @@ if (insertMembers) {
     if (!silent) showToast('resetFailed');
   }
 }
+
+	function seedDemoMenu(storeId) {
+  const prefix = storeId.replace(/-/g, '').slice(0, 6);
+  return getDemoMenu().map((item, i) => ({
+    ...item,
+    id: `${prefix}_${i+1}`,
+    store_id: storeId
+  }));
+}
+
+function seedDemoMembers(storeId) {
+  const prefix = storeId.replace(/-/g, '').slice(0, 6);
+  return getDemoMembers().map((m, i) => ({
+    ...m,
+    id: `${prefix}_M${i+1}`,
+    store_id: storeId
+  }));
+}
+	
 	function openRegisterUserModal() {
   document.getElementById('registerUserModal').style.display = 'flex';
   document.getElementById('registerUserError').style.display = 'none';
