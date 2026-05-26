@@ -3129,45 +3129,39 @@ async function checkUser() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
-    const storeIdFromUrl = urlParams.get('store') || '';   // ← 只声明一次
+    const storeIdFromUrl = urlParams.get('store') || '';
 
-    // ✅ 如果明确请求顾客点餐模式，无论是否登录，都进入顾客页面
+    // ✅ Customer mode – no login required
     if (mode === 'customer') {
-		let storeIdFromUrl = urlParams.get('store');
-  if (!storeIdFromUrl) {
-    // 可以显示错误：“请扫描店铺二维码”
-    showToast('missingStoreId'); 
-    return;
-  }
-    APP_STATE.storeId = storeIdFromUrl || null;
+        if (!storeIdFromUrl) {
+            showToast('missingStoreId'); 
+            return;
+        }
+        APP_STATE.storeId = storeIdFromUrl;
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('publicCustomerView').style.display = 'block';
         document.getElementById('mainApp').style.display = 'none';
         await fetchPublicMenu();
         await loadPublicSettings();
-		updateOrderTotals()
+        updateOrderTotals();
         renderPublicMenu();
         updatePublicCartCount();
-		updateStoreBranding();
-        return; // 直接返回，不再继续
+        updateStoreBranding();
+        return;
     }
 
     if (session) {
-        // ✅ 已登录 → 进入管理后台
+        // ✅ Logged-in – show main app
         APP_STATE.currentUser = session.user;
         await loadUserProfile();
-		if (session) {
-    // ✅ 已登录 → 进入管理后台
-    APP_STATE.currentUser = session.user;
-    await loadUserProfile();
 
-    // ── Demo account: hide the subscription button ──
-    const DEMO_EMAIL = 'demo@gmail.com';
-    if ((APP_STATE.currentUser?.email || '').trim().toLowerCase() === DEMO_EMAIL) {
-        const upgradeBtn = document.getElementById('upgradeBtn');
-        if (upgradeBtn) upgradeBtn.style.display = 'none';
-    }
-    // ──────────────────────────────────────────────────
+        // Demo account: show register button, hide upgrade button
+        const DEMO_EMAIL = 'demo@gmail.com';
+        const currentEmail = (APP_STATE.currentUser?.email || '').trim().toLowerCase();
+        if (currentEmail === DEMO_EMAIL) {
+            document.getElementById('registerUserBtn').style.display = 'inline-block';
+            document.getElementById('upgradeBtn').style.display = 'none';
+        }
 
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('publicCustomerView').style.display = 'none';
@@ -3176,18 +3170,18 @@ async function checkUser() {
         if (!realtimeSubscription) {
             initRealtime();
         }
-		updateUserDisplay();
+        updateUserDisplay();
         renderAll();
         applyLanguage();
         updateQRCode();
-		updateStoreBranding();
+        updateStoreBranding();
         updateUnpaidBadge();
     } else {
-        // 🔐 默认显示登录界面
+        // 🔐 Not logged in – show auth screen
         document.getElementById('authContainer').style.display = 'block';
         document.getElementById('publicCustomerView').style.display = 'none';
         document.getElementById('mainApp').style.display = 'none';
-		updateStoreBranding();
+        updateStoreBranding();
     }
 }
 
