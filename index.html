@@ -1379,17 +1379,29 @@ async function submitNewPassword() {
     }
 }
 // ==================== DEMO DATA (fallback) ====================
-function getDemoMenu() { /* unchanged */ return [
-    { id: '01', name: '柿柿润糖水', price: 10.00, category: '糖水', emoji: '🍅', available: true },
-    { id: '02', name: 'Milk Mochi', price: 7.00, category: '麻薯', emoji: '🥛', available: true },
-    { id: '03', name: 'Set A', price: 30.00, category: '套餐', emoji: '🎀', available: true },
-    { id: '04', name: 'Set B', price: 55.00, category: '套餐', emoji: '🎁', available: true },
-];}
+function getDemoMenu() {
+    return [
+        { id: '01', name: '柿柿润糖水', price: 10.00, category: '糖水', emoji: '🍅', available: true },
+        { id: '02', name: 'Milk Mochi', price: 7.00, category: '麻薯', emoji: '🥛', available: true },
+        { id: '03', name: 'Set A', price: 30.00, category: '套餐', emoji: '🎀', available: true },
+        { id: '04', name: 'Set B', price: 55.00, category: '套餐', emoji: '🎁', available: true },
+        { id: '05', name: '红豆沙', price: 8.00, category: '糖水', emoji: '🫘', available: true },
+        { id: '06', name: '芒果西米露', price: 12.00, category: '糖水', emoji: '🥭', available: true },
+        { id: '07', name: '抹茶麻薯', price: 9.00, category: '麻薯', emoji: '🍵', available: true },
+        { id: '08', name: '珍珠奶茶', price: 11.00, category: '饮品', emoji: '🧋', available: true }
+    ];
+}
 
-function getDemoMembers() { return [
-    { id: 'M001', name: '小明', phone: '0123456789', points: 120, totalSpent: 240.00 },
-    { id: 'M002', name: '阿花', phone: '0178369622', points: 85, totalSpent: 170.00 },
-];}
+function getDemoMembers() {
+    return [
+        { id: 'M001', name: '小明', phone: '0123456789', points: 120, totalSpent: 240.00 },
+        { id: 'M002', name: '阿花', phone: '0178369622', points: 85, totalSpent: 170.00 },
+        { id: 'M003', name: '丽丽', phone: '0167891234', points: 200, totalSpent: 400.00 },
+        { id: 'M004', name: '阿强', phone: '0198765432', points: 50, totalSpent: 100.00 },
+        { id: 'M005', name: '美玲', phone: '0136547890', points: 300, totalSpent: 600.00 },
+        { id: 'M006', name: '志伟', phone: '0112345678', points: 10, totalSpent: 20.00 }
+    ];
+}
 function getDemoDiscountRules() { return []; }
 
 	function canAccess(feature) {
@@ -1437,29 +1449,7 @@ function loadDemoData() {
     APP_STATE.members = getDemoMembers();
     APP_STATE.discountRules = getDemoDiscountRules();
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i=>i.category))];
-}
 
-// Demo account handling
-const DEMO_EMAIL = 'demo@gmail.com';
-const currentEmail = (APP_STATE.currentUser?.email || '').trim().toLowerCase();
-if (currentEmail === DEMO_EMAIL) {
-    // Show special demo buttons
-    const regBtn = document.getElementById('registerUserBtn');
-    const resetBtn = document.getElementById('resetDemoBtn');
-    const upgradeBtn = document.getElementById('upgradeBtn');
-    if (regBtn) regBtn.style.display = 'inline-block';
-    if (resetBtn) resetBtn.style.display = 'inline-block';
-    if (upgradeBtn) upgradeBtn.style.display = 'none';
-
-    // Auto‑reset every 48 hours
-    const lastReset = localStorage.getItem('demoLastResetTimestamp');
-    const now = Date.now();
-    const hoursSinceLastReset = lastReset ? (now - parseInt(lastReset)) / (1000 * 60 * 60) : 999;
-    if (!lastReset || hoursSinceLastReset >= 48) {
-        console.log('⏳ Auto‑resetting demo store (48h passed)…');
-        await resetDemoStore(true);
-        localStorage.setItem('demoLastResetTimestamp', String(now));
-    }
 }
 
 	async function resetDemoStore(silent = false) {
@@ -3241,13 +3231,27 @@ async function checkUser() {
         APP_STATE.currentUser = session.user;
         await loadUserProfile();
 
-        // Demo account: show register button, hide upgrade button
-        const DEMO_EMAIL = 'demo@gmail.com';
-        const currentEmail = (APP_STATE.currentUser?.email || '').trim().toLowerCase();
-        if (currentEmail === DEMO_EMAIL) {
-            document.getElementById('registerUserBtn').style.display = 'inline-block';
-            document.getElementById('upgradeBtn').style.display = 'none';
-        }
+// ── Demo account handling ──
+const DEMO_EMAIL = 'demo@gmail.com';
+const currentEmail = (APP_STATE.currentUser?.email || '').trim().toLowerCase();
+if (currentEmail === DEMO_EMAIL) {
+    // Show / hide relevant buttons
+    document.getElementById('registerUserBtn').style.display = 'inline-block';
+    document.getElementById('upgradeBtn').style.display = 'none';
+
+    // Auto‑reset every 48 hours
+    const lastReset = localStorage.getItem('demoLastResetTimestamp');
+    const now = Date.now();
+    const hoursSinceLastReset = lastReset
+        ? (now - parseInt(lastReset)) / (1000 * 60 * 60)
+        : 999;
+    if (!lastReset || hoursSinceLastReset >= 48) {
+        console.log('⏳ Auto‑resetting demo store (48h passed)…');
+        await resetDemoStore(true);
+        localStorage.setItem('demoLastResetTimestamp', String(now));
+    }
+}
+// ─────────────────────────────
 
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('publicCustomerView').style.display = 'none';
