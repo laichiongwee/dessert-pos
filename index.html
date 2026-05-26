@@ -1402,6 +1402,23 @@ function getDemoMembers() {
         { id: 'M006', name: '志伟', phone: '0112345678', points: 10, totalSpent: 20.00 }
     ];
 }
+	function seedDemoMenu(storeId) {
+  const prefix = storeId.replace(/-/g, '').slice(0, 6);
+  return getDemoMenu().map((item, i) => ({
+    ...item,
+    id: `${prefix}_${i+1}`,
+    store_id: storeId
+  }));
+}
+
+function seedDemoMembers(storeId) {
+  const prefix = storeId.replace(/-/g, '').slice(0, 6);
+  return getDemoMembers().map((m, i) => ({
+    ...m,
+    id: `${prefix}_M${i+1}`,
+    store_id: storeId
+  }));
+}
 function getDemoDiscountRules() { return []; }
 
 	function canAccess(feature) {
@@ -1496,7 +1513,22 @@ function loadDemoData() {
       if (!silent) showToast('resetFailed');
       return;
     }
+// Insert default menu items
+const defaultMenu = seedDemoMenu(storeId);
+const { error: insertMenu } = await supabaseClient.from('menu').insert(defaultMenu);
+if (insertMenu) {
+  console.error('Insert default menu error:', insertMenu);
+  if (!silent) showToast('resetFailed');
+  return;
+}
 
+// Insert default members
+const defaultMembers = seedDemoMembers(storeId);
+const { error: insertMembers } = await supabaseClient.from('members').insert(defaultMembers);
+if (insertMembers) {
+  console.error('Insert default members error:', insertMembers);
+  // menu already inserted, so don't return – continue with reset
+}
     // Reload all data
     await fetchAllData();
 
@@ -1598,32 +1630,31 @@ if (counterDate !== today) {
 } else {
   APP_STATE.orderIdCounter = parseInt(settingsRows?.find(r => r.key === 'orderIdCounter')?.value || '1');
 }
-	      // ─── MENU SEEDING ───
-    let finalMenu = menu || [];
-    if (finalMenu.length === 0) {
-      const defaultMenu = getDemoMenu().map(item => ({ ...item, store_id: APP_STATE.storeId }));
-      const { error: insertErr } = await supabaseClient.from('menu').insert(defaultMenu);
-      if (!insertErr) {
-        const { data: freshMenu } = await supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId);
-        finalMenu = freshMenu || [];
-      } else {
-        console.error('Seed menu failed:', insertErr);
-      }
-    }
+// ─── MENU SEEDING ───
+let finalMenu = menu || [];
+if (finalMenu.length === 0) {
+  const defaultMenu = seedDemoMenu(APP_STATE.storeId);
+  const { error: insertErr } = await supabaseClient.from('menu').insert(defaultMenu);
+  if (!insertErr) {
+    const { data: freshMenu } = await supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId);
+    finalMenu = freshMenu || [];
+  } else {
+    console.error('Seed menu failed:', insertErr);
+  }
+}
 
-    // ─── MEMBERS SEEDING ───
-    let finalMembers = members || [];
-    if (finalMembers.length === 0) {
-      const defaultMembers = getDemoMembers().map(m => ({ ...m, store_id: APP_STATE.storeId }));
-      const { error: insertErr } = await supabaseClient.from('members').insert(defaultMembers);
-      if (!insertErr) {
-        const { data: freshMembers } = await supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId);
-        finalMembers = freshMembers || [];
-      } else {
-        console.error('Seed members failed:', insertErr);
-      }
-    }
-
+// ─── MEMBERS SEEDING ───
+let finalMembers = members || [];
+if (finalMembers.length === 0) {
+  const defaultMembers = seedDemoMembers(APP_STATE.storeId);
+  const { error: insertErr } = await supabaseClient.from('members').insert(defaultMembers);
+  if (!insertErr) {
+    const { data: freshMembers } = await supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId);
+    finalMembers = freshMembers || [];
+  } else {
+    console.error('Seed members failed:', insertErr);
+  }
+}
     // Map to APP_STATE
     APP_STATE.menu = menu.map(item => ({
       ...item,
