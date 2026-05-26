@@ -1439,19 +1439,96 @@ function loadDemoData() {
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i=>i.category))];
 }
 
-// Show register button only for demo user
+// Demo account handling
 const DEMO_EMAIL = 'demo@gmail.com';
 const currentEmail = (APP_STATE.currentUser?.email || '').trim().toLowerCase();
 if (currentEmail === DEMO_EMAIL) {
-  const btn = document.getElementById('registerUserBtn');
-  if (btn) {
-    btn.style.display = 'inline-block';
-    console.log('Demo user detected – register button shown');
-  } else {
-    console.error('registerUserBtn element not found');
-  }
+    // Show special demo buttons
+    const regBtn = document.getElementById('registerUserBtn');
+    const resetBtn = document.getElementById('resetDemoBtn');
+    const upgradeBtn = document.getElementById('upgradeBtn');
+    if (regBtn) regBtn.style.display = 'inline-block';
+    if (resetBtn) resetBtn.style.display = 'inline-block';
+    if (upgradeBtn) upgradeBtn.style.display = 'none';
+
+    // Auto‑reset every 48 hours
+    const lastReset = localStorage.getItem('demoLastResetTimestamp');
+    const now = Date.now();
+    const hoursSinceLastReset = lastReset ? (now - parseInt(lastReset)) / (1000 * 60 * 60) : 999;
+    if (!lastReset || hoursSinceLastReset >= 48) {
+        console.log('⏳ Auto‑resetting demo store (48h passed)…');
+        await resetDemoStore(true);
+        localStorage.setItem('demoLastResetTimestamp', String(now));
+    }
 }
 
+	async function resetDemoStore(silent = false) {
+  if (!silent && !confirm(i18n.t('resetDemoConfirm'))) return;
+
+  const storeId = APP_STATE.storeId;
+  if (!storeId) {
+    showToast('missingStoreId');
+    return;
+  }
+
+  try {
+    // Delete all orders for this store
+    const { error: delOrders } = await supabaseClient
+      .from('orders')
+      .delete()
+      .eq('store_id', storeId);
+    if (delOrders) console.error('Delete orders error:', delOrders);
+
+    // Delete all menu items for this store
+    const { error: delMenu } = await supabaseClient
+      .from('menu')
+      .delete()
+      .eq('store_id', storeId);
+    if (delMenu) console.error('Delete menu error:', delMenu);
+
+    // Delete all members for this store
+    const { error: delMembers } = await supabaseClient
+      .from('members')
+      .delete()
+      .eq('store_id', storeId);
+    if (delMembers) console.error('Delete members error:', delMembers);
+
+    // Insert default menu items
+    const defaultMenu = getDemoMenu().map(item => ({
+      ...item,
+      store_id: storeId
+    }));
+    const { error: insertMenu } = await supabaseClient
+      .from('menu')
+      .insert(defaultMenu);
+    if (insertMenu) {
+      console.error('Insert default menu error:', insertMenu);
+      if (!silent) showToast('resetFailed');
+      return;
+    }
+
+    // Reload all data
+    await fetchAllData();
+
+    // Reset order ID counter
+    APP_STATE.orderIdCounter = 1000;
+    localStorage.setItem('orderIdCounter', '1000');
+
+    // Clear current order & member
+    APP_STATE.cashierOrder = [];
+    APP_STATE.currentMember = null;
+    document.getElementById('memberPhoneInput').value = '';
+    renderOrderPanel();
+    renderAll();
+    applyLanguage();
+    updateUnpaidBadge();
+
+    if (!silent) showToast('resetSuccess');
+  } catch (err) {
+    console.error('Reset error:', err);
+    if (!silent) showToast('resetFailed');
+  }
+}
 	function openRegisterUserModal() {
   document.getElementById('registerUserModal').style.display = 'flex';
   document.getElementById('registerUserError').style.display = 'none';
