@@ -547,6 +547,10 @@
   <span class="user-name" id="userGreeting" style="font-size:0.85rem; font-weight:600; color:var(--text);">Hi, User</span>
   <span class="plan-badge" id="planBadge" style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background:var(--gold-light); color:var(--persimmon); font-weight:600;">Free</span>
 </div>
+		<button id="registerUserBtn" class="btn btn-xs btn-outline" 
+        onclick="openRegisterUserModal()" 
+        style="display:none;" 
+        data-i18n="registerNewUser">👤 注册新用户</button>
 		 <!-- Upgrade button (only visible if not Pro) -->
     <button class="btn btn-xs btn-outline" onclick="openPricingModal()" id="upgradeBtn" style="display:none;" data-i18n="upgradePlan">⭐ 升级套餐</button>
         <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()" style="position:relative;" data-i18n="unpaidOrders">
@@ -1071,6 +1075,26 @@
   </div>
 </div>
 
+	<!-- Register User Modal (visible only to demo user) -->
+<div class="modal-overlay" id="registerUserModal" style="display:none;" onclick="closeRegisterUserModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:420px; padding:24px;">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="registerNewUserTitle">👤 注册新用户</h3>
+    <p style="font-size:0.8rem;color:var(--text-light);margin-bottom:12px;" data-i18n="registerNewUserDesc">
+      创建新的 POS 账户
+    </p>
+    <input type="text" id="regUserName" data-i18n-placeholder="registerNamePlaceholder" placeholder="姓名" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    <input type="email" id="regUserEmail" data-i18n-placeholder="emailPlaceholder" placeholder="电子邮箱" required style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    <input type="password" id="regUserPassword" data-i18n-placeholder="passwordPlaceholderMin" placeholder="密码（至少6位）" required minlength="6" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    <input type="tel" id="regUserPhone" data-i18n-placeholder="registerPhonePlaceholder" placeholder="手机号" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    <input type="date" id="regUserBirthday" data-i18n-placeholder="registerBirthdayPlaceholder" style="width:100%;padding:10px;margin-bottom:8px;border-radius:20px;border:1.5px solid var(--border);">
+    
+    <div id="registerUserError" style="color:red;font-size:0.8rem;margin-bottom:8px;display:none;"></div>
+    
+    <button class="btn btn-primary" style="width:100%;" onclick="submitRegisterUser()" data-i18n="register">📝 注册</button>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeRegisterUserModal()" data-i18n="cancel">取消</button>
+  </div>
+</div>
 
 <script>
 const i18n = i18next.createInstance();
@@ -1406,6 +1430,64 @@ function loadDemoData() {
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i=>i.category))];
 }
 
+	// Show register button only for demo user
+const DEMO_EMAIL = 'demo@gmail.com';   // ← change to your actual demo email
+if (APP_STATE.currentUser?.email === DEMO_EMAIL) {
+  const btn = document.getElementById('registerUserBtn');
+  if (btn) btn.style.display = 'inline-block';
+}
+
+	function openRegisterUserModal() {
+  document.getElementById('registerUserModal').style.display = 'flex';
+  document.getElementById('registerUserError').style.display = 'none';
+  // Clear fields
+  ['regUserName','regUserEmail','regUserPassword','regUserPhone','regUserBirthday'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+function closeRegisterUserModal(e) {
+  if (e && e.target !== document.getElementById('registerUserModal')) return;
+  document.getElementById('registerUserModal').style.display = 'none';
+}
+document.getElementById('registerUserModal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+async function submitRegisterUser() {
+  const name = document.getElementById('regUserName').value.trim();
+  const email = document.getElementById('regUserEmail').value.trim();
+  const password = document.getElementById('regUserPassword').value;
+  const phone = document.getElementById('regUserPhone').value.trim();
+  const birthday = document.getElementById('regUserBirthday').value;
+
+  if (!name || !email || !password) {
+    document.getElementById('registerUserError').textContent = i18n.t('nameEmailPasswordRequired');
+    document.getElementById('registerUserError').style.display = 'block';
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: name,
+        phone,
+        birthday
+      }
+    }
+  });
+
+  if (error) {
+    document.getElementById('registerUserError').textContent = error.message;
+    document.getElementById('registerUserError').style.display = 'block';
+  } else {
+    closeRegisterUserModal();
+    showToast('registerSuccess');
+  }
+}
+	
 async function fetchAllData() {
   if (!APP_STATE.storeId) {
     console.warn('storeId 为空，跳过数据加载');
