@@ -2661,7 +2661,16 @@ async function closeDay() {
 }
 function updateUpgradeButton() {
   const btn = document.getElementById('upgradeBtn');
-  if (btn) btn.style.display = APP_STATE.currentPlan !== 'pro' ? 'inline-block' : 'none';
+  if (!btn) return;
+  btn.style.display = 'inline-block';   // always visible
+  // Change text based on current plan
+  if (APP_STATE.currentPlan === 'pro') {
+    btn.textContent = '⭐ Manage Plan';
+  } else if (APP_STATE.currentPlan === 'lite') {
+    btn.textContent = '⭐ Upgrade / Downgrade';
+  } else {
+    btn.textContent = '⭐ Upgrade Plan';
+  }
 }
 // ==================== 套餐卡片配置 ====================
 const PLAN_DETAILS = {
@@ -2745,74 +2754,99 @@ function updatePlanPrices() {
     el.textContent = price === 0 ? '$0' : `$${price}`;
   });
 }
+	
+function planRank(plan) {
+  if (plan === 'free') return 0;
+  if (plan === 'lite') return 1;
+  if (plan === 'pro') return 2;
+  return -1;
+}
+	
 function openPricingModal() {
-  // 默认年付（确保按钮样式同步）
-  setBilling('monthly');
+  setBilling('monthly');   // default billing cycle
 
   const currentPlan = APP_STATE.currentPlan || 'free';
-
-  // 设置当前套餐标签
   const label = document.getElementById('currentPlanLabel');
-  if (label) {
-    label.textContent = i18n.t(currentPlan + 'Plan');
-  }
+  if (label) label.textContent = i18n.t(currentPlan + 'Plan');
 
-  // 生成卡片
+  const currentRank = planRank(currentPlan);
+
   const cards = Object.keys(PLAN_DETAILS).map(planId => {
     const detail = PLAN_DETAILS[planId];
     const price = selectedBilling === 'monthly' ? detail.monthlyPrice : detail.yearlyPrice;
-const priceDisplay = price === 0 ? '$0' : `$${price}`;
-    const isCurrent = currentPlan === planId;
+    const priceDisplay = price === 0 ? '$0' : `$${price}`;
+    const cardRank = planRank(planId);
 
+    // Feature list
     const featuresList = detail.features.map(f => {
       const translated = i18n.exists('feature_' + f) ? i18n.t('feature_' + f) : f;
       return `<li style="padding:4px 0;">✅ ${translated}</li>`;
     }).join('');
 
-    // 按钮逻辑
+    // Button logic based on rank comparison
     let btnHtml = '';
-    if (isCurrent) {
+    if (cardRank === currentRank) {
       btnHtml = `<button class="btn btn-primary btn-sm" disabled
           style="margin-top:8px; background:${detail.color}; box-shadow:none; border:none; color:white; opacity:0.7;">
           ${i18n.t('currentPlanLabel')}</button>`;
+    } else if (cardRank > currentRank) {
+      // Upgrade via Stripe
+      btnHtml = `<button class="btn btn-primary btn-sm"
+          onclick="handlePlanSelection('${planId}')"
+          style="margin-top:8px; background:${detail.color}; box-shadow:none; border:none; color:white;">
+          ${i18n.t('choosePlanLabel')}</button>`;
     } else {
-      if (planId === 'free') {
-        // 降级到 Free
-        btnHtml = `<button class="btn btn-outline btn-sm"
-            onclick="downgradeToFree()"
-            style="margin-top:8px; border-color:${detail.color}; color:${detail.color};">
-            ${i18n.t('downgradeToFree')}</button>`;
-      } else {
-        // 升级按钮
-        btnHtml = `<button class="btn btn-primary btn-sm"
-            onclick="handlePlanSelection('${planId}')"
-            style="margin-top:8px; background:${detail.color}; box-shadow:none; border:none; color:white;">
-            ${i18n.t('choosePlanLabel')}</button>`;
-      }
+      // Downgrade
+      btnHtml = `<button class="btn btn-outline btn-sm"
+          onclick="downgradePlan('${planId}')"
+          style="margin-top:8px; border-color:${detail.color}; color:${detail.color};">
+          ${i18n.t('downgradeToPlan', { plan: detail.name })}</button>`;
     }
 
     return `
-    <div style="border:2px solid ${detail.color}; border-radius:var(--radius-sm); padding:16px; text-align:center; background:white; display:flex; flex-direction:column; justify-content:space-between;">
-      <div>
-        <h4 style="color:${detail.color}; margin-bottom:8px;">${detail.name}</h4>
-<div class="plan-price" data-plan="${planId}" style="font-size:1.8rem; font-weight:800;">
-  ${priceDisplay}
-</div>
-<div data-i18n="${selectedBilling === 'monthly' ? 'perMonth' : 'perYear'}" 
-     style="font-size:0.75rem; color:var(--text-lighter);">
-  ${i18n.t(selectedBilling === 'monthly' ? 'perMonth' : 'perYear')}
-</div>
-        <ul style="list-style:none; padding:0; margin:12px 0; text-align:left; font-size:0.8rem;">
-          ${featuresList}
-        </ul>
-      </div>
-      ${btnHtml}
-    </div>`;
+      <div style="border:2px solid ${detail.color}; border-radius:var(--radius-sm); padding:16px; text-align:center; background:white; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <h4 style="color:${detail.color}; margin-bottom:8px;">${detail.name}</h4>
+          <div class="plan-price" data-plan="${planId}" style="font-size:1.8rem; font-weight:800;">${priceDisplay}</div>
+          <div data-i18n="${selectedBilling === 'monthly' ? 'perMonth' : 'perYear'}" style="font-size:0.75rem; color:var(--text-lighter);">
+            ${i18n.t(selectedBilling === 'monthly' ? 'perMonth' : 'perYear')}
+          </div>
+          <ul style="list-style:none; padding:0; margin:12px 0; text-align:left; font-size:0.8rem;">${featuresList}</ul>
+        </div>
+        ${btnHtml}
+      </div>`;
   }).join('');
 
   document.getElementById('planCards').innerHTML = cards;
   applyLanguage();
   document.getElementById('pricingModal').style.display = 'flex';
+}
+	async function downgradePlan(targetPlan) {
+  if (!confirm(i18n.t('downgradeConfirm', { plan: targetPlan }))) return;
+
+  // Update local state and DB
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ plan_id: targetPlan })
+    .eq('id', APP_STATE.currentUser.id);
+
+  if (error) {
+    console.error('Downgrade error:', error);
+    showToast('downgradeFailed');
+    return;
+  }
+
+  // Cancel Stripe subscription if user is downgrading from a paid plan
+  if (APP_STATE.currentPlan !== 'free') {
+    await supabaseClient.functions.invoke('cancel-subscription', {
+      body: { userId: APP_STATE.currentUser.id }
+    }).catch(err => console.warn('Stripe cancel failed (maybe not needed):', err));
+  }
+
+  APP_STATE.currentPlan = targetPlan;
+  updateUpgradeButton();
+  closePricingModal();
+  showToast('downgradeSuccess');
 }
 function closePricingModal(event) {
     if (event && event.target !== document.getElementById('pricingModal')) return;
