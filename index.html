@@ -2662,6 +2662,11 @@ async function closeDay() {
 function updateUpgradeButton() {
   const btn = document.getElementById('upgradeBtn');
   if (!btn) return;
+  const isDemo = (APP_STATE.currentUser?.email || '').trim().toLowerCase() === 'demo@gmail.com';
+  if (isDemo) {
+    btn.style.display = 'none';
+    return;
+  }
   btn.style.display = 'inline-block';   // always visible
   // Change text based on current plan
   if (APP_STATE.currentPlan === 'pro') {
@@ -3151,6 +3156,19 @@ async function checkUser() {
         // ✅ 已登录 → 进入管理后台
         APP_STATE.currentUser = session.user;
         await loadUserProfile();
+		if (session) {
+    // ✅ 已登录 → 进入管理后台
+    APP_STATE.currentUser = session.user;
+    await loadUserProfile();
+
+    // ── Demo account: hide the subscription button ──
+    const DEMO_EMAIL = 'demo@gmail.com';
+    if ((APP_STATE.currentUser?.email || '').trim().toLowerCase() === DEMO_EMAIL) {
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        if (upgradeBtn) upgradeBtn.style.display = 'none';
+    }
+    // ──────────────────────────────────────────────────
+
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('publicCustomerView').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
