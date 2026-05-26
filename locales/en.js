@@ -288,7 +288,9 @@ window.__i18n_en = {
   downgradeToFree: "Switch to Free",
   downgradeSuccess: "✅ Successfully downgraded to Free plan",
   downgradeFailed: "❌ Downgrade failed",
-
+  downgradeToPlan: "Switch to {{plan}}",
+  downgradeConfirm: "Are you sure you want to switch to the {{plan}} plan? Your current subscription will be cancelled.",
+  
   // === Plan Features ===
   feature_unlimitedOrders: "Unlimited Orders",
   feature_cloudSync: "Cloud Sync",
