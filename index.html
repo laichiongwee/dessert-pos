@@ -2777,10 +2777,10 @@ async function openStripeCheckout(priceId) {
 
 function getPriceId(plan, billing) {
   const prices = {
-    lite_monthly: 'price_1TVNQYGaRTxvbl03KFoCksKP',   // 替换为你的 Stripe 价格 ID
-    lite_yearly: 'price_1TVNR5GaRTxvbl03PXhN4s4R',
-    pro_monthly: 'price_1TVNR5GaRTxvbl03PXhN4s4R',
-    pro_yearly: 'price_1TVNSIGaRTxvbl03XMTaS2Kx'
+    lite_monthly: 'price_1TbB5nGaRTxvbl03CKVBhRFQ',   // 替换为你的 Stripe 价格 ID
+    lite_yearly: 'price_1TbB5AGaRTxvbl03V3EpfjFl',
+    pro_monthly: 'price_1TbB3zGaRTxvbl03wWrKKdXO',
+    pro_yearly: 'price_1TbB2SGaRTxvbl03rQMkxB2J'
   };
   return prices[`${plan}_${billing}`];
 }
