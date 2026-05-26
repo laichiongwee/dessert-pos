@@ -287,7 +287,9 @@ window.__i18n_zhCN = {
   downgradeToFree: "切换为免费版",
   downgradeSuccess: "✅ 已降级为 Free 套餐",
   downgradeFailed: "❌ 降级失败",
-
+  downgradeToPlan: "降级到 {{plan}}",
+  downgradeConfirm: "确定要降级到 {{plan}} 套餐吗？您当前的订阅将被取消。",
+  
   // === 套餐功能 ===
   feature_unlimitedOrders: "无限订单",
   feature_cloudSync: "云数据同步",
