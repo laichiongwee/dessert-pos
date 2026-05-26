@@ -51,7 +51,11 @@ window.__i18n_en = {
   ok: "OK",
   resetEmailTitle: "Password Reset Email Sent!",
   resetEmailDesc: "We have sent a password reset link to your email.",
-
+  registerNewUser: "👤 Register New User",
+  registerNewUserTitle: "👤Register New User",
+  registerNewUserDesc: "Register New User",
+  
+// Already have "registerSuccess", "nameEmailPasswordRequired", etc.
   // === Modes ===
   cashierMode: "💰 Cashier",
   customerMode: "📱 Customer",
