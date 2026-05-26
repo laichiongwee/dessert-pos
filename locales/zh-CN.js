@@ -51,7 +51,10 @@ window.__i18n_zhCN = {
   ok: "确定",
   resetEmailTitle: "密码重置邮件已发送！",
   resetEmailDesc: "我们已将密码重置链接发送至您的邮箱，请点击链接完成重设。",
-
+  registerNewUser: "👤 注册新用户",
+  registerNewUserTitle: "👤 注册新用户",
+  registerNewUserDesc: "创建一个新的 POS 系统账户",
+  
   // === 模式切换 ===
   cashierMode: "💰 收银",
   customerMode: "📱 顾客",
