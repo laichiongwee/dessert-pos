@@ -1598,6 +1598,33 @@ if (counterDate !== today) {
 } else {
   APP_STATE.orderIdCounter = parseInt(settingsRows?.find(r => r.key === 'orderIdCounter')?.value || '1');
 }
+	      // ─── MENU SEEDING ───
+    let finalMenu = menu || [];
+    if (finalMenu.length === 0) {
+      const defaultMenu = getDemoMenu().map(item => ({ ...item, store_id: APP_STATE.storeId }));
+      const { error: insertErr } = await supabaseClient.from('menu').insert(defaultMenu);
+      if (!insertErr) {
+        const { data: freshMenu } = await supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId);
+        finalMenu = freshMenu || [];
+      } else {
+        console.error('Seed menu failed:', insertErr);
+      }
+    }
+
+    // ─── MEMBERS SEEDING ───
+    let finalMembers = members || [];
+    if (finalMembers.length === 0) {
+      const defaultMembers = getDemoMembers().map(m => ({ ...m, store_id: APP_STATE.storeId }));
+      const { error: insertErr } = await supabaseClient.from('members').insert(defaultMembers);
+      if (!insertErr) {
+        const { data: freshMembers } = await supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId);
+        finalMembers = freshMembers || [];
+      } else {
+        console.error('Seed members failed:', insertErr);
+      }
+    }
+
+    // Map to APP_STATE
     APP_STATE.menu = menu.map(item => ({
       ...item,
       price: Number(item.price),
