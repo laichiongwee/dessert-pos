@@ -949,7 +949,32 @@
       </div>
       <img id="logoPreview" style="max-width:120px; margin-top:8px; display:none; border-radius:12px;">
     </div>
-    
+
+	  <!-- ===== PAYMENT QR CODE ===== -->
+<div style="margin-bottom:16px;">
+  <label data-i18n="paymentQrLabel">Payment QR Code</label>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <input type="file" id="paymentQrFileInput" accept="image/*" style="display:none;" onchange="previewPaymentQr(event)">
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('paymentQrFileInput').click()" data-i18n="chooseFile">选择文件</button>
+    <span id="paymentQrFileName" style="font-size:0.8rem;color:var(--text-lighter);"></span>
+  </div>
+  <img id="paymentQrPreview" style="max-width:120px; margin-top:8px; display:none; border-radius:12px;">
+</div>
+
+<!-- ===== BANK NAME ===== -->
+<div style="margin-bottom:16px;">
+  <label data-i18n="bankNameLabel">Bank Name</label>
+  <input type="text" id="bankNameInput" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);"
+         data-i18n-placeholder="bankNamePlaceholder" placeholder="e.g. Maybank">
+</div>
+
+<!-- ===== BANK ACCOUNT ===== -->
+<div style="margin-bottom:16px;">
+  <label data-i18n="bankAccountLabel">Bank Account Number</label>
+  <input type="text" id="bankAccountInput" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);"
+         data-i18n-placeholder="bankAccountPlaceholder" placeholder="e.g. 112233445566">
+</div>
+	  
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary btn-sm" onclick="saveStoreSettings()" style="flex:1;" data-i18n="save">💾 保存</button>
       <button class="btn btn-outline btn-sm" onclick="closeStoreSettingsModal()" style="flex:1;" data-i18n="cancel">取消</button>
@@ -3139,7 +3164,8 @@ async function saveSettings() {
 function openStoreSettingsModal() {
   // Populate with current values
   document.getElementById('storeNameInput').value = APP_STATE.settings.storeName || i18n.t('storeName');
-  // If logo exists, show preview
+  
+  // Existing logo preview
   const logoUrl = APP_STATE.settings.logoUrl || '';
   const preview = document.getElementById('logoPreview');
   if (logoUrl) {
@@ -3148,6 +3174,21 @@ function openStoreSettingsModal() {
   } else {
     preview.style.display = 'none';
   }
+  
+  // ---- NEW: Populate payment QR preview ----
+  const paymentQrUrl = APP_STATE.settings.paymentQrUrl || '';
+  const qrPreview = document.getElementById('paymentQrPreview');
+  if (paymentQrUrl) {
+    qrPreview.src = paymentQrUrl;
+    qrPreview.style.display = 'block';
+  } else {
+    qrPreview.style.display = 'none';
+  }
+
+  // ---- NEW: Populate bank fields ----
+  document.getElementById('bankNameInput').value = APP_STATE.settings.bankName || '';
+  document.getElementById('bankAccountInput').value = APP_STATE.settings.bankAccount || '';
+
   document.getElementById('storeSettingsModal').style.display = 'flex';
 }
 
@@ -3172,6 +3213,20 @@ function previewLogo(event) {
   }
 }
 
+	// Preview payment QR image
+function previewPaymentQr(event) {
+  const file = event.target.files[0];
+  if (file) {
+    document.getElementById('paymentQrFileName').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById('paymentQrPreview').src = e.target.result;
+      document.getElementById('paymentQrPreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    window._newPaymentQrFile = file;  // store for later upload
+  }
+}
 // Save both name and logo
 async function saveStoreSettings() {
   const newName = document.getElementById('storeNameInput').value.trim();
@@ -3180,23 +3235,36 @@ async function saveStoreSettings() {
     return;
   }
   
-  // Update store name
+  // Save store name (local)
   APP_STATE.settings.storeName = newName;
   document.querySelector('.header-brand span').textContent = newName;
   
-  // Save to database
- // After upserting both storeName and logoUrl to Supabase:
-await supabaseClient.from('settings').upsert([
-  { key: 'storeName', value: newName, store_id: APP_STATE.storeId },
-  { key: 'logoUrl', value: APP_STATE.settings.logoUrl, store_id: APP_STATE.storeId }
-], { onConflict: 'key, store_id' });
+  // ---- NEW: Read bank details ----
+  const bankName = document.getElementById('bankNameInput').value.trim();
+  const bankAccount = document.getElementById('bankAccountInput').value.trim();
+  APP_STATE.settings.bankName = bankName;
+  APP_STATE.settings.bankAccount = bankAccount;
 
+  // ---- NEW: Handle payment QR upload if a new file was selected ----
+  let paymentQrUrl = APP_STATE.settings.paymentQrUrl || '';
+  if (window._newPaymentQrFile) {
+    try {
+      // Upload to Supabase Storage (or ImgBB if you prefer)
+      paymentQrUrl = await uploadToSupabaseStorage(window._newPaymentQrFile, 'payment');
+      APP_STATE.settings.paymentQrUrl = paymentQrUrl;
+    } catch (err) {
+      showToast('paymentQrUploadFailed');
+      console.error(err);
+    }
+    // Clear the temp file reference
+    delete window._newPaymentQrFile;
+  }
 
-  
-  // Handle logo upload if new file selected
+  // ---- NEW: Handle logo upload if a new file was selected ----
+  let logoUrl = APP_STATE.settings.logoUrl || '';
   if (window._newLogoFile) {
     try {
-      const logoUrl = await uploadToSupabaseStorage(window._newLogoFile, 'logo');
+      logoUrl = await uploadToSupabaseStorage(window._newLogoFile, 'logo');
       APP_STATE.settings.logoUrl = logoUrl;
       // Update header logo
       let logoImg = document.querySelector('.header-brand img');
@@ -3208,17 +3276,30 @@ await supabaseClient.from('settings').upsert([
         document.querySelector('.header-brand').prepend(logoImg);
       }
       logoImg.src = logoUrl;
-      // Save logo URL
-      await supabaseClient.from('settings').upsert(
-        { key: 'logoUrl', value: logoUrl, store_id: APP_STATE.storeId },
-        { onConflict: 'key, store_id' }
-      );
     } catch (err) {
       showToast('logoUploadFailed');
       console.error(err);
     }
+    delete window._newLogoFile;
   }
-  updateStoreBranding();   // instantly refreshes all headers & title
+
+  // Prepare all settings rows to upsert
+  const settingsToUpsert = [
+    { key: 'storeName', value: newName, store_id: APP_STATE.storeId },
+    { key: 'logoUrl', value: logoUrl || '', store_id: APP_STATE.storeId },
+    { key: 'bankName', value: bankName, store_id: APP_STATE.storeId },
+    { key: 'bankAccount', value: bankAccount, store_id: APP_STATE.storeId },
+    { key: 'paymentQrUrl', value: paymentQrUrl || '', store_id: APP_STATE.storeId }
+  ];
+
+  const { error } = await supabaseClient.from('settings').upsert(settingsToUpsert, { onConflict: 'key, store_id' });
+  if (error) {
+    console.error('Save store settings error:', error);
+    showToast('saveFailed');
+    return;
+  }
+
+  updateStoreBranding();
   closeStoreSettingsModal();
   showToast('storeSettingsSaved');
 }
@@ -3653,7 +3734,7 @@ async function loadPublicSettings() {
     .from('settings')
     .select('*')
     .eq('store_id', storeId)
-    .in('key', ['autoAddMember', 'storeName', 'logoUrl', 'currencySymbol', 'pricesInclusive', 'tax1Enabled', 'tax1Name', 'tax1Rate', 'tax2Enabled', 'tax2Name', 'tax2Rate', 'roundingEnabled']);
+    .in('key', ['autoAddMember', 'storeName', 'logoUrl', 'currencySymbol', 'pricesInclusive', 'tax1Enabled', 'tax1Name', 'tax1Rate', 'tax2Enabled', 'tax2Name', 'tax2Rate', 'roundingEnabled', 'bankName', 'bankAccount', 'paymentQrUrl']);
 
   if (error) {
     console.error('Load public settings error:', error);
