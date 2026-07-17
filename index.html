@@ -2400,47 +2400,89 @@ function printReceipt(orderId) {
 
     const receiptHtml = buildReceiptHtml(order);
 
-    // Create a hidden iframe
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`
+    // Full HTML for the new window
+    const fullHtml = `
+        <!DOCTYPE html>
         <html>
         <head>
-            <title>收据 ${orderId}</title>
+            <title>Receipt ${orderId}</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-                body { margin:0; padding:0; font-family: 'Nunito', sans-serif; }
-                @media print { body { margin:0; padding:0; } }
+                body { margin: 0; padding: 20px; font-family: 'Nunito', sans-serif; background: white; }
+                .receipt { max-width: 400px; margin: 0 auto; }
+                @media print {
+                    body { padding: 0; }
+                }
             </style>
         </head>
         <body>
-            ${receiptHtml}
+            <div class="receipt">${receiptHtml}</div>
             <script>
-                // Trigger print as soon as the content is loaded
                 window.onload = function() {
                     setTimeout(function() {
                         window.print();
-                    }, 300);
+                    }, 500);
                 };
             <\/script>
         </body>
         </html>
-    `);
-    doc.close();
+    `;
 
-    // Remove the iframe after a reasonable time (e.g., 10 seconds)
-    // This prevents memory leaks and ensures the print dialog is gone.
-    setTimeout(() => {
-        if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
-        }
-    }, 10000);
+    // Try to open a new window (works on desktop, may be blocked on mobile)
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (printWindow) {
+        printWindow.document.write(fullHtml);
+        printWindow.document.close();
+        // Auto-close after printing or after 15s
+        printWindow.onafterprint = function() {
+            printWindow.close();
+        };
+        setTimeout(() => {
+            if (printWindow && !printWindow.closed) {
+                printWindow.close();
+            }
+        }, 15000);
+    } else {
+        // Fallback: overlay with print styles (works on all devices)
+        // Create a container
+        const printContainer = document.createElement('div');
+        printContainer.id = 'printReceiptContainer';
+        printContainer.style.position = 'fixed';
+        printContainer.style.top = '0';
+        printContainer.style.left = '0';
+        printContainer.style.width = '100%';
+        printContainer.style.height = '100%';
+        printContainer.style.backgroundColor = 'white';
+        printContainer.style.zIndex = '99999';
+        printContainer.style.overflow = 'auto';
+        printContainer.innerHTML = receiptHtml;
+        document.body.appendChild(printContainer);
+
+        // Add print styles to hide everything except the container
+        const style = document.createElement('style');
+        style.id = 'printStyle';
+        style.textContent = `
+            @media print {
+                body * { visibility: hidden; }
+                #printReceiptContainer, #printReceiptContainer * { visibility: visible; }
+                #printReceiptContainer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Trigger print
+        window.print();
+
+        // Cleanup after print (or after a timeout)
+        setTimeout(() => {
+            if (document.body.contains(printContainer)) {
+                document.body.removeChild(printContainer);
+            }
+            const styleEl = document.getElementById('printStyle');
+            if (styleEl) styleEl.remove();
+        }, 5000);
+    }
 }
 	
 function getPaymentMethodLabel(method) {
