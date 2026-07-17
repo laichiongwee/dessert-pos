@@ -2343,65 +2343,29 @@ await supabaseClient.from('settings').upsert([
     showOrderReceipt(order);
 }
 function showOrderReceipt(order) {
-    const taxLines = order.taxDetails ? `
-        ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: ${formatCurrency(order.taxDetails.tax1Amount)}</div>` : ''}
-        ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: ${formatCurrency(order.taxDetails.tax2Amount)}</div>` : ''}
-        ${order.taxDetails.inclusive ? '<div style="font-size:0.7rem;color:var(--text-lighter);">(Included in price)</div>' : ''}
-    ` : '';
-    const roundingLine = (order.taxDetails && order.taxDetails.roundingAdjustment !== 0)
-      ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">Rounding Adjustment: ${formatCurrency(order.taxDetails.roundingAdjustment)}</div>`
-      : '';
-    const receiptHTML = `
-    <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
-        <h2 style="color:var(--persimmon);margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
-        <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
-        <div style="font-size:3rem;font-weight:800;color:var(--red);margin:12px 0;">🔔 ${order.callNumber}</div>
-        <div style="font-size:0.85rem;color:var(--text-light);">${i18n.t('callNumberLabel')}</div>
-        <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
-        <table style="width:100%;font-size:0.8rem;text-align:left;border-collapse:collapse;">
-            ${order.items.map(item => `
-                <tr>
-                    <td style="padding:4px 0;">${item.name} x${item.qty}</td>
-                    <td style="text-align:right;">${formatCurrency(item.price * item.qty)}</td>
-                </tr>
-            `).join('')}
-        </table>
-        <hr style="border:0;border-top:1px dashed var(--border);margin:16px 0;">
-        ${taxLines}
-        ${roundingLine}
-        <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1rem;margin-bottom:8px;">
-            <span>${i18n.t('total')}</span>
-            <span>${formatCurrency(order.total)}</span>
-        </div>
-        <div style="font-size:0.8rem;color:var(--text-light);text-align:left;line-height:1.6;">
-            <div>${i18n.t('paymentMethod')}：<strong>${getPaymentMethodLabel(order.paymentMethod)}</strong></div>
-            ${renderPaymentDetailsLine(order)}
-        </div>
-    </div>
-    <div style="padding:0 16px 16px; display:flex; gap:8px;">
-        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="printReceipt('${order.id}')">🖨️ ${i18n.t('printReceipt')}</button>
-        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="closeReceiptModal()">${i18n.t('close')}</button>
-    </div>`;
-    
+    const receiptHtml = buildReceiptHtml(order);
     const modal = document.getElementById('receiptModal');
-    modal.querySelector('.modal-sheet').innerHTML = receiptHTML;
+    modal.querySelector('.modal-sheet').innerHTML = `
+        ${receiptHtml}
+        <div style="padding:0 16px 16px; display:flex; gap:8px;">
+            <button class="btn btn-primary btn-sm" style="flex:1;" onclick="printReceipt('${order.id}')">🖨️ ${i18n.t('printReceipt')}</button>
+            <button class="btn btn-outline btn-sm" style="flex:1;" onclick="closeReceiptModal()">${i18n.t('close')}</button>
+        </div>
+    `;
     modal.style.display = 'flex';
 }
 
-function printReceipt(orderId) {
-    const order = APP_STATE.orders.find(o => o.id === orderId);
-    if (!order) return;
-
+	function buildReceiptHtml(order) {
     const taxLines = order.taxDetails ? `
-        ${order.taxDetails.tax1Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: ${formatCurrency(order.taxDetails.tax1Amount)}</div>` : ''}
-        ${order.taxDetails.tax2Amount > 0 ? `<div style="font-size:0.8rem;color:#6B4E4E;text-align:left;">${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: ${formatCurrency(order.taxDetails.tax2Amount)}</div>` : ''}
+        ${order.taxDetails.tax1Amount > 0 ? `<div>${APP_STATE.taxSettings.tax1Name || 'Sales Tax'}: ${formatCurrency(order.taxDetails.tax1Amount)}</div>` : ''}
+        ${order.taxDetails.tax2Amount > 0 ? `<div>${APP_STATE.taxSettings.tax2Name || 'Service Tax'}: ${formatCurrency(order.taxDetails.tax2Amount)}</div>` : ''}
         ${order.taxDetails.inclusive ? '<div style="font-size:0.7rem;color:#6B4E4E;">(Included in price)</div>' : ''}
     ` : '';
     const roundingLine = (order.taxDetails && order.taxDetails.roundingAdjustment !== 0)
-      ? `<div style="font-size:0.8rem;color:var(--text-light);text-align:left;">Rounding Adjustment: ${formatCurrency(order.taxDetails.roundingAdjustment)}</div>`
+      ? `<div>Rounding Adjustment: ${formatCurrency(order.taxDetails.roundingAdjustment)}</div>`
       : '';
-    const printContent = `
-        <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;">
+    return `
+        <div style="padding:16px;font-family:'Nunito',sans-serif;text-align:center;max-width:400px;margin:0 auto;">
             <h2 style="color:#E8784A;margin-bottom:4px;">🍅 ${i18n.t('receiptStoreName')}</h2>
             <div style="font-size:0.8rem;color:#6B4E4E;margin-bottom:12px;">${new Date(order.date).toLocaleString()}</div>
             <div style="font-size:3rem;font-weight:800;color:#E85555;margin:12px 0;">🔔 ${order.callNumber}</div>
@@ -2428,21 +2392,55 @@ function printReceipt(orderId) {
             </div>
         </div>
     `;
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    printWindow.document.write(`
+}
+	
+function printReceipt(orderId) {
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const receiptHtml = buildReceiptHtml(order);
+
+    // Create a hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
         <html>
-        <head><title>收据 ${orderId}</title>
-        <style>
-            body { margin:0; padding:0; }
-            @media print { body { margin:0; } }
-        </style></head>
-        <body>${printContent}</body>
+        <head>
+            <title>收据 ${orderId}</title>
+            <style>
+                body { margin:0; padding:0; font-family: 'Nunito', sans-serif; }
+                @media print { body { margin:0; padding:0; } }
+            </style>
+        </head>
+        <body>
+            ${receiptHtml}
+            <script>
+                // Trigger print as soon as the content is loaded
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                    }, 300);
+                };
+            <\/script>
+        </body>
         </html>
     `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.onafterprint = () => printWindow.close();
+    doc.close();
+
+    // Remove the iframe after a reasonable time (e.g., 10 seconds)
+    // This prevents memory leaks and ensures the print dialog is gone.
+    setTimeout(() => {
+        if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+        }
+    }, 10000);
 }
 	
 function getPaymentMethodLabel(method) {
