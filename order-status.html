@@ -23,6 +23,13 @@
         button { background: #E8784A; color: white; border: none; border-radius: 20px; padding: 10px 24px; font-weight: bold; margin-top: 16px; cursor: pointer; width: 100%; }
         .lang-switch { position: absolute; top: 10px; right: 10px; background: #ffffff; border: 1px solid #E8784A; color: #E8784A; padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; }
         #audioEnableBar { background:#FFF3E0; color:#E65100; padding:8px; text-align:center; font-size:0.9rem; }
+        .payment-section { margin: 16px 0; border-top: 2px solid #F0E0D6; padding-top: 16px; }
+        .payment-section img { max-width: 200px; border-radius: 12px; border: 1px solid var(--border); margin: 8px 0; }
+        .bank-details { background: #FFF8F3; padding: 12px; border-radius: 12px; text-align: left; font-size: 0.9rem; margin: 12px 0; }
+        .bank-details .row { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; }
+        .btn-sm { padding: 4px 12px; font-size: 0.8rem; border-radius: 16px; background: var(--persimmon); color: white; border: none; cursor: pointer; }
+        .btn-outline { background: transparent; border: 1.5px solid #E8784A; color: #E8784A; }
+        .btn-outline:hover { background: #E8784A; color: white; }
     </style>
 </head>
 <body>
@@ -37,6 +44,8 @@
     <div class="container">
         <h2 data-i18n="orderStatusTitle">🔍 订单状态</h2>
         <div id="orderInfo">加载中...</div>
+        <!-- Payment information will be injected here -->
+        <div id="paymentInfo"></div>
         <button onclick="window.location.reload()" data-i18n="refreshStatus">刷新状态</button>
     </div>
 
@@ -65,7 +74,6 @@
         audioEnabled = true;
         localStorage.setItem('audioEnabled', 'true');
         document.getElementById('audioEnableBar').style.display = 'none';
-        // 移除事件监听，避免重复触发
         document.body.removeEventListener('click', autoEnableAudio);
         document.body.removeEventListener('touchstart', autoEnableAudio);
     }
@@ -136,7 +144,12 @@
                     "msgPending": "Paid, please wait",
                     "msgPreparing": "Preparing your order",
                     "msgReady": "Your order is ready, please pick up at counter",
-                    "msgCompleted": "Order picked up, thank you"
+                    "msgCompleted": "Order picked up, thank you",
+                    "paymentInfo": "💳 Payment Information",
+                    "saveQr": "Save QR",
+                    "copy": "Copy",
+                    "bankName": "Bank",
+                    "accountNumber": "Account Number"
                 }},
                 'zh-CN': { translation: {
                     "orderStatusTitle": "🔍 订单状态",
@@ -157,7 +170,12 @@
                     "msgPending": "已付款，请稍候",
                     "msgPreparing": "正在为您准备",
                     "msgReady": "您的餐点已准备好，请柜台取餐",
-                    "msgCompleted": "餐点已取走，谢谢惠顾"
+                    "msgCompleted": "餐点已取走，谢谢惠顾",
+                    "paymentInfo": "💳 付款信息",
+                    "saveQr": "保存二维码",
+                    "copy": "复制",
+                    "bankName": "银行",
+                    "accountNumber": "账号"
                 }}
             },
             detection: { order: ['querystring', 'localStorage', 'navigator', 'htmlTag'], caches: ['localStorage'] }
@@ -223,13 +241,12 @@
         applyLanguage();
     } else {
         fetchOrderStatus();
-        setInterval(fetchOrderStatus, 8000); //autorefresh every 8s
-        // ✅ 新增：当页面从隐藏变为可见时，立即刷新一次
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        fetchOrderStatus();
-    }
-});
+        setInterval(fetchOrderStatus, 8000);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                fetchOrderStatus();
+            }
+        });
     }
 
     async function fetchOrderStatus() {
@@ -264,7 +281,6 @@ document.addEventListener('visibilitychange', () => {
         const items = Array.isArray(order.items) ? order.items : [];
         let itemsHTML = items.map(i => `<li><span>${i.name} x${i.qty}</span><span>RM ${(i.price * i.qty).toFixed(2)}</span></li>`).join('');
 
-        // 渲染订单信息
         document.getElementById('orderInfo').innerHTML = `
             <p><strong data-i18n="orderNumber">${i18n.t('orderNumber')}</strong>${order.id}</p>
             ${order.memberName ? `
@@ -289,6 +305,120 @@ document.addEventListener('visibilitychange', () => {
         }
         if (status !== 'ready') alertTriggered = false;
         lastStatus = status;
+
+        // ---- Fetch store settings for payment info ----
+        if (order.store_id) {
+            const { data: settingsRows } = await supabaseClient
+                .from('settings')
+                .select('*')
+                .eq('store_id', order.store_id)
+                .in('key', ['paymentQrUrl', 'bankName', 'bankAccount', 'currencySymbol']);
+
+            const settings = {};
+            if (settingsRows) {
+                settingsRows.forEach(row => settings[row.key] = row.value);
+            }
+
+            renderPaymentInfo(settings);
+        }
+    }
+
+    function renderPaymentInfo(settings) {
+        const container = document.getElementById('paymentInfo');
+        const qrUrl = settings.paymentQrUrl || '';
+        const bankName = settings.bankName || '';
+        const bankAccount = settings.bankAccount || '';
+        const currencySymbol = settings.currencySymbol || '$';
+
+        // If no payment info, hide section
+        if (!qrUrl && !bankName && !bankAccount) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = `<div class="payment-section"><h3 data-i18n="paymentInfo">${i18n.t('paymentInfo')}</h3>`;
+
+        if (qrUrl) {
+            html += `
+                <div>
+                    <img src="${qrUrl}" id="paymentQrImg" alt="Payment QR">
+                    <br>
+                    <button class="btn-sm" onclick="savePaymentQr()" data-i18n="saveQr">💾 ${i18n.t('saveQr')}</button>
+                </div>
+            `;
+        }
+
+        if (bankName || bankAccount) {
+            html += `<div class="bank-details">`;
+            if (bankName) {
+                html += `<div class="row"><span><strong data-i18n="bankName">${i18n.t('bankName')}</strong></span><span>${bankName}</span></div>`;
+            }
+            if (bankAccount) {
+                html += `<div class="row">
+                    <span><strong data-i18n="accountNumber">${i18n.t('accountNumber')}</strong></span>
+                    <span>${bankAccount} <button class="btn-sm" onclick="copyBankAccount('${bankAccount}')" data-i18n="copy">📋 ${i18n.t('copy')}</button></span>
+                </div>`;
+            }
+            html += `</div>`;
+        }
+
+        html += `</div>`;
+        container.innerHTML = html;
+        applyLanguage();
+    }
+
+    // ==================== Helper: Save QR Image ====================
+    function savePaymentQr() {
+        const img = document.getElementById('paymentQrImg');
+        if (!img) {
+            alert('No QR image to save.');
+            return;
+        }
+        // Use fetch to get the image as blob, then trigger download
+        fetch(img.src)
+            .then(res => res.blob())
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `payment_qr_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            })
+            .catch(() => {
+                // Fallback: if fetch fails (CORS), use the src directly as a link
+                const a = document.createElement('a');
+                a.href = img.src;
+                a.download = `payment_qr_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+    }
+
+    // ==================== Helper: Copy Bank Account ====================
+    function copyBankAccount(account) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(account).then(() => {
+                alert('Account number copied!');
+            }).catch(() => {
+                fallbackCopy(account);
+            });
+        } else {
+            fallbackCopy(account);
+        }
+    }
+
+    function fallbackCopy(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Account number copied!');
     }
 </script>
 </body>
