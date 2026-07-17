@@ -3940,10 +3940,21 @@ showPublicOrderSuccessModal(orderId, {
     //window.location.href = 'order-status.html?orderId=' + orderId;
 }
 
-	function showPublicOrderSuccessModal(orderId, paymentInfo) {
+function showPublicOrderSuccessModal(orderId, paymentInfo) {
+  console.log('Showing success modal for order:', orderId, paymentInfo); // debug
+
   const modal = document.getElementById('publicOrderSuccessModal');
+  if (!modal) {
+    console.error('Modal element not found!');
+    return;
+  }
+
   const sheet = modal.querySelector('.modal-sheet');
-  
+  if (!sheet) {
+    console.error('Modal sheet not found!');
+    return;
+  }
+
   let paymentHtml = '';
   if (paymentInfo.paymentQrUrl) {
     paymentHtml += `<div style="margin:12px 0;"><img src="${paymentInfo.paymentQrUrl}" style="max-width:200px; border-radius:12px; border:1px solid var(--border);" alt="Payment QR"></div>`;
@@ -3958,8 +3969,11 @@ showPublicOrderSuccessModal(orderId, {
         </div>
       </div>
     `;
+  } else {
+    // Fallback message if no bank details are set
+    paymentHtml = `<p style="font-size:0.9rem;color:var(--text-light);">${i18n.t('pleasePayAtCounter')}</p>`;
   }
-  
+
   sheet.innerHTML = `
     <div style="padding:16px; text-align:center;">
       <h3>✅ ${i18n.t('orderSubmitted')}</h3>
@@ -3974,7 +3988,7 @@ showPublicOrderSuccessModal(orderId, {
       </div>
     </div>
   `;
-  
+
   modal.style.display = 'flex';
 }
 	function copyBankAccount(account) {
