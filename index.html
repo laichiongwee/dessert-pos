@@ -2417,6 +2417,7 @@ function printReceipt(orderId) {
             <div class="receipt">${receiptHtml}</div>
             <script>
                 window.onload = function() {
+                    // Print as soon as the content loads
                     window.print();
                 };
             <\/script>
@@ -2424,7 +2425,7 @@ function printReceipt(orderId) {
         </html>
     `;
 
-    // Try new window (desktop, works on some mobile browsers)
+    // Try new window (works on desktop, sometimes on mobile)
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     if (printWindow) {
         printWindow.document.write(fullHtml);
@@ -2438,73 +2439,61 @@ function printReceipt(orderId) {
                 printWindow.close();
             }
         }, 30000);
-        return;
-    }
+    } else {
+        // ----- FALLBACK: OVERLAY + PRINT (works on all devices) -----
+        // Create the overlay container
+        const printContainer = document.createElement('div');
+        printContainer.id = 'printReceiptContainer';
+        printContainer.style.cssText = `
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: white;
+            z-index: 99999;
+            overflow: auto;
+            padding: 20px;
+            box-sizing: border-box;
+        `;
+        printContainer.innerHTML = receiptHtml;
+        document.body.appendChild(printContainer);
 
-    // ----- FALLBACK: iFrame (works on mobile) -----
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.top = '0';
-    iframe.style.left = '0';
-    iframe.style.width = '100%';
-    iframe.style.height = '100%';
-    iframe.style.border = '0';
-    iframe.style.zIndex = '99999';
-    iframe.style.background = 'white';
-    document.body.appendChild(iframe);
+        // Add print-specific styles
+        const style = document.createElement('style');
+        style.id = 'printStyle';
+        style.textContent = `
+            @media print {
+                body * { visibility: hidden; }
+                #printReceiptContainer, #printReceiptContainer * { visibility: visible; }
+                #printReceiptContainer {
+                    position: absolute;
+                    left: 0; top: 0;
+                    width: 100%; height: 100%;
+                    overflow: visible;
+                    background: white;
+                }
+            }
+        `;
+        document.head.appendChild(style);
 
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`
-        <html>
-        <head>
-            <style>
-                body { margin: 0; padding: 20px; font-family: 'Nunito', sans-serif; }
-                @media print { body { padding: 0; } }
-            </style>
-        </head>
-        <body>
-            <div class="receipt">${receiptHtml}</div>
-            <script>
-                window.onload = function() {
-                    // Focus the iframe to ensure print works
-                    window.focus();
-                    // Short delay to let content render, then print
-                    setTimeout(function() {
-                        window.print();
-                    }, 300);
-                };
-                // Notify parent when printing is done
-                window.onafterprint = function() {
-                    window.parent.postMessage('printDone', '*');
-                };
-            <\/script>
-        </body>
-        </html>
-    `);
-    doc.close();
-
-    // Cleanup when print is done
-    function cleanupIframe() {
-        if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
-        }
-    }
-
-    const handler = function(e) {
-        if (e.data === 'printDone') {
-            cleanupIframe();
-            window.removeEventListener('message', handler);
-        }
-    };
-    window.addEventListener('message', handler);
-
-    // Safety cleanup after 60 seconds (in case print fails or user cancels)
-    setTimeout(() => {
-        cleanupIframe();
-        window.removeEventListener('message', handler);
-    }, 60000);
-}
+        // Add a close button (visible on screen, hidden when printing)
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕ Close';
+        closeBtn.style.cssText = `
+            position: fixed;
+            top: 10px; right: 10px;
+            z-index: 100000;
+            background: #E8784A;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-weight: bold;
+            cursor: pointer;
+        `;
+        closeBtn.onclick = function() {
+            cleanupPrintOverlay();
+        };
+        document.body.appendChild(closeBtn);
 
         // Cleanup function
         function cleanupPrintOverlay() {
