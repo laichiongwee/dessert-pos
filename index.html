@@ -3972,18 +3972,21 @@ function renderOrderCard(order) {
     
     let statusLabel = { pending_payment: i18n.t('statusPendingPayment'), pending: i18n.t('statusPending'), preparing: i18n.t('statusPreparing'), ready: i18n.t('statusReady'), completed: i18n.t('statusCompleted') }[status] || '未知';
     let badgeClass = `status-${status}`;
-    if (status === 'pending_payment') badgeClass = 'status-pending'; // use same orangish badge
+    if (status === 'pending_payment') badgeClass = 'status-pending';
 
     let buttons = '';
-if (status === 'pending_payment') {
-    buttons = `<span style="color:var(--red);font-size:0.75rem;">${i18n.t('notYetPaid')}</span>`;
-} else if (status === 'pending') {
-    buttons = `<button class="btn btn-xs btn-outline" onclick="updateOrderStatus('${order.id}','preparing')">${i18n.t('startPrep')}</button>`;
-} else if (status === 'preparing') {
-    buttons = `<button class="btn btn-xs btn-primary" onclick="markReady('${order.id}')">${i18n.t('foodReady')}</button>`;
-} else if (status === 'ready') {
-    buttons = `<button class="btn btn-xs btn-success" onclick="markCompleted('${order.id}')">${i18n.t('pickedUp')}</button>`;
-}
+    if (status === 'pending_payment') {
+        // ---------- CHANGED LINE ----------
+        buttons = `<button class="btn btn-xs btn-primary" onclick="collectPayment('${order.id}')">💰 ${i18n.t('collectPayment')}</button>`;
+        // ---------------------------------
+    } else if (status === 'pending') {
+        buttons = `<button class="btn btn-xs btn-outline" onclick="updateOrderStatus('${order.id}','preparing')">${i18n.t('startPrep')}</button>`;
+    } else if (status === 'preparing') {
+        buttons = `<button class="btn btn-xs btn-primary" onclick="markReady('${order.id}')">${i18n.t('foodReady')}</button>`;
+    } else if (status === 'ready') {
+        buttons = `<button class="btn btn-xs btn-success" onclick="markCompleted('${order.id}')">${i18n.t('pickedUp')}</button>`;
+    }
+    
     return `
     <div class="order-card ${status === 'completed' ? 'completed' : ''}">
         <div class="flex-row">
@@ -4034,6 +4037,16 @@ async function markCompleted(orderId) {
     renderFulfillmentView();
 }
 
+	// Add this function
+function collectPayment(orderId) {
+    const order = APP_STATE.orders.find(o => o.id === orderId);
+    if (order) {
+        openPaymentModalForOrder(order);
+    } else {
+        showToast('orderNotFound');
+    }
+}
+	
 // ==================== ORDER ACTIONS ====================
 function addToOrder(itemId) {
     const item = APP_STATE.menu.find(m => m.id === itemId);
