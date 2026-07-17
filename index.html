@@ -2492,26 +2492,6 @@ function printReceipt(orderId) {
         window.removeEventListener('message', handler);
     }, 60000);
 }
-
-        // Cleanup function
-        function cleanupPrintOverlay() {
-            if (document.body.contains(printContainer)) {
-                document.body.removeChild(printContainer);
-            }
-            const styleEl = document.getElementById('printStyle');
-            if (styleEl) styleEl.remove();
-            if (document.body.contains(closeBtn)) {
-                document.body.removeChild(closeBtn);
-            }
-        }
-
-        // Trigger print **immediately** (preserves user gesture)
-        window.print();
-
-        // Safety cleanup after 30 seconds (in case user never closes)
-        setTimeout(cleanupPrintOverlay, 30000);
-    }
-}
 	
 function getPaymentMethodLabel(method) {
     const labels = {
