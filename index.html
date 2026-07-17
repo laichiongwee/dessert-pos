@@ -2400,97 +2400,85 @@ function printReceipt(orderId) {
 
     const receiptHtml = buildReceiptHtml(order);
 
-    const fullHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Receipt ${orderId}</title>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body { margin: 0; padding: 20px; font-family: 'Nunito', sans-serif; background: white; }
-                .receipt { max-width: 400px; margin: 0 auto; }
-                @media print { body { padding: 0; } }
-            </style>
-        </head>
-        <body>
-            <div class="receipt">${receiptHtml}</div>
-            <script>
-                window.onload = function() {
-                    window.print();
-                };
-            <\/script>
-        </body>
-        </html>
+    // Create the overlay container
+    const overlay = document.createElement('div');
+    overlay.id = 'printReceiptOverlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: white;
+        z-index: 99999;
+        overflow: auto;
+        padding: 20px;
+        box-sizing: border-box;
     `;
+    overlay.innerHTML = receiptHtml;
+    document.body.appendChild(overlay);
 
-    // Try new window (desktop, some mobile)
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    if (printWindow) {
-        printWindow.document.write(fullHtml);
-        printWindow.document.close();
-        printWindow.onafterprint = function() {
-            printWindow.close();
-        };
-        setTimeout(() => {
-            if (printWindow && !printWindow.closed) {
-                printWindow.close();
+    // Inject print-only styles
+    const style = document.createElement('style');
+    style.id = 'printOverlayStyle';
+    style.textContent = `
+        @media print {
+            body * { visibility: hidden; }
+            #printReceiptOverlay, #printReceiptOverlay * { visibility: visible; }
+            #printReceiptOverlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                overflow: visible;
+                background: white;
+                padding: 0;
             }
-        }, 30000);
-        return;
-    }
-
-    // ----- FALLBACK: iFrame (works on mobile) -----
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; border:0; z-index:99999; background:white;';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`
-        <html>
-        <head>
-            <style>
-                body { margin: 0; padding: 20px; font-family: 'Nunito', sans-serif; }
-                @media print { body { padding: 0; } }
-            </style>
-        </head>
-        <body>
-            <div class="receipt">${receiptHtml}</div>
-            <script>
-                window.onload = function() {
-                    window.focus();
-                    setTimeout(function() {
-                        window.print();
-                    }, 300);
-                };
-                window.onafterprint = function() {
-                    window.parent.postMessage('printDone', '*');
-                };
-            <\/script>
-        </body>
-        </html>
-    `);
-    doc.close();
-
-    function cleanupIframe() {
-        if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
         }
-    }
+    `;
+    document.head.appendChild(style);
 
-    const handler = function(e) {
-        if (e.data === 'printDone') {
-            cleanupIframe();
-            window.removeEventListener('message', handler);
-        }
+    // Add a close button (visible on screen, hidden in print)
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕ Close';
+    closeBtn.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 100000;
+        background: #E8784A;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 12px 24px;
+        font-weight: bold;
+        font-size: 1rem;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    `;
+    closeBtn.onclick = function() {
+        cleanupPrintOverlay();
     };
-    window.addEventListener('message', handler);
+    document.body.appendChild(closeBtn);
 
-    setTimeout(() => {
-        cleanupIframe();
-        window.removeEventListener('message', handler);
-    }, 60000);
+    // Cleanup function
+    function cleanupPrintOverlay() {
+        if (document.body.contains(overlay)) {
+            document.body.removeChild(overlay);
+        }
+        const styleEl = document.getElementById('printOverlayStyle');
+        if (styleEl) styleEl.remove();
+        if (document.body.contains(closeBtn)) {
+            document.body.removeChild(closeBtn);
+        }
+    }
+
+    // Trigger print **immediately** (user gesture preserved)
+    window.print();
+
+    // Auto‑cleanup after 30 seconds (safety net)
+    setTimeout(cleanupPrintOverlay, 30000);
 }
 	
 function getPaymentMethodLabel(method) {
