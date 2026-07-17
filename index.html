@@ -2400,7 +2400,6 @@ function printReceipt(orderId) {
 
     const receiptHtml = buildReceiptHtml(order);
 
-    // Full HTML for the new window
     const fullHtml = `
         <!DOCTYPE html>
         <html>
@@ -2411,77 +2410,108 @@ function printReceipt(orderId) {
             <style>
                 body { margin: 0; padding: 20px; font-family: 'Nunito', sans-serif; background: white; }
                 .receipt { max-width: 400px; margin: 0 auto; }
-                @media print {
-                    body { padding: 0; }
-                }
+                @media print { body { padding: 0; } }
             </style>
         </head>
         <body>
             <div class="receipt">${receiptHtml}</div>
             <script>
                 window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                    }, 500);
+                    // Print as soon as the content loads
+                    window.print();
                 };
             <\/script>
         </body>
         </html>
     `;
 
-    // Try to open a new window (works on desktop, may be blocked on mobile)
+    // Try new window (works on desktop, sometimes on mobile)
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     if (printWindow) {
         printWindow.document.write(fullHtml);
         printWindow.document.close();
-        // Auto-close after printing or after 15s
         printWindow.onafterprint = function() {
             printWindow.close();
         };
+        // Safety close after 30 seconds
         setTimeout(() => {
             if (printWindow && !printWindow.closed) {
                 printWindow.close();
             }
-        }, 15000);
+        }, 30000);
     } else {
-        // Fallback: overlay with print styles (works on all devices)
-        // Create a container
+        // ----- FALLBACK: OVERLAY + PRINT (works on all devices) -----
+        // Create the overlay container
         const printContainer = document.createElement('div');
         printContainer.id = 'printReceiptContainer';
-        printContainer.style.position = 'fixed';
-        printContainer.style.top = '0';
-        printContainer.style.left = '0';
-        printContainer.style.width = '100%';
-        printContainer.style.height = '100%';
-        printContainer.style.backgroundColor = 'white';
-        printContainer.style.zIndex = '99999';
-        printContainer.style.overflow = 'auto';
+        printContainer.style.cssText = `
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: white;
+            z-index: 99999;
+            overflow: auto;
+            padding: 20px;
+            box-sizing: border-box;
+        `;
         printContainer.innerHTML = receiptHtml;
         document.body.appendChild(printContainer);
 
-        // Add print styles to hide everything except the container
+        // Add print-specific styles
         const style = document.createElement('style');
         style.id = 'printStyle';
         style.textContent = `
             @media print {
                 body * { visibility: hidden; }
                 #printReceiptContainer, #printReceiptContainer * { visibility: visible; }
-                #printReceiptContainer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+                #printReceiptContainer {
+                    position: absolute;
+                    left: 0; top: 0;
+                    width: 100%; height: 100%;
+                    overflow: visible;
+                    background: white;
+                }
             }
         `;
         document.head.appendChild(style);
 
-        // Trigger print
-        window.print();
+        // Add a close button (visible on screen, hidden when printing)
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕ Close';
+        closeBtn.style.cssText = `
+            position: fixed;
+            top: 10px; right: 10px;
+            z-index: 100000;
+            background: #E8784A;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-weight: bold;
+            cursor: pointer;
+        `;
+        closeBtn.onclick = function() {
+            cleanupPrintOverlay();
+        };
+        document.body.appendChild(closeBtn);
 
-        // Cleanup after print (or after a timeout)
-        setTimeout(() => {
+        // Cleanup function
+        function cleanupPrintOverlay() {
             if (document.body.contains(printContainer)) {
                 document.body.removeChild(printContainer);
             }
             const styleEl = document.getElementById('printStyle');
             if (styleEl) styleEl.remove();
-        }, 5000);
+            if (document.body.contains(closeBtn)) {
+                document.body.removeChild(closeBtn);
+            }
+        }
+
+        // Trigger print **immediately** (preserves user gesture)
+        window.print();
+
+        // Safety cleanup after 30 seconds (in case user never closes)
+        setTimeout(cleanupPrintOverlay, 30000);
     }
 }
 	
