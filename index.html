@@ -2406,11 +2406,18 @@ let bluetoothDevice = null;
 let bluetoothCharacteristic = null;
 let discoveredServices = [];
 
-// Known UUIDs from your printer (RichTech)
-const PRINTER_SERVICE_UUID = '0000-1000-8000-00805f9b34fb';
-const PRINTER_CHARACTERISTIC_UUID = '00001101-0000-1000-8000-00805f9b34fb';
+// ✅ Common BLE printer service UUIDs for discovery
+const BLE_PRINTER_SERVICES = [
+  '0000fff0-0000-1000-8000-00805f9b34fb',
+  '0000fee0-0000-1000-8000-00805f9b34fb',
+  '0000ffb0-0000-1000-8000-00805f9b34fb',
+  '0000ffe0-0000-1000-8000-00805f9b34fb',
+  '000018f0-0000-1000-8000-00805f9b34fb',
+  '0000180a-0000-1000-8000-00805f9b34fb', // Device info
+  '0000180f-0000-1000-8000-00805f9b34fb'  // Battery
+];
 
-// Connect to Bluetooth printer – uses known service
+// Connect to Bluetooth printer – auto-discovers writable characteristic
 async function connectBluetoothPrinter() {
     if (!navigator.bluetooth) {
         showToast('Web Bluetooth not supported on this browser/device');
@@ -2418,31 +2425,56 @@ async function connectBluetoothPrinter() {
     }
 
     try {
-        // Request the device using the known service UUID
+        // ✅ Request device by name prefix + declare all services upfront
         const device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [PRINTER_SERVICE_UUID] }],
-            optionalServices: [PRINTER_SERVICE_UUID]
+            filters: [{ namePrefix: 'Rich' }], // Matches Rich/RichTech printers
+            optionalServices: BLE_PRINTER_SERVICES
         });
 
-        // Connect and get the service
+        // Connect to GATT server
         const server = await device.gatt.connect();
-        const service = await server.getPrimaryService(PRINTER_SERVICE_UUID);
-        const characteristic = await service.getCharacteristic(PRINTER_CHARACTERISTIC_UUID);
 
-        // Check if writable
-        if (!characteristic.properties.write && !characteristic.properties.writeWithoutResponse) {
-            showToast('Characteristic is not writable');
+        // ✅ Auto-discover writable characteristic
+        const services = await server.getPrimaryServices();
+        let foundChar = null;
+        let foundService = null;
+
+        for (const service of services) {
+            const chars = await service.getCharacteristics();
+            for (const char of chars) {
+                if (char.properties.write || char.properties.writeWithoutResponse) {
+                    foundChar = char;
+                    foundService = service;
+                    break;
+                }
+            }
+            if (foundChar) break;
+        }
+
+        if (!foundChar) {
+            // Debug: log all available services/characteristics
+            let debugMsg = 'No writable characteristic found.\nAvailable services:\n';
+            for (const service of services) {
+                const chars = await service.getCharacteristics();
+                debugMsg += `Service: ${service.uuid}\n`;
+                for (const char of chars) {
+                    const props = Object.keys(char.properties).filter(k => char.properties[k]).join(', ');
+                    debugMsg += `  Characteristic: ${char.uuid} (${props})\n`;
+                }
+            }
+            console.log(debugMsg);
+            showToast('No writable print channel found. Check console.');
             return false;
         }
 
         // Save references
         bluetoothDevice = device;
-        bluetoothCharacteristic = characteristic;
+        bluetoothCharacteristic = foundChar;
 
-        // Save to localStorage
+        // ✅ Save discovered UUIDs to localStorage
         localStorage.setItem('btDeviceName', device.name || 'Unknown');
-        localStorage.setItem('btServiceUUID', PRINTER_SERVICE_UUID);
-        localStorage.setItem('btCharUUID', PRINTER_CHARACTERISTIC_UUID);
+        localStorage.setItem('btServiceUUID', foundService.uuid);
+        localStorage.setItem('btCharUUID', foundChar.uuid);
 
         // Update UI
         document.getElementById('btStatus').textContent = `✅ Connected to ${device.name || 'Printer'}`;
@@ -2457,7 +2489,6 @@ async function connectBluetoothPrinter() {
         return false;
     }
 }
-
 // Print via Bluetooth (using the discovered characteristic)
 async function webBluetoothPrint(order) {
     if (!bluetoothCharacteristic) {
