@@ -2406,7 +2406,11 @@ let bluetoothDevice = null;
 let bluetoothCharacteristic = null;
 let discoveredServices = [];
 
-// Connect to any Bluetooth printer with auto-discovery
+// Known UUIDs from your printer (RichTech)
+const PRINTER_SERVICE_UUID = '0000-1000-8000-00805f9b34fb';
+const PRINTER_CHARACTERISTIC_UUID = '00001101-0000-1000-8000-00805f9b34fb';
+
+// Connect to Bluetooth printer – uses known service
 async function connectBluetoothPrinter() {
     if (!navigator.bluetooth) {
         showToast('Web Bluetooth not supported on this browser/device');
@@ -2414,69 +2418,35 @@ async function connectBluetoothPrinter() {
     }
 
     try {
-        // 1. Request any BLE device (use name filter to narrow down)
-        // Use a generic name filter like 'Rich' or 'Printer'
+        // Request the device using the known service UUID
         const device = await navigator.bluetooth.requestDevice({
-            // You can use a name prefix filter to find your printer
-            filters: [{ namePrefix: 'Rich' }], // or use acceptAllDevices: true
-            // Include a common service (Battery) to allow connection
-            optionalServices: ['0000180f-0000-1000-8000-00805f9b34fb']
+            filters: [{ services: [PRINTER_SERVICE_UUID] }],
+            optionalServices: [PRINTER_SERVICE_UUID]
         });
 
-        // 2. Connect to the device
+        // Connect and get the service
         const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(PRINTER_SERVICE_UUID);
+        const characteristic = await service.getCharacteristic(PRINTER_CHARACTERISTIC_UUID);
 
-        // 3. Discover ALL primary services
-        const services = await server.getPrimaryServices();
-
-        // 4. Find a writable characteristic that accepts data
-        let foundChar = null;
-        let foundService = null;
-        let debugInfo = [];
-
-        for (const service of services) {
-            const chars = await service.getCharacteristics();
-            for (const char of chars) {
-                const props = char.properties;
-                if (props.write || props.writeWithoutResponse) {
-                    // Found a writable characteristic – likely the print data channel
-                    foundChar = char;
-                    foundService = service;
-                    break;
-                }
-            }
-            if (foundChar) break;
-        }
-
-        // If no writable characteristic found, show debug info
-        if (!foundChar) {
-            let msg = 'No writable characteristic found. Available services:\n';
-            for (const service of services) {
-                const chars = await service.getCharacteristics();
-                msg += `Service: ${service.uuid}\n`;
-                for (const char of chars) {
-                    const props = Object.keys(char.properties).filter(k => char.properties[k]).join(', ');
-                    msg += `  Characteristic: ${char.uuid} (${props})\n`;
-                }
-            }
-            showToast('No writable characteristic found. Check console for details.');
-            console.log(msg);
+        // Check if writable
+        if (!characteristic.properties.write && !characteristic.properties.writeWithoutResponse) {
+            showToast('Characteristic is not writable');
             return false;
         }
 
-        // 5. Save the device and characteristic
+        // Save references
         bluetoothDevice = device;
-        bluetoothCharacteristic = foundChar;
+        bluetoothCharacteristic = characteristic;
 
-        // Save to localStorage for future connections
+        // Save to localStorage
         localStorage.setItem('btDeviceName', device.name || 'Unknown');
-        localStorage.setItem('btServiceUUID', foundService.uuid);
-        localStorage.setItem('btCharUUID', foundChar.uuid);
+        localStorage.setItem('btServiceUUID', PRINTER_SERVICE_UUID);
+        localStorage.setItem('btCharUUID', PRINTER_CHARACTERISTIC_UUID);
 
         // Update UI
         document.getElementById('btStatus').textContent = `✅ Connected to ${device.name || 'Printer'}`;
         document.getElementById('btConnectBtn').style.display = 'none';
-        document.getElementById('btDebug').textContent = `Service: ${foundService.uuid}\nCharacteristic: ${foundChar.uuid}`;
 
         showToast('Printer connected: ' + (device.name || 'Printer'));
         return true;
