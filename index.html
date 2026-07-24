@@ -557,10 +557,10 @@
   <span class="plan-badge" id="planBadge" style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background:var(--gold-light); color:var(--persimmon); font-weight:600;">Free</span>
 	
 </div>
-		<button class="btn btn-outline btn-sm" onclick="connectBluetoothPrinter()" id="btConnectBtn" style="display:none;">
+		<button class="btn btn-xs btn-outline" onclick="connectBluetoothPrinter()" id="btConnectBtn">
     📡 Connect Printer
 </button>
-<span id="btStatus" style="font-size:0.7rem;color:var(--text-lighter);"></span>
+<span id="btStatus" style="font-size:0.7rem;color:var(--text-lighter);margin-left:8px;"></span>
 		
 		<button id="registerUserBtn" class="btn btn-xs btn-outline" 
         onclick="openRegisterUserModal()" 
@@ -2400,21 +2400,203 @@ function showOrderReceipt(order) {
     `;
 }
 	
+// ==================== WEB BLUETOOTH PRINTING ====================
+let bluetoothDevice = null;
+let bluetoothCharacteristic = null;
+
+// Printer UUIDs (from your screenshot)
+const PRINTER_SERVICE_UUID = '0000-1000-8000-00805f9b34fb';
+const PRINTER_CHARACTERISTIC_UUID = '00001101-0000-1000-8000-00805f9b34fb';
+
+// Connect to Bluetooth printer
+async function connectBluetoothPrinter() {
+    if (!navigator.bluetooth) {
+        showToast('Web Bluetooth not supported on this browser/device');
+        return;
+    }
+
+    try {
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ services: [PRINTER_SERVICE_UUID] }],
+            optionalServices: [PRINTER_SERVICE_UUID]
+        });
+
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(PRINTER_SERVICE_UUID);
+        const characteristic = await service.getCharacteristic(PRINTER_CHARACTERISTIC_UUID);
+
+        bluetoothDevice = device;
+        bluetoothCharacteristic = characteristic;
+
+        document.getElementById('btStatus').textContent = '✅ Connected to ' + device.name;
+        document.getElementById('btConnectBtn').style.display = 'none';
+
+        showToast('Printer connected: ' + device.name);
+        return true;
+    } catch (error) {
+        console.error('Bluetooth connection error:', error);
+        showToast('Connection failed: ' + error.message);
+        return false;
+    }
+}
+
+// Print via Bluetooth
+async function webBluetoothPrint(order) {
+    // If not connected, try to connect
+    if (!bluetoothCharacteristic) {
+        const connected = await connectBluetoothPrinter();
+        if (!connected) {
+            throw new Error('Printer not connected');
+        }
+    }
+
+    // Build ESC/POS receipt data
+    const receiptData = buildEscPosReceipt(order);
+
+    // Split into chunks (some printers require max 20 bytes per write)
+    const chunkSize = 20;
+    const chunks = [];
+    for (let i = 0; i < receiptData.length; i += chunkSize) {
+        chunks.push(receiptData.slice(i, i + chunkSize));
+    }
+
+    // Write each chunk with a small delay
+    for (let i = 0; i < chunks.length; i++) {
+        await bluetoothCharacteristic.writeValue(chunks[i]);
+        // Small delay between writes (some printers need this)
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    showToast('✅ Receipt printed!');
+    return true;
+}
+
+// Build ESC/POS raw data from order
+function buildEscPosReceipt(order) {
+    const enc = new TextEncoder();
+
+    // ESC/POS commands
+    const CMD_INIT = '\x1B\x40';           // Initialize printer
+    const CMD_BOLD_ON = '\x1B\x45\x01';     // Bold on
+    const CMD_BOLD_OFF = '\x1B\x45\x00';    // Bold off
+    const CMD_ALIGN_CENTER = '\x1B\x61\x01';// Center align
+    const CMD_ALIGN_LEFT = '\x1B\x61\x00';  // Left align
+    const CMD_FEED_LINES = '\x0A';          // Line feed
+    const CMD_PAPER_CUT = '\x1D\x56\x42\x00'; // Full cut (may vary)
+
+    // Build receipt lines (plain text)
+    const lines = [];
+
+    // Store header (centered)
+    lines.push('================');
+    lines.push('🍅 ' + i18n.t('receiptStoreName'));
+    lines.push('================');
+    lines.push('');
+
+    // Date
+    lines.push(new Date(order.date).toLocaleString());
+    lines.push('');
+
+    // Call number
+    lines.push('🔔 ' + order.callNumber);
+    lines.push('');
+
+    // Items
+    lines.push('--- Items ---');
+    order.items.forEach(item => {
+        const price = (item.price * item.qty).toFixed(2);
+        const name = item.name.length > 20 ? item.name.slice(0, 18) + '..' : item.name;
+        const qty = 'x' + item.qty;
+        const priceStr = formatCurrency(price);
+        const pad = 32 - name.length - qty.length - priceStr.length;
+        lines.push(name + qty + ' '.repeat(Math.max(1, pad)) + priceStr);
+    });
+    lines.push('');
+
+    // Taxes
+    if (order.taxDetails) {
+        if (order.taxDetails.tax1Amount > 0) {
+            lines.push(APP_STATE.taxSettings.tax1Name + ': ' + formatCurrency(order.taxDetails.tax1Amount));
+        }
+        if (order.taxDetails.tax2Amount > 0) {
+            lines.push(APP_STATE.taxSettings.tax2Name + ': ' + formatCurrency(order.taxDetails.tax2Amount));
+        }
+        if (order.taxDetails.roundingAdjustment !== 0) {
+            lines.push('Rounding: ' + formatCurrency(order.taxDetails.roundingAdjustment));
+        }
+    }
+    lines.push('');
+
+    // Total (bold)
+    lines.push('----------------');
+    lines.push('TOTAL: ' + formatCurrency(order.total));
+    lines.push('----------------');
+    lines.push('');
+
+    // Payment method
+    lines.push('Payment: ' + getPaymentMethodLabel(order.paymentMethod));
+    if (order.paymentDetails) {
+        if (order.paymentDetails.cardLast4) {
+            lines.push('Card: **** ' + order.paymentDetails.cardLast4);
+        }
+        if (order.paymentDetails.refNum) {
+            lines.push('Ref: ' + order.paymentDetails.refNum);
+        }
+        if (order.paymentDetails.amountTendered) {
+            lines.push('Tendered: ' + formatCurrency(order.paymentDetails.amountTendered));
+            lines.push('Change: ' + formatCurrency(order.paymentDetails.change));
+        }
+    }
+    lines.push('');
+    lines.push('Thank you!');
+    lines.push('');
+
+    // Combine with ESC/POS commands
+    let data = CMD_INIT;
+    data += CMD_ALIGN_CENTER;
+    data += lines.join('\n');
+    data += CMD_FEED_LINES.repeat(3);
+    data += CMD_PAPER_CUT;
+
+    return enc.encode(data);
+}
+
+// ==================== MAIN PRINT FUNCTION ====================
 function printReceipt(orderId) {
     const order = APP_STATE.orders.find(o => o.id === orderId);
-    if (!order) return;
+    if (!order) {
+        showToast('Order not found');
+        return;
+    }
 
+    // Try Web Bluetooth first (if supported)
+    if (navigator.bluetooth) {
+        webBluetoothPrint(order)
+            .then(() => {
+                // Success – receipt printed
+            })
+            .catch((err) => {
+                console.warn('Web Bluetooth failed:', err);
+                // Fallback to browser print
+                browserPrint(order);
+            });
+    } else {
+        // Fallback to browser print
+        browserPrint(order);
+    }
+}
+
+// ==================== BROWSER PRINT FALLBACK ====================
+function browserPrint(order) {
     const receiptHtml = buildReceiptHtml(order);
 
-    // Create the overlay container
+    // Create overlay
     const overlay = document.createElement('div');
     overlay.id = 'printReceiptOverlay';
     overlay.style.cssText = `
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
         background: white;
         z-index: 99999;
         overflow: auto;
@@ -2424,7 +2606,7 @@ function printReceipt(orderId) {
     overlay.innerHTML = receiptHtml;
     document.body.appendChild(overlay);
 
-    // Inject print-only styles
+    // Print styles
     const style = document.createElement('style');
     style.id = 'printOverlayStyle';
     style.textContent = `
@@ -2433,10 +2615,8 @@ function printReceipt(orderId) {
             #printReceiptOverlay, #printReceiptOverlay * { visibility: visible; }
             #printReceiptOverlay {
                 position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
                 overflow: visible;
                 background: white;
                 padding: 0;
@@ -2445,13 +2625,12 @@ function printReceipt(orderId) {
     `;
     document.head.appendChild(style);
 
-    // Add a close button (visible on screen, hidden in print)
+    // Close button
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '✕ Close';
     closeBtn.style.cssText = `
         position: fixed;
-        bottom: 20px;
-        right: 20px;
+        bottom: 20px; right: 20px;
         z-index: 100000;
         background: #E8784A;
         color: white;
@@ -2459,7 +2638,6 @@ function printReceipt(orderId) {
         border-radius: 20px;
         padding: 12px 24px;
         font-weight: bold;
-        font-size: 1rem;
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     `;
@@ -2468,22 +2646,14 @@ function printReceipt(orderId) {
     };
     document.body.appendChild(closeBtn);
 
-    // Cleanup function
     function cleanupPrintOverlay() {
-        if (document.body.contains(overlay)) {
-            document.body.removeChild(overlay);
-        }
+        if (document.body.contains(overlay)) overlay.remove();
         const styleEl = document.getElementById('printOverlayStyle');
         if (styleEl) styleEl.remove();
-        if (document.body.contains(closeBtn)) {
-            document.body.removeChild(closeBtn);
-        }
+        if (document.body.contains(closeBtn)) closeBtn.remove();
     }
 
-    // Trigger print **immediately** (user gesture preserved)
     window.print();
-
-    // Auto‑cleanup after 30 seconds (safety net)
     setTimeout(cleanupPrintOverlay, 30000);
 }
 	
