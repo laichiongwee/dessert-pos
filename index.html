@@ -13,6 +13,8 @@
 	<!-- Locale files -->
 <script src="locales/en.js"></script>
 <script src="locales/zh-CN.js"></script>
+	<!-- Load this BEFORE your script that contains buildEscPosReceipt -->
+<script src="gbk-table.js"></script>
     <style>
         :root {
             --persimmon: #E8784A; --persimmon-light: #FDE8DF; --persimmon-dark: #C45A2E;
@@ -2543,13 +2545,12 @@ async function webBluetoothPrint(order) {
 
 // Build ESC/POS raw data from order
 function buildEscPosReceipt(order) {
-    const enc = new TextEncoder();
     // ESC/POS commands
     const CMD_INIT = '\x1B\x40';
     const CMD_ALIGN_CENTER = '\x1B\x61\x01';
     const CMD_PAPER_CUT = '\x1D\x56\x42\x00';
-    
-    // ✅ Chinese character mode (Option 3 fix)
+
+    // ✅ Chinese character mode
     const FS_AND = '\x1C\x26'; // Enter Chinese character mode
     const FS_DOT = '\x1C\x2E'; // Cancel Chinese character mode
 
@@ -2561,7 +2562,7 @@ function buildEscPosReceipt(order) {
 
     // Store header (centered)
     lines.push('================');
-    lines.push('[T] ' + i18n.t('receiptStoreName')); // ✅ Removed emoji 🍅
+    lines.push('[T] ' + i18n.t('receiptStoreName'));
     lines.push('================');
     lines.push('');
 
@@ -2570,7 +2571,7 @@ function buildEscPosReceipt(order) {
     lines.push('');
 
     // Call number
-    lines.push('[!] ' + order.callNumber); // ✅ Removed emoji 🔔
+    lines.push('[!] ' + order.callNumber);
     lines.push('');
 
     // Items
@@ -2633,7 +2634,12 @@ function buildEscPosReceipt(order) {
     data += '\x0A\x0A\x0A'; // feed lines
     data += CMD_PAPER_CUT;
 
-    return enc.encode(data);
+    // ❌ OLD (this was the bug — always produces UTF-8 bytes):
+    // const enc = new TextEncoder();
+    // return enc.encode(data);
+
+    // ✅ NEW — encode with GBK instead, using gbk-table.js's gbkEncode()
+    return gbkEncode(data);
 }
 	
 // ==================== MAIN PRINT FUNCTION ====================
