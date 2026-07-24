@@ -555,7 +555,13 @@
   <div class="user-avatar" id="userAvatar" style="width:36px; height:36px; border-radius:50%; background:var(--persimmon); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem;">👤</div>
   <span class="user-name" id="userGreeting" style="font-size:0.85rem; font-weight:600; color:var(--text);">Hi, User</span>
   <span class="plan-badge" id="planBadge" style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background:var(--gold-light); color:var(--persimmon); font-weight:600;">Free</span>
+	
 </div>
+		<button class="btn btn-outline btn-sm" onclick="connectBluetoothPrinter()" id="btConnectBtn" style="display:none;">
+    📡 Connect Printer
+</button>
+<span id="btStatus" style="font-size:0.7rem;color:var(--text-lighter);"></span>
+		
 		<button id="registerUserBtn" class="btn btn-xs btn-outline" 
         onclick="openRegisterUserModal()" 
         style="display:none;" 
