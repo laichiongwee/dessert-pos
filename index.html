@@ -2729,18 +2729,31 @@ function buildEscPosReceipt(order) {
     lines.push('[!] ' + order.callNumber);
     lines.push('');
 
-    // Items
-    lines.push('--- Items ---');
-    order.items.forEach(item => {
-        const price = (item.price * item.qty).toFixed(2);
-        const name = item.name.length > 20 ? item.name.slice(0, 18) + '..' : item.name;
-        const qty = 'x' + item.qty;
-        const priceStr = formatCurrency(price);
-        const pad = 32 - name.length - qty.length - priceStr.length;
-        lines.push(name + qty + ' '.repeat(Math.max(1, pad)) + priceStr);
-    });
-    lines.push('');
+// Items
+lines.push('--- Items ---');
+order.items.forEach(item => {
+    const price = (item.price * item.qty).toFixed(2);
+    const name = item.name.length > 20 ? item.name.slice(0, 18) + '..' : item.name;
+    const qty = 'x' + item.qty;
+    const priceStr = formatCurrency(price);
 
+    // Inline display-width calc: CJK chars print double-width on the printer,
+    // so we count them as 2 columns instead of JS's default 1 (.length).
+    const displayWidth = (str) => {
+        let w = 0;
+        for (const ch of str) {
+            const cp = ch.codePointAt(0);
+            const isWide = (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFF00 && cp <= 0xFF60);
+            w += isWide ? 2 : 1;
+        }
+        return w;
+    };
+
+    const pad = 32 - displayWidth(name) - displayWidth(qty) - displayWidth(priceStr);
+    lines.push(name + qty + ' '.repeat(Math.max(1, pad)) + priceStr);
+});
+lines.push('');
+	
     // Taxes
     if (order.taxDetails) {
         if (order.taxDetails.tax1Amount > 0) {
