@@ -2543,79 +2543,49 @@ async function webBluetoothPrint(order) {
 
 // Build ESC/POS raw data from order
 function buildEscPosReceipt(order) {
-    // ================== 内嵌GBK编码工具（核心：解决浏览器默认UTF-8和打印机GBK不匹配） ==================
-    function toGBK(str) {
-        const out = [];
-        for (let i = 0; i < str.length; i++) {
-            const code = str.charCodeAt(i);
-            // ASCII范围直接存
-            if (code < 0x80) {
-                out.push(code);
-                continue;
-            }
-            // 中文/非ASCII：通过浏览器编码API转GBK字节
-            try {
-                // 用Blob+TextDecoder的反向方式获取GBK字节
-                const blob = new Blob([str.charAt(i)], { type: 'text/plain;charset=gbk' });
-                const reader = new FileReaderSync(); // 同步读取，适合短文本
-                const result = new Uint8Array(reader.readAsArrayBuffer(blob));
-                for (let b of result) out.push(b);
-            } catch (e) {
-                // 失败则存问号占位
-                out.push(0x3F);
-            }
-        }
-        return new Uint8Array(out);
-    }
+    const enc = new TextEncoder();
+    // ESC/POS commands
+    const CMD_INIT = '\x1B\x40';
+    const CMD_ALIGN_CENTER = '\x1B\x61\x01';
+    const CMD_PAPER_CUT = '\x1D\x56\x42\x00';
+    
+    // ✅ Chinese character mode (Option 3 fix)
+    const FS_AND = '\x1C\x26'; // Enter Chinese character mode
+    const FS_DOT = '\x1C\x2E'; // Cancel Chinese character mode
 
-    // ================== ESC/POS命令定义 ==================
-    const CMD_INIT = '\x1B\x40';           // 初始化打印机
-    const CMD_ALIGN_CENTER = '\x1B\x61\x01'; // 居中对齐
-    const CMD_ALIGN_LEFT = '\x1B\x61\x00';   // 左对齐
-    const CMD_PAPER_CUT = '\x1D\x56\x42\x00'; // 切纸
-    const FS_AND = '\x1C\x26';              // 进入中文模式（必须）
-    const FS_DOT = '\x1C\x2E';              // 退出中文模式
-    const CODE_PAGE_GBK = '\x1B\x74\x00';   // 切换代码页为GBK（多数国产打印机通用）
-
-    // ================== 构建小票内容 ==================
+    // Build receipt lines (plain text)
     const lines = [];
 
-    // 1. 初始化+设置GBK编码+进入中文模式（必须在中文内容之前）
-    lines.push(CMD_INIT);
-    lines.push(CODE_PAGE_GBK);
+    // ✅ Enter Chinese mode BEFORE any Chinese text
     lines.push(FS_AND);
 
-    // 2. 小票头部（居中，移除emoji）
-    lines.push(CMD_ALIGN_CENTER);
+    // Store header (centered)
     lines.push('================');
-    lines.push('[T] ' + i18n.t('receiptStoreName'));
+    lines.push('[T] ' + i18n.t('receiptStoreName')); // ✅ Removed emoji 🍅
     lines.push('================');
     lines.push('');
 
-    // 3. 日期
-    lines.push(CMD_ALIGN_LEFT);
+    // Date
     lines.push(new Date(order.date).toLocaleString());
     lines.push('');
 
-    // 4. 叫号（移除emoji）
-    lines.push('[!] ' + order.callNumber);
+    // Call number
+    lines.push('[!] ' + order.callNumber); // ✅ Removed emoji 🔔
     lines.push('');
 
-    // 5. 商品明细（修正中文对齐：中文占2个字符宽度）
-    lines.push('--- 商品 ---');
+    // Items
+    lines.push('--- Items ---');
     order.items.forEach(item => {
         const price = (item.price * item.qty).toFixed(2);
         const name = item.name.length > 20 ? item.name.slice(0, 18) + '..' : item.name;
         const qty = 'x' + item.qty;
         const priceStr = formatCurrency(price);
-        // 计算名称实际显示宽度
-        const nameWidth = Array.from(name).reduce((w, c) => w + (c.charCodeAt(0) > 127 ? 2 : 1), 0);
-        const pad = 32 - nameWidth - qty.length - priceStr.length;
+        const pad = 32 - name.length - qty.length - priceStr.length;
         lines.push(name + qty + ' '.repeat(Math.max(1, pad)) + priceStr);
     });
     lines.push('');
 
-    // 6. 税费
+    // Taxes
     if (order.taxDetails) {
         if (order.taxDetails.tax1Amount > 0) {
             lines.push(APP_STATE.taxSettings.tax1Name + ': ' + formatCurrency(order.taxDetails.tax1Amount));
@@ -2624,39 +2594,46 @@ function buildEscPosReceipt(order) {
             lines.push(APP_STATE.taxSettings.tax2Name + ': ' + formatCurrency(order.taxDetails.tax2Amount));
         }
         if (order.taxDetails.roundingAdjustment !== 0) {
-            lines.push('抹零: ' + formatCurrency(order.taxDetails.roundingAdjustment));
+            lines.push('Rounding: ' + formatCurrency(order.taxDetails.roundingAdjustment));
         }
     }
     lines.push('');
 
-    // 7. 合计
+    // Total (bold)
     lines.push('----------------');
-    lines.push('总计: ' + formatCurrency(order.total));
+    lines.push('TOTAL: ' + formatCurrency(order.total));
     lines.push('----------------');
     lines.push('');
 
-    // 8. 支付信息
-    lines.push('支付方式: ' + getPaymentMethodLabel(order.paymentMethod));
+    // Payment method
+    lines.push('Payment: ' + getPaymentMethodLabel(order.paymentMethod));
     if (order.paymentDetails) {
-        if (order.paymentDetails.cardLast4) lines.push('卡号: **** ' + order.paymentDetails.cardLast4);
-        if (order.paymentDetails.refNum) lines.push('参考号: ' + order.paymentDetails.refNum);
+        if (order.paymentDetails.cardLast4) {
+            lines.push('Card: **** ' + order.paymentDetails.cardLast4);
+        }
+        if (order.paymentDetails.refNum) {
+            lines.push('Ref: ' + order.paymentDetails.refNum);
+        }
         if (order.paymentDetails.amountTendered) {
-            lines.push('实收: ' + formatCurrency(order.paymentDetails.amountTendered));
-            lines.push('找零: ' + formatCurrency(order.paymentDetails.change));
+            lines.push('Tendered: ' + formatCurrency(order.paymentDetails.amountTendered));
+            lines.push('Change: ' + formatCurrency(order.paymentDetails.change));
         }
     }
     lines.push('');
-    lines.push('谢谢惠顾！Thank you!');
+    lines.push('Thank you! 谢谢惠顾!');
     lines.push('');
 
-    // 9. 退出中文模式+走纸+切纸
+    // ✅ Exit Chinese mode
     lines.push(FS_DOT);
-    lines.push('\x0A\x0A\x0A');
-    lines.push(CMD_PAPER_CUT);
 
-    // ================== 合并后转GBK字节返回 ==================
-    const fullText = lines.join('');
-    return toGBK(fullText);
+    // Combine with ESC/POS commands
+    let data = CMD_INIT;
+    data += CMD_ALIGN_CENTER;
+    data += lines.join('\n');
+    data += '\x0A\x0A\x0A'; // feed lines
+    data += CMD_PAPER_CUT;
+
+    return enc.encode(data);
 }
 	
 // ==================== MAIN PRINT FUNCTION ====================
