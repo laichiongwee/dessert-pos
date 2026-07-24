@@ -2537,15 +2537,10 @@ async function webBluetoothPrint(order) {
 // Build ESC/POS raw data from order
 function buildEscPosReceipt(order) {
     const enc = new TextEncoder();
-const lines = [];
     // ESC/POS commands
-    const CMD_INIT = '\x1B\x40';           // Initialize printer
-    const CMD_BOLD_ON = '\x1B\x45\x01';     // Bold on
-    const CMD_BOLD_OFF = '\x1B\x45\x00';    // Bold off
-    const CMD_ALIGN_CENTER = '\x1B\x61\x01';// Center align
-    const CMD_ALIGN_LEFT = '\x1B\x61\x00';  // Left align
-    const CMD_FEED_LINES = '\x0A';          // Line feed
-    const CMD_PAPER_CUT = '\x1D\x56\x42\x00'; // Full cut (may vary)
+    const CMD_INIT = '\x1B\x40';
+    const CMD_ALIGN_CENTER = '\x1B\x61\x01';
+    const CMD_PAPER_CUT = '\x1D\x56\x42\x00';
 
     // Build receipt lines (plain text)
     const lines = [];
@@ -2614,16 +2609,15 @@ const lines = [];
     lines.push('Thank you!');
     lines.push('');
 
-  // Combine with ESC/POS commands
-    let data = '\x1B\x40'; // init
-    data += '\x1B\x61\x01'; // center
+    // Combine with ESC/POS commands
+    let data = CMD_INIT;
+    data += CMD_ALIGN_CENTER;
     data += lines.join('\n');
-    data += '\x0A\x0A\x0A'; // feed
-    data += '\x1D\x56\x42\x00'; // cut
+    data += '\x0A\x0A\x0A'; // feed lines
+    data += CMD_PAPER_CUT;
 
     return enc.encode(data);
 }
-
 // ==================== MAIN PRINT FUNCTION ====================
 function printReceipt(orderId) {
     const order = APP_STATE.orders.find(o => o.id === orderId);
