@@ -560,7 +560,8 @@
 		<button class="btn btn-xs btn-outline" onclick="connectBluetoothPrinter()" id="btConnectBtn">
     📡 Connect Printer
 </button>
-<span id="btStatus" style="font-size:0.7rem;color:var(--text-lighter);margin-left:8px;"></span>
+<span id="btStatus" style="font-size:0.7rem;color:var(--text-lighter);"></span>
+<div id="btDebug" style="font-size:0.65rem;color:#999;margin-top:4px;white-space:pre-wrap;"></div>
 		
 		<button id="registerUserBtn" class="btn btn-xs btn-outline" 
         onclick="openRegisterUserModal()" 
@@ -2400,39 +2401,80 @@ function showOrderReceipt(order) {
     `;
 }
 	
-// ==================== WEB BLUETOOTH PRINTING ====================
+// ==================== SMART BLUETOOTH DISCOVERY ====================
 let bluetoothDevice = null;
 let bluetoothCharacteristic = null;
+let discoveredServices = [];
 
-// Printer UUIDs (from your screenshot)
-const PRINTER_SERVICE_UUID = '0000-1000-8000-00805f9b34fb';
-const PRINTER_CHARACTERISTIC_UUID = '00001101-0000-1000-8000-00805f9b34fb';
-
-// Connect to Bluetooth printer
+// Connect to any Bluetooth printer with auto-discovery
 async function connectBluetoothPrinter() {
     if (!navigator.bluetooth) {
         showToast('Web Bluetooth not supported on this browser/device');
-        return;
+        return false;
     }
 
     try {
+        // 1. Request any BLE device (no filter)
         const device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [PRINTER_SERVICE_UUID] }],
-            optionalServices: [PRINTER_SERVICE_UUID]
+            acceptAllDevices: true,
+            optionalServices: [] // We'll discover all services later
         });
 
+        // 2. Connect and discover all services & characteristics
         const server = await device.gatt.connect();
-        const service = await server.getPrimaryService(PRINTER_SERVICE_UUID);
-        const characteristic = await service.getCharacteristic(PRINTER_CHARACTERISTIC_UUID);
+        const services = await server.getPrimaryServices();
 
+        // 3. Find a writable characteristic that looks like a printer
+        let foundChar = null;
+        let foundService = null;
+        let debugInfo = [];
+
+        for (const service of services) {
+            const characteristics = await service.getCharacteristics();
+            for (const char of characteristics) {
+                const properties = char.properties;
+                // Look for write or writeWithoutResponse
+                if (properties.write || properties.writeWithoutResponse) {
+                    // Check if the characteristic name contains "data", "tx", "print", etc.
+                    // We don't have name, but we can store UUIDs
+                    foundChar = char;
+                    foundService = service;
+                    break;
+                }
+            }
+            if (foundChar) break;
+        }
+
+        if (!foundChar) {
+            // No writable characteristic found – show all available
+            let msg = 'No writable characteristic found. Available services:\n';
+            for (const service of services) {
+                const chars = await service.getCharacteristics();
+                msg += `Service: ${service.uuid}\n`;
+                for (const char of chars) {
+                    msg += `  Characteristic: ${char.uuid} (${Object.keys(char.properties).filter(k => char.properties[k]).join(', ')})\n`;
+                }
+            }
+            showToast(msg);
+            return false;
+        }
+
+        // 4. Save the device and characteristic
         bluetoothDevice = device;
-        bluetoothCharacteristic = characteristic;
+        bluetoothCharacteristic = foundChar;
 
-        document.getElementById('btStatus').textContent = '✅ Connected to ' + device.name;
+        // Save to localStorage for future use
+        localStorage.setItem('btDeviceName', device.name || 'Unknown');
+        localStorage.setItem('btServiceUUID', foundService.uuid);
+        localStorage.setItem('btCharUUID', foundChar.uuid);
+
+        // Update UI
+        document.getElementById('btStatus').textContent = `✅ Connected to ${device.name || 'Printer'}`;
         document.getElementById('btConnectBtn').style.display = 'none';
 
-        showToast('Printer connected: ' + device.name);
+        showToast('Printer connected: ' + (device.name || 'Printer'));
         return true;
+
     } catch (error) {
         console.error('Bluetooth connection error:', error);
         showToast('Connection failed: ' + error.message);
@@ -2440,41 +2482,62 @@ async function connectBluetoothPrinter() {
     }
 }
 
-// Print via Bluetooth
+// Print via Bluetooth (using the discovered characteristic)
 async function webBluetoothPrint(order) {
-    // If not connected, try to connect
     if (!bluetoothCharacteristic) {
-        const connected = await connectBluetoothPrinter();
-        if (!connected) {
-            throw new Error('Printer not connected');
+        // Try to reconnect using saved UUIDs
+        const savedService = localStorage.getItem('btServiceUUID');
+        const savedChar = localStorage.getItem('btCharUUID');
+        if (savedService && savedChar) {
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [savedService] }]
+                });
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(savedService);
+                const characteristic = await service.getCharacteristic(savedChar);
+                bluetoothDevice = device;
+                bluetoothCharacteristic = characteristic;
+            } catch (e) {
+                // If reconnect fails, fall back to discovery
+                const connected = await connectBluetoothPrinter();
+                if (!connected) {
+                    throw new Error('Printer not connected');
+                }
+            }
+        } else {
+            const connected = await connectBluetoothPrinter();
+            if (!connected) {
+                throw new Error('Printer not connected');
+            }
         }
     }
 
     // Build ESC/POS receipt data
     const receiptData = buildEscPosReceipt(order);
 
-    // Split into chunks (some printers require max 20 bytes per write)
-    const chunkSize = 20;
-    const chunks = [];
-    for (let i = 0; i < receiptData.length; i += chunkSize) {
-        chunks.push(receiptData.slice(i, i + chunkSize));
+    // Write to characteristic (supports both write and writeWithoutResponse)
+    try {
+        if (bluetoothCharacteristic.properties.write) {
+            await bluetoothCharacteristic.writeValue(receiptData);
+        } else if (bluetoothCharacteristic.properties.writeWithoutResponse) {
+            await bluetoothCharacteristic.writeValueWithoutResponse(receiptData);
+        } else {
+            throw new Error('Characteristic does not support writing');
+        }
+        showToast('✅ Receipt printed!');
+        return true;
+    } catch (error) {
+        console.error('Print error:', error);
+        showToast('Print failed: ' + error.message);
+        throw error;
     }
-
-    // Write each chunk with a small delay
-    for (let i = 0; i < chunks.length; i++) {
-        await bluetoothCharacteristic.writeValue(chunks[i]);
-        // Small delay between writes (some printers need this)
-        await new Promise(resolve => setTimeout(resolve, 50));
-    }
-
-    showToast('✅ Receipt printed!');
-    return true;
 }
 
 // Build ESC/POS raw data from order
 function buildEscPosReceipt(order) {
     const enc = new TextEncoder();
-
+const lines = [];
     // ESC/POS commands
     const CMD_INIT = '\x1B\x40';           // Initialize printer
     const CMD_BOLD_ON = '\x1B\x45\x01';     // Bold on
@@ -2551,12 +2614,12 @@ function buildEscPosReceipt(order) {
     lines.push('Thank you!');
     lines.push('');
 
-    // Combine with ESC/POS commands
-    let data = CMD_INIT;
-    data += CMD_ALIGN_CENTER;
+  // Combine with ESC/POS commands
+    let data = '\x1B\x40'; // init
+    data += '\x1B\x61\x01'; // center
     data += lines.join('\n');
-    data += CMD_FEED_LINES.repeat(3);
-    data += CMD_PAPER_CUT;
+    data += '\x0A\x0A\x0A'; // feed
+    data += '\x1D\x56\x42\x00'; // cut
 
     return enc.encode(data);
 }
