@@ -564,6 +564,11 @@
 </button>
 <span id="btStatus" style="font-size:0.7rem;color:var(--text-lighter);"></span>
 <div id="btDebug" style="font-size:0.65rem;color:#999;margin-top:4px;white-space:pre-wrap;"></div>
+
+		<button class="btn btn-xs btn-outline" onclick="connectUSBPrinter()" id="usbConnectBtn">
+    🔌 Connect USB Printer
+</button>
+<span id="usbStatus" style="font-size:0.7rem;color:var(--text-lighter);"></span>
 		
 		<button id="registerUserBtn" class="btn btn-xs btn-outline" 
         onclick="openRegisterUserModal()" 
@@ -2542,6 +2547,7 @@ async function webBluetoothPrint(order) {
         throw error;
     }
 }
+
 
 // Build ESC/POS raw data from order
 function buildEscPosReceipt(order) {
