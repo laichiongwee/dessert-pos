@@ -1477,6 +1477,10 @@ document.getElementById('unlockBtn').style.display = 'block';
     // 不需要再单独加载数据
 }
 
+	document.addEventListener('DOMContentLoaded', async () => {
+    await tryReconnectUSB();
+});
+	
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.member-search')) {
     const dropdown = document.getElementById('memberDropdown');
@@ -2548,7 +2552,152 @@ async function webBluetoothPrint(order) {
     }
 }
 
+// ==================== USB PRINTER SUPPORT ====================
+let usbDevice = null;
+let usbEndpointOut = null;
+let usbInterfaceNumber = null;
 
+// Connect to USB thermal printer
+async function connectUSBPrinter() {
+    if (!navigator.usb) {
+        showToast('WebUSB not supported on this browser/device');
+        return false;
+    }
+
+    try {
+        // No filters = shows ALL USB devices in the picker.
+        // Most cheap thermal printers don't advertise the standard
+        // "printer class" (7), so filtering by class often hides them.
+        const device = await navigator.usb.requestDevice({ filters: [] });
+
+        await device.open();
+
+        // Most printers only have configuration 1
+        if (device.configuration === null) {
+            await device.selectConfiguration(1);
+        }
+
+        // Find an interface with a bulk OUT endpoint
+        let foundInterface = null;
+        let foundEndpoint = null;
+
+        for (const iface of device.configuration.interfaces) {
+            for (const alt of iface.alternates) {
+                const outEndpoint = alt.endpoints.find(
+                    e => e.direction === 'out' && e.type === 'bulk'
+                );
+                if (outEndpoint) {
+                    foundInterface = iface.interfaceNumber;
+                    foundEndpoint = outEndpoint.endpointNumber;
+                    break;
+                }
+            }
+            if (foundEndpoint !== null) break;
+        }
+
+        if (foundEndpoint === null) {
+            showToast('No writable USB print endpoint found');
+            console.log('USB device interfaces:', device.configuration.interfaces);
+            return false;
+        }
+
+        await device.claimInterface(foundInterface);
+
+        usbDevice = device;
+        usbEndpointOut = foundEndpoint;
+        usbInterfaceNumber = foundInterface;
+
+        // Save identifiers so we can try silent reconnect next time
+        localStorage.setItem('usbVendorId', device.vendorId);
+        localStorage.setItem('usbProductId', device.productId);
+
+        document.getElementById('usbStatus').textContent = `✅ Connected to ${device.productName || 'USB Printer'}`;
+        document.getElementById('usbConnectBtn').style.display = 'none';
+
+        showToast('USB printer connected: ' + (device.productName || 'Printer'));
+        return true;
+
+    } catch (error) {
+        console.error('USB connection error:', error);
+        showToast('USB connection failed: ' + error.message);
+        return false;
+    }
+}
+
+// Try to silently reconnect to a previously-paired USB device
+// (browser remembers permission grants, so this can skip the picker)
+async function tryReconnectUSB() {
+    if (!navigator.usb) return false;
+    const vendorId = localStorage.getItem('usbVendorId');
+    const productId = localStorage.getItem('usbProductId');
+    if (!vendorId || !productId) return false;
+
+    try {
+        const devices = await navigator.usb.getDevices(); // only already-permitted devices
+        const match = devices.find(
+            d => d.vendorId === Number(vendorId) && d.productId === Number(productId)
+        );
+        if (!match) return false;
+
+        await match.open();
+        if (match.configuration === null) {
+            await match.selectConfiguration(1);
+        }
+
+        let foundInterface = null;
+        let foundEndpoint = null;
+        for (const iface of match.configuration.interfaces) {
+            for (const alt of iface.alternates) {
+                const outEndpoint = alt.endpoints.find(e => e.direction === 'out' && e.type === 'bulk');
+                if (outEndpoint) {
+                    foundInterface = iface.interfaceNumber;
+                    foundEndpoint = outEndpoint.endpointNumber;
+                    break;
+                }
+            }
+            if (foundEndpoint !== null) break;
+        }
+        if (foundEndpoint === null) return false;
+
+        await match.claimInterface(foundInterface);
+        usbDevice = match;
+        usbEndpointOut = foundEndpoint;
+        usbInterfaceNumber = foundInterface;
+
+        document.getElementById('usbStatus').textContent = `✅ Connected to ${match.productName || 'USB Printer'}`;
+        document.getElementById('usbConnectBtn').style.display = 'none';
+        return true;
+    } catch (e) {
+        console.warn('USB silent reconnect failed:', e);
+        return false;
+    }
+}
+
+// Print via USB
+async function webUSBPrint(order) {
+    if (!usbDevice || !usbEndpointOut) {
+        const reconnected = await tryReconnectUSB();
+        if (!reconnected) {
+            throw new Error('USB printer not connected');
+        }
+    }
+
+    const receiptData = buildEscPosReceipt(order); // same GBK-encoded builder you already use
+
+    try {
+        const result = await usbDevice.transferOut(usbEndpointOut, receiptData);
+        if (result.status !== 'ok') {
+            throw new Error('USB transfer status: ' + result.status);
+        }
+        showToast('✅ Receipt printed (USB)!');
+        return true;
+    } catch (error) {
+        console.error('USB print error:', error);
+        showToast('USB print failed: ' + error.message);
+        throw error;
+    }
+}
+	
 // Build ESC/POS raw data from order
 function buildEscPosReceipt(order) {
     // ESC/POS commands
@@ -2648,7 +2797,6 @@ function buildEscPosReceipt(order) {
     return gbkEncode(data);
 }
 	
-// ==================== MAIN PRINT FUNCTION ====================
 function printReceipt(orderId) {
     const order = APP_STATE.orders.find(o => o.id === orderId);
     if (!order) {
@@ -2656,19 +2804,25 @@ function printReceipt(orderId) {
         return;
     }
 
-    // Try Web Bluetooth first (if supported)
+    if (navigator.usb && usbDevice) {
+        // USB is already connected this session — prefer it
+        webUSBPrint(order).catch(() => {
+            tryBluetoothThenFallback(order);
+        });
+    } else {
+        tryBluetoothThenFallback(order);
+    }
+}
+
+function tryBluetoothThenFallback(order) {
     if (navigator.bluetooth) {
         webBluetoothPrint(order)
-            .then(() => {
-                // Success – receipt printed
-            })
+            .then(() => { /* success */ })
             .catch((err) => {
-                console.warn('Web Bluetooth failed:', err);
-                // Fallback to browser print
+                console.warn('Bluetooth print failed:', err);
                 browserPrint(order);
             });
     } else {
-        // Fallback to browser print
         browserPrint(order);
     }
 }
