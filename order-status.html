@@ -7,8 +7,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/i18next@23.7.0/i18next.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/i18next-browser-languagedetector@7.2.0/i18nextBrowserLanguageDetector.min.js"></script>
-    <script src="locales/en.js"></script>
-    <script src="locales/zh-CN.js"></script>
     <style>
         body { font-family: 'Nunito', sans-serif; background: #fff5ef; margin: 0; padding: 2rem; text-align: center; }
         .container { max-width: 400px; margin: 0 auto; background: white; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -151,7 +149,11 @@
                     "saveQr": "Save QR",
                     "copy": "Copy",
                     "bankName": "Bank",
-                    "accountNumber": "Account Number"
+                    "accountNumber": "Account Number",
+                    "paymentLinkLabel": "Payment Link",
+                    "payNowButton": "Pay Now",
+                    "linkCopied": "Payment link copied!"
+                    
                 }},
                 'zh-CN': { translation: {
                     "orderStatusTitle": "🔍 订单状态",
@@ -177,7 +179,10 @@
                     "saveQr": "保存二维码",
                     "copy": "复制",
                     "bankName": "银行",
-                    "accountNumber": "账号"
+                    "accountNumber": "账号",
+                    "paymentLinkLabel": "付款链接",
+                    "payNowButton": "立即付款",
+                    "linkCopied": "付款链接已复制！"
                 }}
             },
             detection: { order: ['querystring', 'localStorage', 'navigator', 'htmlTag'], caches: ['localStorage'] }
@@ -352,30 +357,42 @@
         `;
     }
 
-    // ── NEW: payment link (right after the QR) ──
-    if (paymentLink) {
-        const safeLink = paymentLink.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        html += `
-            <div style="margin:12px 0; padding:14px; background:#FDE8DF;
-                        border-radius:12px; text-align:center;">
-                <div style="font-size:0.85rem; color:#6B4E4E; margin-bottom:8px;"
-                     data-i18n="paymentLinkLabel">${i18n.t('paymentLinkLabel')}</div>
-                <a href="${safeLink}" target="_blank" rel="noopener noreferrer"
-                   style="display:inline-block; padding:10px 22px; background:#E8784A;
-                          color:white; border-radius:20px; text-decoration:none;
-                          font-weight:700; box-shadow:0 2px 8px rgba(232,120,74,0.3);">
-                   🔗 ${i18n.t('payNowButton')}
-                </a>
-                <div style="margin-top:10px;">
-                    <button class="btn-sm btn-outline" onclick="copyToClipboard('${safeLink}')">
-                        📋 <span data-i18n="copy">${i18n.t('copy')}</span>
-                    </button>
-                </div>
-                <div style="margin-top:8px; font-size:0.7rem; color:#9B7E7E;
-                            word-break:break-all;">${paymentLink}</div>
+   // ── NEW: payment link (right after the QR) ──
+if (paymentLink) {
+    const safeLink = paymentLink
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Hoisted fallbacks — double-quoted so apostrophes are safe
+    const linkLabelText  = i18n.t('paymentLinkLabel')  || 'Payment Link';
+    const payNowText     = i18n.t('payNowButton')      || 'Pay Now';
+    const copyText       = i18n.t('copy')              || 'Copy';
+
+    html += `
+        <div style="margin:12px 0; padding:14px; background:#FDE8DF;
+                    border-radius:12px; text-align:center;">
+            <div style="font-size:0.85rem; color:#6B4E4E; margin-bottom:8px;"
+                 data-i18n="paymentLinkLabel">${linkLabelText}</div>
+            <a href="${safeLink}" target="_blank" rel="noopener noreferrer"
+               style="display:inline-block; padding:10px 22px; background:#E8784A;
+                      color:white; border-radius:20px; text-decoration:none;
+                      font-weight:700; box-shadow:0 2px 8px rgba(232,120,74,0.3);">
+               🔗 <span data-i18n="payNowButton">${payNowText}</span>
+            </a>
+            <div style="margin-top:10px;">
+                <button class="btn-sm btn-outline"
+                        onclick="copyToClipboard('${safeLink}')">
+                    📋 <span data-i18n="copy">${copyText}</span>
+                </button>
             </div>
-        `;
-    }
+            <div style="margin-top:8px; font-size:0.7rem; color:#9B7E7E;
+                        word-break:break-all;">${paymentLink}</div>
+        </div>
+    `;
+}
 
     // ── Bank details ──
     if (bankName || bankAccount) {
