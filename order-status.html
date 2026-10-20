@@ -312,7 +312,7 @@
                 .from('settings')
                 .select('*')
                 .eq('store_id', order.store_id)
-                .in('key', ['paymentQrUrl', 'bankName', 'bankAccount', 'currencySymbol']);
+             .in('key', ['paymentQrUrl', 'bankName', 'bankAccount', 'paymentLink', 'currencySymbol']);
 
             const settings = {};
             if (settingsRows) {
