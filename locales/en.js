@@ -25,6 +25,9 @@ window.__i18n_en = {
   preview: "Preview",
   allCategories: "All",
   missingStoreId: "Please scan the correct store QR code",
+  "paymentLinkLabel": "Payment Link",
+"payNowButton": "Pay Now",
+"linkCopied": "Payment link copied!",
 
   // === Auth ===
   emailPlaceholder: "Email",
