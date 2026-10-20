@@ -549,19 +549,23 @@
   <label for="publicCustomerName" style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:4px;">
      <span data-i18n="customerName">Your Name</span> <span style="color:var(--red);">*</span>
   </label>
-  <input type="text" id="publicCustomerName" data-i18n-placeholder="customerName" placeholder="e.g. John" 
-         style="width:100%;padding:12px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;font-size:0.95rem;box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:border 0.2s;"
+  <input type="text" id="publicCustomerName" data-i18n-placeholder="customerName" placeholder="e.g. John"
+         style="width:100%;padding:12px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;font-size:0.95rem;transition:all 0.2s;"
          onfocus="this.style.borderColor='var(--persimmon)'" onblur="this.style.borderColor='var(--border)'">
+  <div id="nameFieldHint" style="font-size:0.7rem;color:var(--text-lighter);margin:4px 0 0 4px;display:none;"></div>
 </div>
 
 <div style="margin-top:10px; text-align:left;">
   <label for="publicCustomerPhone" style="display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:4px;">
-     <span data-i18n="customerPhone">Phone (optional)</span>
+     <span data-i18n="customerPhone">Phone</span> <span style="color:var(--red);">*</span>
   </label>
   <input type="tel" id="publicCustomerPhone" data-i18n-placeholder="customerPhone" placeholder="e.g. 012-3456789"
-         style="width:100%;padding:12px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;font-size:0.95rem;box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:border 0.2s;"
-         onfocus="this.style.borderColor='var(--persimmon)'" onblur="this.style.borderColor='var(--border)'">
-</div><p style="font-size:0.7rem; color:var(--text-lighter); margin:4px 0 0 4px;" data-i18n="phoneHint">For order updates & membership rewards</p>
+         style="width:100%;padding:12px;border-radius:16px;border:1.5px solid var(--border);font-family:inherit;font-size:0.95rem;transition:all 0.2s;"
+         onfocus="this.style.borderColor='var(--persimmon)'" onblur="this.style.borderColor='var(--border)'"
+         oninput="onPublicPhoneInput(this.value)">
+  <div id="phoneLookupStatus" style="font-size:0.75rem;margin:6px 0 0 4px;min-height:1em;"></div>
+</div>
+				<p style="font-size:0.7rem; color:var(--text-lighter); margin:4px 0 0 4px;" data-i18n="phoneHint">For order updates & membership rewards</p>
                 <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="submitPublicOrder()" data-i18n="submitOrder">✅ 送出訂單</button>
                 <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closePublicCartModal()" data-i18n="continueOrdering">繼續點餐</button>
             </div>
@@ -1515,6 +1519,21 @@ function checkOrderLimit() {
   }
   return true;
 }
+
+// ==================== PHONE NORMALIZATION ====================
+// Mirrors SQL normalize_phone() exactly — keep both in sync.
+function normalizePhone(p) {
+    if (!p) return '';
+    let v = String(p).replace(/[^0-9+]/g, '');
+    if (v.startsWith('+60'))      v = '0' + v.slice(3);
+    else if (v.startsWith('60') && v.length > 9) v = '0' + v.slice(2);
+    return v.length >= 7 ? v : '';
+}
+
+function isValidPhone(p) {
+    return normalizePhone(p).length >= 7;
+}
+	
 // ==================== INIT ====================
 async function init() {
     await checkUser(); // checkUser 会自动调用 fetchAllData
@@ -2118,39 +2137,56 @@ function closeAddMemberModal(e) { if(e&&e.target!==document.getElementById('addM
 document.getElementById('addMemberModal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
 async function submitNewMember() {
     const name = document.getElementById('newMemberName').value.trim();
-    const phone = document.getElementById('newMemberPhone').value.trim();
-    if (!name || !phone) {
-        showToast('fillNameAndPhone');
+    const rawPhone = document.getElementById('newMemberPhone').value.trim();
+    const phone = normalizePhone(rawPhone);
+
+    if (!name) { showToast('fillNameAndPhone'); return; }
+    if (!phone) { showToast(i18n.t('phoneRequired') || 'Invalid phone'); return; }
+
+    // Duplicate guard
+    const existing = APP_STATE.members.find(m => normalizePhone(m.phone) === phone);
+    if (existing) {
+        showToast(i18n.t('memberExistsUseSearch') ||
+                  `Member already exists: ${existing.name}. Use search to select.`);
+        // Auto-select it for convenience
+        selectMemberById(existing.id);
+        document.getElementById('addMemberModal').style.display = 'none';
         return;
     }
-    
-    const memberId = 'M' + Date.now().toString().slice(-6);
-    const newMember = {
-  id: memberId,
-  name: name,
-  phone: phone,
-  points: 0,
-  totalSpent: 0,
-  store_id: APP_STATE.storeId   // ← 新增
-};
-    
-    // 本地添加
-    APP_STATE.members.push(newMember);
-    
-    // 写入 Supabase
-    const { error } = await supabaseClient.from('members').insert([newMember]);
-    if (error) {
-        console.error('Add member error:', error);
+
+    // Use ensure_member RPC (same one the public flow uses)
+    let memberId, canonicalName;
+    try {
+        const { data, error } = await supabaseClient.rpc('ensure_member', {
+            p_store_id: APP_STATE.storeId,
+            p_phone: phone,
+            p_name: name
+        });
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error('empty result');
+        memberId = data[0].id;
+        canonicalName = data[0].name;
+    } catch (e) {
+        console.error('Add member error:', e);
         showToast(i18n.t('memberAddFailed'));
-        APP_STATE.members = APP_STATE.members.filter(m => m.id !== memberId);
         return;
     }
-    
+
+    const newMember = {
+        id: memberId,
+        name: canonicalName,
+        phone,
+        points: 0,
+        totalSpent: 0,
+        store_id: APP_STATE.storeId
+    };
+    APP_STATE.members.push(newMember);
+
     document.getElementById('addMemberModal').style.display = 'none';
     document.getElementById('newMemberName').value = '';
     document.getElementById('newMemberPhone').value = '';
     showToast('memberAdded');
-    
+
     APP_STATE.currentMember = newMember;
     document.getElementById('memberPhoneInput').value = newMember.phone;
     updateMemberDisplay();
@@ -2345,17 +2381,18 @@ async function processPayment(method, total, paymentDetails = {}) {
     let subtotal, taxInfo, finalTotal;
 
     if (APP_STATE.selectedOrderForPayment) {
-        // Paying an existing unpaid order – use its stored values
         finalTotal = Number(APP_STATE.selectedOrderForPayment.total);
         subtotal = Number(APP_STATE.selectedOrderForPayment.subtotal) || finalTotal;
         taxInfo = APP_STATE.selectedOrderForPayment.taxDetails || { total: finalTotal };
     } else {
-        // New order from cashier – calculate from cart
         subtotal = getOrderSubtotal();
         taxInfo = calculateTaxes(subtotal);
         finalTotal = taxInfo.total;
     }
-	
+
+    // ── Capture member BEFORE clearing cart state ──
+    const payingMember = APP_STATE.currentMember || null;
+
     // Generate call number...
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
     APP_STATE.settings.callNumberCounter = callNum;
@@ -2366,20 +2403,21 @@ async function processPayment(method, total, paymentDetails = {}) {
 
     const orderId = String(++APP_STATE.orderIdCounter);
     const today = new Date().toISOString().slice(0, 10);
-await supabaseClient.from('settings').upsert([
-  { key: 'orderIdCounter', value: String(APP_STATE.orderIdCounter), store_id: APP_STATE.storeId },
-  { key: 'orderIdDate', value: today, store_id: APP_STATE.storeId }
-], { onConflict: 'key, store_id' });
+    await supabaseClient.from('settings').upsert([
+        { key: 'orderIdCounter', value: String(APP_STATE.orderIdCounter), store_id: APP_STATE.storeId },
+        { key: 'orderIdDate', value: today, store_id: APP_STATE.storeId }
+    ], { onConflict: 'key, store_id' });
 
     const order = {
         id: orderId,
         date: new Date().toISOString(),
         items: APP_STATE.cashierOrder.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
-        subtotal: subtotal,                    // now always defined
+        subtotal: subtotal,
         total: finalTotal,
         paymentMethod: method,
-        memberPhone: APP_STATE.currentMember?.phone || '',
-        memberName: APP_STATE.currentMember?.name || '',
+        memberPhone: payingMember?.phone || '',
+        memberName:  payingMember?.name  || '',
+        member_id:   payingMember?.id    || null,
         paymentDetails: paymentDetails,
         discountApplied: getDiscountAmount(),
         taxDetails: taxInfo,
@@ -2397,16 +2435,23 @@ await supabaseClient.from('settings').upsert([
     const { error } = await supabaseClient.from('orders').insert([order]);
     if (error) console.error('Order insert error:', error);
 
-    if (order.memberPhone) {
-        const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
-        if (member) {
-            member.points += Math.floor(finalTotal);
-            member.totalSpent += Number(finalTotal);
-            await supabaseClient.from('members').update({
-                points: member.points,
-                totalSpent: member.totalSpent
-            }).eq('id', member.id);
-        }
+    // ── Credit points to the member (Policy A: prefer member_id) ──
+    if (payingMember) {
+        // Update local state first
+        payingMember.points     += Math.floor(finalTotal);
+        payingMember.totalSpent += Number(finalTotal);
+
+        // Persist — prefer id, scoped to store
+        const { error: memberErr } = await supabaseClient
+            .from('members')
+            .update({
+                points: payingMember.points,
+                totalSpent: payingMember.totalSpent
+            })
+            .eq('id', payingMember.id)
+            .eq('store_id', APP_STATE.storeId);   // ← multi-tenant safety
+
+        if (memberErr) console.error('Member points update error:', memberErr);
     }
 
     showOrderReceipt(order);
@@ -3219,13 +3264,17 @@ function renderMembersReport(start, end) {
   const orders = getOrdersInRange(start, end);
   const memberMap = {};
   orders.forEach(o => {
-    const name = o.memberName || 'Walk-in';
-    if (!memberMap[name]) memberMap[name] = { orders: 0, total: 0 };
-    memberMap[name].orders++;
-    memberMap[name].total += Number(o.total);
+    // Group by member_id if present; otherwise fall back to phone; then name
+    const key = o.member_id
+        || (o.memberPhone ? 'phone:' + normalizePhone(o.memberPhone) : null)
+        || ('name:' + (o.memberName || 'Walk-in'));
+    const label = o.memberName || 'Walk-in';
+    if (!memberMap[key]) memberMap[key] = { name: label, orders: 0, total: 0 };
+    memberMap[key].orders++;
+    memberMap[key].total += Number(o.total);
   });
-  const rows = Object.entries(memberMap).map(([name, data]) =>
-    `<tr><td>${name}</td><td>${data.orders}</td><td>${formatCurrency(data.total)}</td></tr>`
+  const rows = Object.entries(memberMap).map(([_, data]) =>
+    `<tr><td>${data.name}</td><td>${data.orders}</td><td>${formatCurrency(data.total)}</td></tr>`
   ).join('');
   document.getElementById('dailyReportContent').innerHTML = `
     <table class="daily-report-table">
@@ -4436,28 +4485,152 @@ function confirmNamePrompt() {
     submitPublicOrder();
 }
 
-async function submitPublicOrder() {
-    const name = document.getElementById('publicCustomerName').value.trim();
-    if (!name) {
-        showNamePrompt();
+	// ==================== PUBLIC PHONE LOOKUP (live UX) ====================
+let _phoneLookupTimer = null;
+let _phoneLookupToken = 0;          // race-guard
+let _lastResolvedPhone = null;      // avoid re-fetching same number
+
+function onPublicPhoneInput(rawValue) {
+    const phone = normalizePhone(rawValue);
+    const statusEl = document.getElementById('phoneLookupStatus');
+    const nameInput = document.getElementById('publicCustomerName');
+    const nameHint  = document.getElementById('nameFieldHint');
+
+    // Reset state when phone no longer valid
+    if (!phone) {
+        if (_phoneLookupTimer) clearTimeout(_phoneLookupTimer);
+        _lastResolvedPhone = null;
+        statusEl.innerHTML = '';
+        nameInput.readOnly = false;
+        nameInput.style.background = '';
+        nameHint.style.display = 'none';
         return;
     }
-    if (APP_STATE.publicCart.length === 0) { showToast('cartEmpty'); return; }
-    const phone = document.getElementById('publicCustomerPhone').value.trim();
+
+    if (phone === _lastResolvedPhone) return;   // already resolved
+
+    if (_phoneLookupTimer) clearTimeout(_phoneLookupTimer);
+    statusEl.innerHTML = `<span style="color:var(--text-lighter);">⏳ ${i18n.t('checkingPhone') || 'Checking…'}</span>`;
+
+    const myToken = ++_phoneLookupToken;
+    _phoneLookupTimer = setTimeout(() => lookupPhone(phone, myToken), 500);
+}
+
+async function lookupPhone(phone, token) {
+    const statusEl = document.getElementById('phoneLookupStatus');
+    const nameInput = document.getElementById('publicCustomerName');
+    const nameHint  = document.getElementById('nameFieldHint');
+
+    try {
+        const { data, error } = await supabasePublicClient
+            .rpc('lookup_member_by_phone', {
+                p_store_id: APP_STATE.storeId,
+                p_phone: phone
+            });
+
+        if (token !== _phoneLookupToken) return;   // a newer lookup superseded us
+
+        if (error) {
+            statusEl.innerHTML = '';
+            console.warn('lookup_member_by_phone error:', error);
+            return;
+        }
+
+        const found = data && data.length > 0 ? data[0] : null;
+
+        if (found) {
+            _lastResolvedPhone = phone;
+            statusEl.innerHTML =
+                `<span style="color:var(--green);font-weight:700;">👋 ${i18n.t('welcomeBack') || 'Welcome back'}, ${found.name}</span>`;
+            // Auto-fill & lock the name (canonical wins)
+            nameInput.value = found.name;
+            nameInput.readOnly = true;
+            nameInput.style.background = '#F5F0EC';
+            nameHint.textContent = i18n.t('nameLockedToMember') ||
+                "This name is linked to your phone number. Contact the store to change it.";
+            nameHint.style.display = 'block';
+        } else {
+            _lastResolvedPhone = phone;
+            const autoAdd = APP_STATE.settings.autoAddMember !== false;
+            statusEl.innerHTML = autoAdd
+                ? `<span style="color:var(--persimmon);">✨ ${i18n.t('newCustomer') || 'New customer — we\\'ll create your account'}</span>`
+                : `<span style="color:var(--text-lighter);">${i18n.t('newCustomerNoAuto') || 'New customer'}</span>`;
+            nameInput.readOnly = false;
+            nameInput.style.background = '';
+            nameHint.style.display = 'none';
+        }
+    } catch (e) {
+        if (token !== _phoneLookupToken) return;
+        console.warn('lookup phone exception:', e);
+        statusEl.innerHTML = '';
+    }
+}
+	
+async function submitPublicOrder() {
+    const nameInput = document.getElementById('publicCustomerName');
+    const name  = nameInput.value.trim();
+    const rawPhone = document.getElementById('publicCustomerPhone').value.trim();
+    const phone = normalizePhone(rawPhone);
+
+    // --- Validation ---
+    if (!phone) {
+        showToast(i18n.t('phoneRequired') || 'Please enter a valid phone number');
+        return;
+    }
+    if (APP_STATE.publicCart.length === 0) {
+        showToast('cartEmpty');
+        return;
+    }
+
+    // --- Resolve member (Policy A: canonical wins) ---
+    const autoAdd = APP_STATE.settings.autoAddMember !== false;
+    let memberId = null;
+    let canonicalName = name || 'Guest';
+
+    try {
+        if (autoAdd) {
+            const { data, error } = await supabasePublicClient.rpc('ensure_member', {
+                p_store_id: APP_STATE.storeId,
+                p_phone: phone,
+                p_name: name || 'Guest'
+            });
+            if (error) throw error;
+            if (data && data.length > 0) {
+                memberId = data[0].id;
+                canonicalName = data[0].name;         // ← canonical wins
+            }
+        } else {
+            // Don't create; just look up
+            const { data } = await supabasePublicClient.rpc('lookup_member_by_phone', {
+                p_store_id: APP_STATE.storeId,
+                p_phone: phone
+            });
+            if (data && data.length > 0) {
+                memberId = data[0].id;
+                canonicalName = data[0].name;
+            }
+        }
+    } catch (e) {
+        console.error('Member resolution failed:', e);
+        showToast(i18n.t('memberResolveFailed') || 'Could not verify phone number. Please try again.');
+        return;
+    }
+
+    // --- Build order ---
     const subtotal = APP_STATE.publicCart.reduce((s, e) => s + e.menuItem.price * e.quantity, 0);
     const taxInfo = calculateTaxes(subtotal);
-    const finalTotal = taxInfo.total;
-
     const orderId = 'PUB-' + Date.now();
+
     const order = {
         id: orderId,
         date: new Date().toISOString(),
         items: APP_STATE.publicCart.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
-        subtotal: subtotal,
-        total: finalTotal,
+        subtotal,
+        total: taxInfo.total,
         paymentMethod: 'customer_order',
-        memberPhone: phone,
-        memberName: name,
+        memberPhone: phone,             // normalized
+        memberName:  canonicalName,     // canonical (Policy A)
+        member_id:   memberId,          // ← NEW
         paymentDetails: {},
         discountApplied: 0,
         taxDetails: taxInfo,
@@ -4466,49 +4639,30 @@ async function submitPublicOrder() {
         store_id: APP_STATE.storeId
     };
 
-    const { error } = await supabaseClient.from('orders').insert([order]);
-    if (error) {
-        console.error('Order insert error:', error);
+    const { error: insertErr } = await supabaseClient.from('orders').insert([order]);
+    if (insertErr) {
+        console.error('Order insert error:', insertErr);
         showToast('submitFailed');
         return;
     }
 
-    // ==================== 自动添加会员（新增）====================
-    // 条件：设置了自动添加（默认为 true）、填写了电话、该电话尚未注册为会员
-    const autoAdd = APP_STATE.settings.autoAddMember !== false; // 默认为 true
-    if (autoAdd && phone) {
-        const existingMember = APP_STATE.members.find(m => String(m.phone) === phone);
-        if (!existingMember) {
-            const newMember = {
-                id: 'M' + Date.now().toString().slice(-6),
-                name: name,
-                phone: phone,
-                points: 0,
-                totalSpent: 0,
-    store_id: APP_STATE.storeId
-            };
-            // 本地添加，以便收银端立即能搜索到
-            APP_STATE.members.push(newMember);
-            // 异步写入 Supabase，不阻塞跳转
-            supabaseClient.from('members').insert([newMember]).then(({ error: e2 }) => {
-                if (e2) console.error('自动添加会员失败:', e2);
-            });
-        }
-    }
-    // ============================================================
-
+    // --- Reset UI ---
     APP_STATE.publicCart = [];
     document.getElementById('publicCartModal').style.display = 'none';
-    document.getElementById('publicCustomerName').value = '';
+    nameInput.value = '';
+    nameInput.readOnly = false;
+    nameInput.style.background = '';
     document.getElementById('publicCustomerPhone').value = '';
+    document.getElementById('phoneLookupStatus').innerHTML = '';
+    document.getElementById('nameFieldHint').style.display = 'none';
+    _lastResolvedPhone = null;
     updatePublicCartCount();
 
-    // 跳转到订单状态页面
     window.location.href = 'order-status.html?orderId=' + orderId;
 }
 	
-        // ==================== URL PARAM CHECK ====================
-        function checkUrlParams() {
+// ==================== URL PARAM CHECK ====================
+function checkUrlParams() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('mode') === 'customer') {
     openCustomerView();
@@ -5277,15 +5431,32 @@ async function finalizeCustomerPayment() {
 
     if (error) console.error('Payment update error:', error);
 
-    const member = APP_STATE.members.find(m => m.phone === order.memberPhone);
-    if (member) {
-        member.points += Math.floor(total);
-        member.totalSpent += total;
-        await supabaseClient.from('members')
-            .update({ points: member.points, totalSpent: member.totalSpent })
-            .eq('id', member.id)
-            .eq('store_id', APP_STATE.storeId);   // ✅ 隔离
+    // Prefer member_id (policy A), fall back to normalized phone lookup
+let member = null;
+if (order.member_id) {
+    member = APP_STATE.members.find(m => m.id === order.member_id);
+}
+if (!member && order.memberPhone) {
+    const normPhone = normalizePhone(order.memberPhone);
+    member = APP_STATE.members.find(m => normalizePhone(m.phone) === normPhone);
+}
+if (member) {
+    member.points += Math.floor(total);
+    member.totalSpent += total;
+    await supabaseClient.from('members')
+        .update({ points: member.points, totalSpent: member.totalSpent })
+        .eq('id', member.id)
+        .eq('store_id', APP_STATE.storeId);
+
+    // Backfill member_id on this order for future reports
+    if (!order.member_id) {
+        order.member_id = member.id;
+        await supabaseClient.from('orders')
+            .update({ member_id: member.id })
+            .eq('id', orderId)
+            .eq('store_id', APP_STATE.storeId);
     }
+}
 
     document.getElementById('paymentModal').style.display = 'none';
     window.currentPayingOrderId = null;
