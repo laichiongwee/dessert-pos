@@ -324,49 +324,92 @@
     }
 
     function renderPaymentInfo(settings) {
-        const container = document.getElementById('paymentInfo');
-        const qrUrl = settings.paymentQrUrl || '';
-        const bankName = settings.bankName || '';
-        const bankAccount = settings.bankAccount || '';
-        const currencySymbol = settings.currencySymbol || '$';
+    const container    = document.getElementById('paymentInfo');
+    const qrUrl        = settings.paymentQrUrl || '';
+    const bankName     = settings.bankName     || '';
+    const bankAccount  = settings.bankAccount  || '';
+    const paymentLink  = settings.paymentLink  || '';          // ← NEW
+    const currencySymbol = settings.currencySymbol || '$';
 
-        // If no payment info, hide section
-        if (!qrUrl && !bankName && !bankAccount) {
-            container.innerHTML = '';
-            return;
-        }
-
-        let html = `<div class="payment-section"><h3 data-i18n="paymentInfo">${i18n.t('paymentInfo')}</h3>`;
-
-        if (qrUrl) {
-            html += `
-                <div>
-                    <img src="${qrUrl}" id="paymentQrImg" alt="Payment QR">
-                    <br>
-                    <button class="btn-sm" onclick="savePaymentQr()" data-i18n="saveQr">💾 ${i18n.t('saveQr')}</button>
-                </div>
-            `;
-        }
-
-        if (bankName || bankAccount) {
-            html += `<div class="bank-details">`;
-            if (bankName) {
-                html += `<div class="row"><span><strong data-i18n="bankName">${i18n.t('bankName')}</strong></span><span>${bankName}</span></div>`;
-            }
-            if (bankAccount) {
-                html += `<div class="row">
-                    <span><strong data-i18n="accountNumber">${i18n.t('accountNumber')}</strong></span>
-                    <span>${bankAccount} <button class="btn-sm" onclick="copyBankAccount('${bankAccount}')" data-i18n="copy">📋 ${i18n.t('copy')}</button></span>
-                </div>`;
-            }
-            html += `</div>`;
-        }
-
-        html += `</div>`;
-        container.innerHTML = html;
-        applyLanguage();
+    // Updated guard: also hide if paymentLink is the only thing that exists
+    if (!qrUrl && !bankName && !bankAccount && !paymentLink) {
+        container.innerHTML = '';
+        return;
     }
 
+    let html = `<div class="payment-section"><h3 data-i18n="paymentInfo">${i18n.t('paymentInfo')}</h3>`;
+
+    // ── QR image ──
+    if (qrUrl) {
+        html += `
+            <div>
+                <img src="${qrUrl}" id="paymentQrImg" alt="Payment QR">
+                <br>
+                <button class="btn-sm" onclick="savePaymentQr()" data-i18n="saveQr">💾 ${i18n.t('saveQr')}</button>
+            </div>
+        `;
+    }
+
+    // ── NEW: payment link (right after the QR) ──
+    if (paymentLink) {
+        const safeLink = paymentLink.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        html += `
+            <div style="margin:12px 0; padding:14px; background:#FDE8DF;
+                        border-radius:12px; text-align:center;">
+                <div style="font-size:0.85rem; color:#6B4E4E; margin-bottom:8px;"
+                     data-i18n="paymentLinkLabel">${i18n.t('paymentLinkLabel')}</div>
+                <a href="${safeLink}" target="_blank" rel="noopener noreferrer"
+                   style="display:inline-block; padding:10px 22px; background:#E8784A;
+                          color:white; border-radius:20px; text-decoration:none;
+                          font-weight:700; box-shadow:0 2px 8px rgba(232,120,74,0.3);">
+                   🔗 ${i18n.t('payNowButton')}
+                </a>
+                <div style="margin-top:10px;">
+                    <button class="btn-sm btn-outline" onclick="copyToClipboard('${safeLink}')">
+                        📋 <span data-i18n="copy">${i18n.t('copy')}</span>
+                    </button>
+                </div>
+                <div style="margin-top:8px; font-size:0.7rem; color:#9B7E7E;
+                            word-break:break-all;">${paymentLink}</div>
+            </div>
+        `;
+    }
+
+    // ── Bank details ──
+    if (bankName || bankAccount) {
+        html += `<div class="bank-details">`;
+        if (bankName) {
+            html += `<div class="row"><span><strong data-i18n="bankName">${i18n.t('bankName')}</strong></span><span>${bankName}</span></div>`;
+        }
+        if (bankAccount) {
+            html += `<div class="row">
+                <span><strong data-i18n="accountNumber">${i18n.t('accountNumber')}</strong></span>
+                <span>${bankAccount}
+                    <button class="btn-sm"
+                            onclick="copyBankAccount('${bankAccount.replace(/'/g, "\\'")}')"
+                            data-i18n="copy">📋 ${i18n.t('copy')}</button>
+                </span>
+            </div>`;
+        }
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
+    applyLanguage();
+}
+
+    function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+            .then(() => alert(i18n.t('linkCopied')))
+            .catch(() => { fallbackCopy(text); alert(i18n.t('linkCopied')); });
+    } else {
+        fallbackCopy(text);
+        alert(i18n.t('linkCopied'));
+    }
+}
+    
     // ==================== Helper: Save QR Image ====================
     function savePaymentQr() {
         const img = document.getElementById('paymentQrImg');
