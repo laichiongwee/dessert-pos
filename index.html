@@ -1007,7 +1007,20 @@
   </div>
   <img id="paymentQrPreview" style="max-width:120px; margin-top:8px; display:none; border-radius:12px;">
 </div>
-
+	  
+<!-- ===== PAYMENT LINK ===== -->
+<div style="margin-bottom:16px;">
+  <label data-i18n="paymentLinkLabel">Payment Link</label>
+  <input type="url" id="paymentLinkInput"
+         style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);"
+         data-i18n-placeholder="paymentLinkPlaceholder"
+         placeholder="e.g. https://pay.yourbank.com/xyz">
+  <p style="font-size:0.7rem; color:var(--text-lighter); margin-top:4px;"
+     data-i18n="paymentLinkHint">
+    Shown to customers on their order status page.
+  </p>
+</div>
+	  
 <!-- ===== BANK NAME ===== -->
 <div style="margin-bottom:16px;">
   <label data-i18n="bankNameLabel">Bank Name</label>
@@ -1756,6 +1769,10 @@ if (finalMembers.length === 0) {
 		 // 🆕 Load store branding
       APP_STATE.settings.storeName = getSetting('storeName', 'Dessert POS');
       APP_STATE.settings.logoUrl  = getSetting('logoUrl', '');
+		APP_STATE.settings.bankName     = getSetting('bankName', '');
+APP_STATE.settings.bankAccount  = getSetting('bankAccount', '');
+APP_STATE.settings.paymentQrUrl = getSetting('paymentQrUrl', '');
+APP_STATE.settings.paymentLink  = getSetting('paymentLink', '');
     }
 
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
@@ -3683,7 +3700,9 @@ function openStoreSettingsModal() {
   } else {
     qrPreview.style.display = 'none';
   }
-
+// ---- NEW: populate payment link ----
+document.getElementById('paymentLinkInput').value = APP_STATE.settings.paymentLink || '';
+	
   // ---- NEW: Populate bank fields ----
   document.getElementById('bankNameInput').value = APP_STATE.settings.bankName || '';
   document.getElementById('bankAccountInput').value = APP_STATE.settings.bankAccount || '';
@@ -3737,10 +3756,13 @@ async function saveStoreSettings() {
   // Save store name (local)
   APP_STATE.settings.storeName = newName;
   document.querySelector('.header-brand span').textContent = newName;
-  
+	
+  const paymentLink = document.getElementById('paymentLinkInput').value.trim();   // ← NEW
+
   // ---- NEW: Read bank details ----
   const bankName = document.getElementById('bankNameInput').value.trim();
   const bankAccount = document.getElementById('bankAccountInput').value.trim();
+	APP_STATE.settings.paymentLink = paymentLink;                                  // ← NEW
   APP_STATE.settings.bankName = bankName;
   APP_STATE.settings.bankAccount = bankAccount;
 
@@ -3789,6 +3811,7 @@ async function saveStoreSettings() {
     { key: 'bankName', value: bankName, store_id: APP_STATE.storeId },
     { key: 'bankAccount', value: bankAccount, store_id: APP_STATE.storeId },
     { key: 'paymentQrUrl', value: paymentQrUrl || '', store_id: APP_STATE.storeId }
+	  { key: 'paymentLink', value: paymentLink, store_id: APP_STATE.storeId }
   ];
 
   const { error } = await supabaseClient.from('settings').upsert(settingsToUpsert, { onConflict: 'key, store_id' });
@@ -4236,7 +4259,10 @@ async function loadPublicSettings() {
     .from('settings')
     .select('*')
     .eq('store_id', storeId)
-    .in('key', ['autoAddMember', 'storeName', 'logoUrl', 'currencySymbol', 'pricesInclusive', 'tax1Enabled', 'tax1Name', 'tax1Rate', 'tax2Enabled', 'tax2Name', 'tax2Rate', 'roundingEnabled', 'bankName', 'bankAccount', 'paymentQrUrl']);
+    .in('key', ['autoAddMember', 'storeName', 'logoUrl', 'currencySymbol', 'pricesInclusive',
+            'tax1Enabled', 'tax1Name', 'tax1Rate', 'tax2Enabled', 'tax2Name', 'tax2Rate',
+            'roundingEnabled', 'bankName', 'bankAccount', 'paymentQrUrl',
+            'paymentLink']);
 
   if (error) {
     console.error('Load public settings error:', error);
