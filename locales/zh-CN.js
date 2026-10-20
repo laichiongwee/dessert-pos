@@ -25,6 +25,9 @@ window.__i18n_zhCN = {
   preview: "预览",
   allCategories: "全部",
   missingStoreId: "请扫描正确的店铺二维码",
+  "paymentLinkLabel": "付款链接",
+"payNowButton": "立即付款",
+"linkCopied": "付款链接已复制！",
 
   // === 认证 ===
   emailPlaceholder: "电子邮箱",
