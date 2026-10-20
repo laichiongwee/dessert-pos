@@ -1358,7 +1358,8 @@ const supabasePublicClient = window.supabase.createClient(SUPABASE_URL, SUPABASE
   auth: {
     autoRefreshToken: false,
     persistSession: false,
-    detectSessionInUrl: false
+    detectSessionInUrl: false,
+	  storageKey: 'sb-public-readonly'   // ← unique key, no collision
   }
 });
 const stripe = Stripe('pk_test_51TVNNWGaRTxvbl03MtFuj3oMYc8mfFD8rOs6el6tVc2ppw9RMG3HXik9gOgIzaquz3mqWUM3bEKJ6PjAu7JI8Tyx00XZKfqIe4');
@@ -3643,7 +3644,7 @@ function updateStoreBranding() {
   // Login screen branding – logo + store name
   const authBrand = document.getElementById('authBranding');
   if (authBrand) {
-    const displayLogo = logoUrl || 'https://yymopyjhfarnqbhuqaio.supabase.co/storage/v1/object/public/Dessert_shop/dessert_logo.png';
+    const displayLogo = logoUrl || 'https://tpisbuxzbnmoaowtlbyu.supabase.co/storage/v1/object/public/menu-images/logo/1779172601306_wkpl9nx9ta8.png';
     authBrand.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">
         <img src="${displayLogo}" alt="Dessert POS" style="height:50px;width:auto;object-fit:contain;">
