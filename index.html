@@ -4540,21 +4540,32 @@ async function lookupPhone(phone, token) {
 
         if (found) {
             _lastResolvedPhone = phone;
+
+            const welcomeText   = i18n.t('welcomeBack')        || 'Welcome back';
+            const lockedHint    = i18n.t('nameLockedToMember') ||
+                                  'This name is linked to your phone number. Contact the store to change it.';
+
             statusEl.innerHTML =
-                `<span style="color:var(--green);font-weight:700;">👋 ${i18n.t('welcomeBack') || 'Welcome back'}, ${found.name}</span>`;
-            // Auto-fill & lock the name (canonical wins)
+                `<span style="color:var(--green);font-weight:700;">👋 ${welcomeText}, ${found.name}</span>`;
+
             nameInput.value = found.name;
             nameInput.readOnly = true;
             nameInput.style.background = '#F5F0EC';
-            nameHint.textContent = i18n.t('nameLockedToMember') ||
-                "This name is linked to your phone number. Contact the store to change it.";
+            nameHint.textContent = lockedHint;
             nameHint.style.display = 'block';
         } else {
             _lastResolvedPhone = phone;
             const autoAdd = APP_STATE.settings.autoAddMember !== false;
+
+            // Precompute strings — never put apostrophes inside `${...}` strings
+            const newCustomerText       = i18n.t('newCustomer')       ||
+                "New customer — we'll create your account";
+            const newCustomerNoAutoText = i18n.t('newCustomerNoAuto') || 'New customer';
+
             statusEl.innerHTML = autoAdd
-                ? `<span style="color:var(--persimmon);">✨ ${i18n.t('newCustomer') || 'New customer — we\\'ll create your account'}</span>`
-                : `<span style="color:var(--text-lighter);">${i18n.t('newCustomerNoAuto') || 'New customer'}</span>`;
+                ? `<span style="color:var(--persimmon);">✨ ${newCustomerText}</span>`
+                : `<span style="color:var(--text-lighter);">${newCustomerNoAutoText}</span>`;
+
             nameInput.readOnly = false;
             nameInput.style.background = '';
             nameHint.style.display = 'none';
