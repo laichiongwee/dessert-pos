@@ -37,6 +37,8 @@ nameLockedToMember: "此姓名已绑定您的电话。如需修改请联系店�
 checkingPhone: "查询中…",
 memberExistsUseSearch: "会员已存在，请使用搜索选择。",
 memberResolveFailed: "无法验证电话号码，请重试。",
+  shiftAlreadyOpen: "收银台已开台，正在重新加载…",
+fetchShiftFailed: "开台成功但无法读取记录。请检查 cashier_shifts 表的 RLS。",
 
   // === 认证 ===
   emailPlaceholder: "电子邮箱",
