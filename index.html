@@ -6022,7 +6022,24 @@ async function finalizeCustomerPayment() {
     const order = APP_STATE.orders.find(o => o.id === orderId);
     if (!order) return;
 
+    // 🔒 Fix #1: prevent double-collection
+    if (order.status !== 'pending_payment') {
+        console.warn('Order already processed:', orderId, order.status);
+        document.getElementById('paymentModal').style.display = 'none';
+        window.currentPayingOrderId = null;
+        return;
+    }
+
     const method = document.getElementById('paymentMethodSelect').value;
+
+    // 🔒 Fix #2: shift guard before tender collection
+    if (method === 'cash' && !APP_STATE.currentShift) {
+        showToast(i18n.t('registerNotOpen') || 'Please open the register first');
+        document.getElementById('paymentModal').style.display = 'none';
+        openCashierModal();
+        return;
+    }
+
     const total = Number(order.total);
     let paymentDetails = { method };
 
@@ -6040,19 +6057,30 @@ async function finalizeCustomerPayment() {
         paymentDetails.refNum = document.getElementById('onlineRefNum').value;
     }
 
-	if (method === 'cash' && !APP_STATE.currentShift) {
-    showToast(i18n.t('registerNotOpen') || 'Please open the register first');
-    document.getElementById('paymentModal').style.display = 'none';
-    openCashierModal();
-    return;
-}
-	
+    // 🔒 Fix #3: re-verify shift still open (stale-shift guard)
+    if (method === 'cash' && APP_STATE.currentShift) {
+        const { data: liveShift } = await supabaseClient
+            .from('cashier_shifts')
+            .select('id, status')
+            .eq('id', APP_STATE.currentShift.id)
+            .single();
+        if (!liveShift || liveShift.status !== 'open') {
+            showToast(i18n.t('shiftClosedMeanwhile') ||
+                      'Register was closed. Please reopen before collecting cash.');
+            APP_STATE.currentShift = null;
+            document.getElementById('paymentModal').style.display = 'none';
+            openCashierModal();
+            return;
+        }
+    }
+
+    // Generate call number
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
     APP_STATE.settings.callNumberCounter = callNum;
     await supabaseClient.from('settings').upsert(
-    { key: 'callNumberCounter', value: String(callNum), store_id: APP_STATE.storeId },
-    { onConflict: 'key, store_id' }
-);
+        { key: 'callNumberCounter', value: String(callNum), store_id: APP_STATE.storeId },
+        { onConflict: 'key, store_id' }
+    );
 
     order.status = 'pending';
     order.paymentMethod = method;
@@ -6065,40 +6093,44 @@ async function finalizeCustomerPayment() {
             status: 'pending',
             paymentMethod: method,
             paymentDetails: paymentDetails,
-                        callNumber: String(callNum),
-            shift_id:   APP_STATE.currentShift?.id || null    // ← NEW
+            callNumber: String(callNum),
+            shift_id: APP_STATE.currentShift?.id || null
         })
         .eq('id', orderId)
-        .eq('store_id', APP_STATE.storeId);   // ✅ 隔离
-
-    if (error) console.error('Payment update error:', error);
-
-    // Prefer member_id (policy A), fall back to normalized phone lookup
-let member = null;
-if (order.member_id) {
-    member = APP_STATE.members.find(m => m.id === order.member_id);
-}
-if (!member && order.memberPhone) {
-    const normPhone = normalizePhone(order.memberPhone);
-    member = APP_STATE.members.find(m => normalizePhone(m.phone) === normPhone);
-}
-if (member) {
-    member.points += Math.floor(total);
-    member.totalSpent += total;
-    await supabaseClient.from('members')
-        .update({ points: member.points, totalSpent: member.totalSpent })
-        .eq('id', member.id)
         .eq('store_id', APP_STATE.storeId);
 
-    // Backfill member_id on this order for future reports
-    if (!order.member_id) {
-        order.member_id = member.id;
-        await supabaseClient.from('orders')
-            .update({ member_id: member.id })
-            .eq('id', orderId)
-            .eq('store_id', APP_STATE.storeId);
+    if (error) {
+        console.error('Payment update error:', error);
+        showToast(i18n.t('paymentFailed') || 'Payment failed, please retry');
+        return;
     }
-}
+
+    // Member points (Policy A: prefer member_id)
+    let member = null;
+    if (order.member_id) {
+        member = APP_STATE.members.find(m => m.id === order.member_id);
+    }
+    if (!member && order.memberPhone) {
+        const normPhone = normalizePhone(order.memberPhone);
+        member = APP_STATE.members.find(m => normalizePhone(m.phone) === normPhone);
+    }
+    if (member) {
+        member.points += Math.floor(total);
+        member.totalSpent += total;
+        await supabaseClient.from('members')
+            .update({ points: member.points, totalSpent: member.totalSpent })
+            .eq('id', member.id)
+            .eq('store_id', APP_STATE.storeId);
+
+        // Backfill member_id for legacy orders
+        if (!order.member_id) {
+            order.member_id = member.id;
+            await supabaseClient.from('orders')
+                .update({ member_id: member.id })
+                .eq('id', orderId)
+                .eq('store_id', APP_STATE.storeId);
+        }
+    }
 
     document.getElementById('paymentModal').style.display = 'none';
     window.currentPayingOrderId = null;
