@@ -220,6 +220,7 @@ nameRequired: "Name required",
   paymentOnline: "📱 Online Payment",
   paymentFailed: "Payment failed, please retry",
   shiftClosedMeanwhile: "Register was closed. Please reopen before collecting cash.",
+  orderSaveFailed: "Failed to save order. Please retry.",
 
   // === Password Change ===
   changePasswordTitle: "🔒 Change Password",
