@@ -220,6 +220,7 @@ nameRequired: "请填写姓名",
   paymentOnline: "📱 线上支付",
   paymentFailed: "付款失败，请重试",
   shiftClosedMeanwhile: "收银台已关闭，请重新开台后再收款。",
+  orderSaveFailed: "订单保存失败，请重试。",
 
   // === 修改密码 ===
   changePasswordTitle: "🔒 修改密码",
