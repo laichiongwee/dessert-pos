@@ -1760,75 +1760,72 @@ async function fetchAllData() {
   }
   try {
     const [
-  { data: menu },
-  { data: members },
-  { data: orders },
-  { data: discountRules },
-  { data: settingsRows },
-  { data: cashiers },
-  { data: shifts }
-] = await Promise.all([
-  supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId),
-  supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId),
-  supabaseClient.from('orders').select('*').order('date', { ascending: false }).eq('store_id', APP_STATE.storeId),
-  supabaseClient.from('discount_rules').select('*').eq('store_id', APP_STATE.storeId),
-  supabaseClient.from('settings').select('*').eq('store_id', APP_STATE.storeId),
-  supabaseClient.from('cashiers').select('*').eq('store_id', APP_STATE.storeId).order('created_at', { ascending: false }),
-  supabaseClient.from('cashier_shifts').select('*').eq('store_id', APP_STATE.storeId).order('opened_at', { ascending: false }).limit(100)
-]);
+      { data: menu },
+      { data: members },
+      { data: orders },
+      { data: discountRules },
+      { data: settingsRows },
+      { data: cashiers },
+      { data: shifts }
+    ] = await Promise.all([
+      supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('orders').select('*').order('date', { ascending: false }).eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('discount_rules').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('settings').select('*').eq('store_id', APP_STATE.storeId),
+      supabaseClient.from('cashiers').select('*').eq('store_id', APP_STATE.storeId).order('created_at', { ascending: false }),
+      supabaseClient.from('cashier_shifts').select('*').eq('store_id', APP_STATE.storeId).order('opened_at', { ascending: false }).limit(100)
+    ]);
 
-APP_STATE.cashiers = cashiers || [];
-APP_STATE.shifts = shifts || [];
-APP_STATE.currentShift = APP_STATE.shifts.find(s => s.status === 'open') || null;
-// Daily order counter
-const counterDate = settingsRows?.find(r => r.key === 'orderIdDate')?.value || '';
-const today = new Date().toISOString().slice(0, 10);
-if (counterDate !== today) {
-  APP_STATE.orderIdCounter = 1;
-} else {
-  APP_STATE.orderIdCounter = parseInt(settingsRows?.find(r => r.key === 'orderIdCounter')?.value || '1');
-}
-// ─── MENU SEEDING ───
-let finalMenu = menu || [];
-if (finalMenu.length === 0) {
-  const defaultMenu = seedDemoMenu(APP_STATE.storeId);
-  const { error: insertErr } = await supabaseClient.from('menu').insert(defaultMenu);
-  if (!insertErr) {
-    const { data: freshMenu } = await supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId);
-    finalMenu = freshMenu || [];
-  } else {
-    console.error('Seed menu failed:', insertErr);
-  }
-}
+    // ─── Cashiers & shifts state ───
+    APP_STATE.cashiers     = (cashiers || []).filter(c => c && c.id);
+    APP_STATE.shifts       = (shifts   || []).filter(s => s && s.id);
+    APP_STATE.currentShift = APP_STATE.shifts.find(s => s.status === 'open') || null;
 
-// ─── MEMBERS SEEDING ───
-let finalMembers = members || [];
-if (finalMembers.length === 0) {
-  const defaultMembers = seedDemoMembers(APP_STATE.storeId);
-  const { error: insertErr } = await supabaseClient.from('members').insert(defaultMembers);
-  if (!insertErr) {
-    const { data: freshMembers } = await supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId);
-    finalMembers = freshMembers || [];
-  } else {
-    console.error('Seed members failed:', insertErr);
-  }
-}
-    // Map to APP_STATE
-    APP_STATE.menu = menu.map(item => ({
+    // ─── MENU SEEDING ───
+    let finalMenu = menu || [];
+    if (finalMenu.length === 0) {
+      const defaultMenu = seedDemoMenu(APP_STATE.storeId);
+      const { error: insertErr } = await supabaseClient.from('menu').insert(defaultMenu);
+      if (!insertErr) {
+        const { data: freshMenu } = await supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId);
+        finalMenu = freshMenu || [];
+      } else {
+        console.error('Seed menu failed:', insertErr);
+      }
+    }
+
+    // ─── MEMBERS SEEDING ───
+    let finalMembers = members || [];
+    if (finalMembers.length === 0) {
+      const defaultMembers = seedDemoMembers(APP_STATE.storeId);
+      const { error: insertErr } = await supabaseClient.from('members').insert(defaultMembers);
+      if (!insertErr) {
+        const { data: freshMembers } = await supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId);
+        finalMembers = freshMembers || [];
+      } else {
+        console.error('Seed members failed:', insertErr);
+      }
+    }
+
+    // ─── Map to APP_STATE — use finalMenu / finalMembers ───
+    APP_STATE.menu = finalMenu.map(item => ({
       ...item,
       price: Number(item.price),
       originalPrice: item.originalPrice ? Number(item.originalPrice) : null,
       available: item.available === true || item.available === 'TRUE'
     }));
-    APP_STATE.members = members.map(m => ({
+
+    APP_STATE.members = finalMembers.map(m => ({
       ...m,
       points: Number(m.points),
       totalSpent: Number(m.totalSpent)
     }));
-    APP_STATE.orders = orders || [];
+
+    APP_STATE.orders        = orders || [];
     APP_STATE.discountRules = discountRules || [];
 
-    // Initialize tax settings with defaults
+    // ─── Default tax settings (overridden below if rows exist) ───
     APP_STATE.taxSettings = {
       pricesInclusive: false,
       tax1Enabled: false,
@@ -1836,32 +1833,53 @@ if (finalMembers.length === 0) {
       tax1Rate: 0,
       tax2Enabled: false,
       tax2Name: 'Service Tax',
-      tax2Rate: 0
+      tax2Rate: 0,
+      roundingEnabled: true
     };
 
-    // Override from database if rows exist
+    // ─── ORDER ID COUNTER: heal from max(existing IDs, stored counter) ───
+    const numericIds = (orders || [])
+      .map(o => parseInt(o.id, 10))
+      .filter(n => Number.isFinite(n));
+    const maxExistingId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
+
+    const storedCounter = parseInt(
+      settingsRows?.find(r => r.key === 'orderIdCounter')?.value || '0', 10
+    ) || 0;
+
+    APP_STATE.orderIdCounter = Math.max(maxExistingId, storedCounter, 0);
+
+    // Only persist if we corrected an out-of-sync value
+    if (APP_STATE.orderIdCounter !== storedCounter && APP_STATE.storeId) {
+      await supabaseClient.from('settings').upsert([
+        { key: 'orderIdCounter', value: String(APP_STATE.orderIdCounter), store_id: APP_STATE.storeId },
+        { key: 'orderIdDate',    value: new Date().toISOString().slice(0, 10), store_id: APP_STATE.storeId }
+      ], { onConflict: 'key, store_id' });
+    }
+
+    // ─── Load other settings from DB ───
     if (settingsRows && settingsRows.length > 0) {
       const getSetting = (key, fallback) => {
         const row = settingsRows.find(r => r.key === key);
         return row ? row.value : fallback;
       };
-      APP_STATE.taxSettings.pricesInclusive = getSetting('pricesInclusive', 'false') !== 'false';
-      APP_STATE.taxSettings.tax1Enabled = getSetting('tax1Enabled', 'false') === 'true';
-      APP_STATE.taxSettings.tax1Name = getSetting('tax1Name', 'Sales Tax');
-      APP_STATE.taxSettings.tax1Rate = parseFloat(getSetting('tax1Rate', '0'));
-      APP_STATE.taxSettings.tax2Enabled = getSetting('tax2Enabled', 'false') === 'true';
-      APP_STATE.taxSettings.tax2Name = getSetting('tax2Name', 'Service Tax');
-      APP_STATE.taxSettings.tax2Rate = parseFloat(getSetting('tax2Rate', '0'));
-		APP_STATE.taxSettings.roundingEnabled = getSetting('roundingEnabled', 'true') !== 'false';
-		APP_STATE.settings.currencySymbol = getSetting('currencySymbol', '$');
-		APP_STATE.settings.callNumberCounter = getSetting('callNumberCounter', '0'); 
-		 // 🆕 Load store branding
-      APP_STATE.settings.storeName = getSetting('storeName', 'Dessert POS');
-      APP_STATE.settings.logoUrl  = getSetting('logoUrl', '');
-		APP_STATE.settings.bankName     = getSetting('bankName', '');
-APP_STATE.settings.bankAccount  = getSetting('bankAccount', '');
-APP_STATE.settings.paymentQrUrl = getSetting('paymentQrUrl', '');
-APP_STATE.settings.paymentLink  = getSetting('paymentLink', '');
+      APP_STATE.taxSettings.pricesInclusive  = getSetting('pricesInclusive',  'false') !== 'false';
+      APP_STATE.taxSettings.tax1Enabled      = getSetting('tax1Enabled',      'false') === 'true';
+      APP_STATE.taxSettings.tax1Name         = getSetting('tax1Name',         'Sales Tax');
+      APP_STATE.taxSettings.tax1Rate         = parseFloat(getSetting('tax1Rate', '0'));
+      APP_STATE.taxSettings.tax2Enabled      = getSetting('tax2Enabled',      'false') === 'true';
+      APP_STATE.taxSettings.tax2Name         = getSetting('tax2Name',         'Service Tax');
+      APP_STATE.taxSettings.tax2Rate         = parseFloat(getSetting('tax2Rate', '0'));
+      APP_STATE.taxSettings.roundingEnabled  = getSetting('roundingEnabled',  'true') !== 'false';
+
+      APP_STATE.settings.currencySymbol    = getSetting('currencySymbol',    '$');
+      APP_STATE.settings.callNumberCounter = getSetting('callNumberCounter', '0');
+      APP_STATE.settings.storeName         = getSetting('storeName',         'Dessert POS');
+      APP_STATE.settings.logoUrl           = getSetting('logoUrl',           '');
+      APP_STATE.settings.bankName          = getSetting('bankName',          '');
+      APP_STATE.settings.bankAccount       = getSetting('bankAccount',       '');
+      APP_STATE.settings.paymentQrUrl      = getSetting('paymentQrUrl',      '');
+      APP_STATE.settings.paymentLink       = getSetting('paymentLink',       '');
     }
 
     APP_STATE.categories = ['全部', ...new Set(APP_STATE.menu.map(i => i.category))];
@@ -2476,14 +2494,19 @@ async function processPayment(method, total, paymentDetails = {}) {
         { onConflict: 'key, store_id' }
     );
 
-    const orderId = String(++APP_STATE.orderIdCounter);
-    const today = new Date().toISOString().slice(0, 10);
-    await supabaseClient.from('settings').upsert([
-        { key: 'orderIdCounter', value: String(APP_STATE.orderIdCounter), store_id: APP_STATE.storeId },
-        { key: 'orderIdDate', value: today, store_id: APP_STATE.storeId }
-    ], { onConflict: 'key, store_id' });
+// ─── Build order object (id filled below) ───
+const today = new Date().toISOString().slice(0, 10);
 
-    const order = {
+// Generate + insert with retry on duplicate-key
+let orderId;
+let insertedOrder;
+let insertErr;
+const MAX_RETRIES = 5;
+
+for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    orderId = String(++APP_STATE.orderIdCounter);
+
+    const orderToInsert = {
         id: orderId,
         date: new Date().toISOString(),
         items: APP_STATE.cashierOrder.map(e => ({ name: e.menuItem.name, qty: e.quantity, price: e.menuItem.price })),
@@ -2499,18 +2522,60 @@ async function processPayment(method, total, paymentDetails = {}) {
         status: 'pending',
         callNumber: String(callNum),
         store_id: APP_STATE.storeId,
-    shift_id: APP_STATE.currentShift?.id || null     // ← NEW
+        shift_id: APP_STATE.currentShift?.id || null
     };
 
-    APP_STATE.orders.unshift(order);
-    APP_STATE.cashierOrder = [];
-    APP_STATE.currentMember = null;
-    document.getElementById('memberPhoneInput').value = '';
-    renderOrderPanel();
+    const { error } = await supabaseClient.from('orders').insert([orderToInsert]);
+    if (!error) {
+        insertedOrder = orderToInsert;
+        insertErr = null;
+        break;
+    }
+    if (error.code === '23505') {
+        // Duplicate key — counter out of sync, bump and retry
+        console.warn(`Order id "${orderId}" collision, retrying…`);
+        insertErr = error;
+        continue;
+    }
+    // Any other error — stop
+    insertErr = error;
+    break;
+}
 
-    const { error } = await supabaseClient.from('orders').insert([order]);
-    if (error) console.error('Order insert error:', error);
+if (!insertedOrder) {
+    console.error('Order insert failed after retries:', insertErr);
+    showToast(i18n.t('orderSaveFailed') || 'Failed to save order. Please retry.');
+    // Roll back counter if we walked off the end
+    return;
+}
 
+// Persist the counter we actually used (correct value)
+await supabaseClient.from('settings').upsert([
+    { key: 'orderIdCounter', value: String(APP_STATE.orderIdCounter), store_id: APP_STATE.storeId },
+    { key: 'orderIdDate',    value: today, store_id: APP_STATE.storeId }
+], { onConflict: 'key, store_id' });
+
+// ─── Only now update local state & member points ───
+const order = insertedOrder;
+APP_STATE.orders.unshift(order);
+APP_STATE.cashierOrder = [];
+APP_STATE.currentMember = null;
+document.getElementById('memberPhoneInput').value = '';
+renderOrderPanel();
+
+// ─── Credit points (unchanged, uses `payingMember` from earlier) ───
+if (payingMember) {
+    payingMember.points     += Math.floor(finalTotal);
+    payingMember.totalSpent += Number(finalTotal);
+    const { error: memberErr } = await supabaseClient
+        .from('members')
+        .update({ points: payingMember.points, totalSpent: payingMember.totalSpent })
+        .eq('id', payingMember.id)
+        .eq('store_id', APP_STATE.storeId);
+    if (memberErr) console.error('Member points update error:', memberErr);
+}
+
+showOrderReceipt(order);
     // ── Credit points to the member (Policy A: prefer member_id) ──
     if (payingMember) {
         // Update local state first
