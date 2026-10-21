@@ -37,6 +37,9 @@ nameLockedToMember: "This name is linked to your phone. Contact the store to cha
 checkingPhone: "Checking…",
 memberExistsUseSearch: "Member already exists. Use search to select.",
 memberResolveFailed: "Could not verify phone number. Please try again.",
+  shiftAlreadyOpen: "A shift is already open. Reloading…",
+fetchShiftFailed: "Shift created but could not be loaded. Check RLS on cashier_shifts.",
+  
   // === Auth ===
   emailPlaceholder: "Email",
   passwordPlaceholder: "Password",
