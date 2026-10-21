@@ -618,9 +618,7 @@
         onclick="openRegisterUserModal()" 
         style="display:none;" 
         data-i18n="registerNewUser">👤 注册新用户</button>
-		<button class="btn btn-outline btn-sm" onclick="openCashierModal()" style="position:relative;" data-i18n="cashierBtn">
-    💼 收银台
-</button>
+		
 		 <!-- Upgrade button (only visible if not Pro) -->
     <button class="btn btn-xs btn-outline" onclick="openPricingModal()" id="upgradeBtn" style="display:none;" data-i18n="upgradePlan">⭐ 升级套餐</button>
         <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()" style="position:relative;">
@@ -640,6 +638,9 @@
     <span data-i18n="adminModeLabel">🔓 管理模式</span>
     <input type="file" id="logoUpload" accept="image/*" style="display:none;" onchange="uploadLogo()">
     <button class="btn btn-xs btn-outline" data-i18n="storeSettings" onclick="openStoreSettingsModal()">🏪 店铺设置</button>
+	<button class="btn btn-outline btn-sm" onclick="openCashierModal()" style="position:relative;" data-i18n="cashierBtn">
+    💼 收银台
+</button>
 	<button class="btn btn-xs btn-outline" onclick="openTaxSettingsModal()" data-i18n="taxPaymentSettingsTitle">🧾 税务与付款设置</button>
     <button class="btn btn-xs btn-outline" data-i18n="discountRules" onclick="openDiscountRulesModal()">🏷️ 优惠规则</button>
     <button class="btn btn-xs btn-outline" data-i18n="manageCategory" onclick="openCategoryModal()">📂 管理分类</button>
