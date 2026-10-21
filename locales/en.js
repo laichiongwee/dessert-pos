@@ -215,6 +215,8 @@ nameRequired: "Name required",
   paymentCash: "💰 Cash",
   paymentCard: "💳 Credit/Debit Card",
   paymentOnline: "📱 Online Payment",
+  paymentFailed: "Payment failed, please retry",
+  shiftClosedMeanwhile: "Register was closed. Please reopen before collecting cash.",
 
   // === Password Change ===
   changePasswordTitle: "🔒 Change Password",
