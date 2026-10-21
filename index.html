@@ -618,6 +618,9 @@
         onclick="openRegisterUserModal()" 
         style="display:none;" 
         data-i18n="registerNewUser">👤 注册新用户</button>
+		<button class="btn btn-outline btn-sm" onclick="openCashierModal()" style="position:relative;" data-i18n="cashierBtn">
+    💼 收银台
+</button>
 		 <!-- Upgrade button (only visible if not Pro) -->
     <button class="btn btn-xs btn-outline" onclick="openPricingModal()" id="upgradeBtn" style="display:none;" data-i18n="upgradePlan">⭐ 升级套餐</button>
         <button class="btn btn-outline btn-sm" onclick="openUnpaidOrdersModal()" style="position:relative;">
@@ -731,6 +734,9 @@
 <div style="margin-bottom:16px;">
     <button class="btn btn-sm btn-outline" onclick="openChangePasswordModal()" style="width:100%;">🔑 修改密码</button>
 </div>
+<div style="margin-bottom:16px;">
+    <button class="btn btn-sm btn-outline" onclick="openSupervisorPinModal()" style="width:100%;" data-i18n="setSupervisorPin">🛡️ 设置主管 PIN</button>
+</div>
         <!-- ImgBB API Key (只读) -->
         <label style="font-size:0.75rem; color:var(--text-lighter);" data-i18n="imgbbKey">ImgBB API 密钥（暂不可修改）</label>
         <input type="text" id="imgbbKeyInput" disabled 
@@ -744,7 +750,28 @@
         </div>
     </div>
 </div>
-
+	
+<!-- Supervisor PIN modal -->	
+<div class="modal-overlay" id="supervisorPinModal" style="display:none;" onclick="closeSupervisorPinModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:400px;">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="supervisorPinTitle">🛡️ 主管 PIN</h3>
+    <p style="font-size:0.8rem;color:var(--text-light);margin-bottom:12px;"
+       data-i18n="supervisorPinDesc">用于批准关闭收银台操作。4-6 位数字。</p>
+    <input type="password" id="currentSupervisorPin" inputmode="numeric" maxlength="6"
+           placeholder="Current PIN (leave blank if first time)" data-i18n-placeholder="currentPinPlaceholder"
+           style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:8px;text-align:center;letter-spacing:4px;">
+    <input type="password" id="newSupervisorPin" inputmode="numeric" maxlength="6"
+           placeholder="New PIN (4-6 digits)" data-i18n-placeholder="newPinPlaceholder"
+           style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:8px;text-align:center;letter-spacing:4px;">
+    <input type="password" id="confirmSupervisorPin" inputmode="numeric" maxlength="6"
+           placeholder="Confirm new PIN" data-i18n-placeholder="confirmPinPlaceholder"
+           style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);margin-bottom:12px;text-align:center;letter-spacing:4px;">
+    <button class="btn btn-primary" style="width:100%;" onclick="saveSupervisorPin()" data-i18n="save">💾 保存</button>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeSupervisorPinModal()" data-i18n="cancel">取消</button>
+  </div>
+</div>
+	
 <!-- Add Member Modal -->
 <div class="modal-overlay" id="addMemberModal" style="display:none;" onclick="closeAddMemberModal(event)">
     <div class="modal-sheet" onclick="event.stopPropagation()"><div class="modal-handle"></div>
@@ -826,6 +853,7 @@
       <button class="cat-tab" onclick="switchReportTab('weekly')" data-i18n="weekly">Weekly</button>
       <button class="cat-tab" onclick="switchReportTab('items')" data-i18n="items">Items</button>
       <button class="cat-tab" onclick="switchReportTab('members')" data-i18n="members">Members</button>
+		<button class="cat-tab" onclick="switchReportTab('cashPosition')" data-i18n="cashPosition">💵 Cash Position</button>
       <!-- Pro only tabs -->
       <button class="cat-tab pro-only" onclick="switchReportTab('inventory')" data-i18n="inventory" style="display:none;">Inventory</button>
       <button class="cat-tab pro-only" onclick="switchReportTab('cashiers')" data-i18n="cashiers" style="display:none;">Cashiers</button>
@@ -1194,6 +1222,35 @@
   </div>
 </div>
 
+	<!-- ══════════ CASHIER REGISTER MODAL ══════════ -->
+<div class="modal-overlay" id="cashierModal" style="display:none;" onclick="closeCashierModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:600px;">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="cashierRegisterTitle">💼 收银台</h3>
+    <div id="cashierModalTabs" style="display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap;">
+      <button class="cat-tab active" data-ctab="register" onclick="switchCashierTab('register')" data-i18n="tabRegister">🗄️ 收银台</button>
+      <button class="cat-tab" data-ctab="cashiers" onclick="switchCashierTab('cashiers')" data-i18n="tabCashiers">👥 收银员</button>
+      <button class="cat-tab" data-ctab="history" onclick="switchCashierTab('history')" data-i18n="tabShiftHistory">📜 记录</button>
+    </div>
+    <div id="cashierTabContent"></div>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;" onclick="closeCashierModal()" data-i18n="close">关闭</button>
+  </div>
+</div>
+
+<!-- ══════════ CLOSE SHIFT MODAL ══════════ -->
+<div class="modal-overlay" id="closeShiftModal" style="display:none;" onclick="closeCloseShiftModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:440px;">
+    <div class="modal-handle"></div>
+    <h3 data-i18n="closeShiftTitle">🔒 关闭收银台</h3>
+    <div id="closeShiftBody"></div>
+  </div>
+</div>
+
+<!-- ══════════ SHIFT RECEIPT MODAL ══════════ -->
+<div class="modal-overlay" id="shiftReceiptModal" style="display:none;" onclick="closeShiftReceiptModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px;padding:0;"></div>
+</div>
+	
 <script>
 const i18n = i18next.createInstance();
 i18n
@@ -1434,7 +1491,11 @@ const APP_STATE = {
 	storeId: null,
     currentUser: null,
     currentPlan: 'free',
-    supabaseReady: false
+    supabaseReady: false,
+	    // ── Cashier Register (Phase 1) ──
+    cashiers: [],           // all cashiers for the store
+    shifts: [],             // all shifts, newest first
+    currentShift: null      // the single open shift, or null
 };
 
 	let realtimeSubscription = null;
@@ -1699,18 +1760,26 @@ async function fetchAllData() {
   }
   try {
     const [
-      { data: menu },
-      { data: members },
-      { data: orders },
-      { data: discountRules },
-      { data: settingsRows }          // ← must match the variable name you use later
-    ] = await Promise.all([
-      supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId),
-      supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId),
-      supabaseClient.from('orders').select('*').order('date', { ascending: false }).eq('store_id', APP_STATE.storeId),
-      supabaseClient.from('discount_rules').select('*').eq('store_id', APP_STATE.storeId),
-      supabaseClient.from('settings').select('*').eq('store_id', APP_STATE.storeId)   // ← this line must exist
-    ]);
+  { data: menu },
+  { data: members },
+  { data: orders },
+  { data: discountRules },
+  { data: settingsRows },
+  { data: cashiers },
+  { data: shifts }
+] = await Promise.all([
+  supabaseClient.from('menu').select('*').eq('store_id', APP_STATE.storeId),
+  supabaseClient.from('members').select('*').eq('store_id', APP_STATE.storeId),
+  supabaseClient.from('orders').select('*').order('date', { ascending: false }).eq('store_id', APP_STATE.storeId),
+  supabaseClient.from('discount_rules').select('*').eq('store_id', APP_STATE.storeId),
+  supabaseClient.from('settings').select('*').eq('store_id', APP_STATE.storeId),
+  supabaseClient.from('cashiers').select('*').eq('store_id', APP_STATE.storeId).order('created_at', { ascending: false }),
+  supabaseClient.from('cashier_shifts').select('*').eq('store_id', APP_STATE.storeId).order('opened_at', { ascending: false }).limit(100)
+]);
+
+APP_STATE.cashiers = cashiers || [];
+APP_STATE.shifts = shifts || [];
+APP_STATE.currentShift = APP_STATE.shifts.find(s => s.status === 'open') || null;
 // Daily order counter
 const counterDate = settingsRows?.find(r => r.key === 'orderIdDate')?.value || '';
 const today = new Date().toISOString().slice(0, 10);
@@ -2378,6 +2447,12 @@ function finalizePayment() {
 async function processPayment(method, total, paymentDetails = {}) {
     if (!checkOrderLimit()) return;
 
+	if (method === 'cash' && !APP_STATE.currentShift) {
+    showToast(i18n.t('registerNotOpen') || 'Please open the register first');
+    openCashierModal();
+    return;
+}
+	
     let subtotal, taxInfo, finalTotal;
 
     if (APP_STATE.selectedOrderForPayment) {
@@ -2423,7 +2498,8 @@ async function processPayment(method, total, paymentDetails = {}) {
         taxDetails: taxInfo,
         status: 'pending',
         callNumber: String(callNum),
-        store_id: APP_STATE.storeId
+        store_id: APP_STATE.storeId,
+    shift_id: APP_STATE.currentShift?.id || null     // ← NEW
     };
 
     APP_STATE.orders.unshift(order);
@@ -3195,6 +3271,7 @@ function loadReport() {
     case 'members': renderMembersReport(start, end); break;
     case 'inventory': renderInventoryReport(start, end); break;
     case 'cashiers': renderCashierReport(start, end); break;
+	case 'cashPosition': renderCashPositionReport(start, end); break;
     default: renderDailyReport(start, end);
   }
 }
@@ -3311,6 +3388,65 @@ function renderCashierReport(start, end) {
     </table>`;
 }
 
+function renderCashPositionReport(start, end) {
+    const shifts = APP_STATE.shifts.filter(s => {
+        if (!s.closed_at) return false;
+        const d = s.opened_at.slice(0, 10);
+        return d >= start && d <= end;
+    });
+
+    if (shifts.length === 0) {
+        document.getElementById('dailyReportContent').innerHTML = `
+            <p style="text-align:center;padding:20px;color:var(--text-lighter);"
+               data-i18n="noShiftHistory">No closed shifts in this range.</p>`;
+        applyLanguage();
+        return;
+    }
+
+    const totalVariance = shifts.reduce((s, x) => s + Number(x.variance || 0), 0);
+
+    const rows = shifts.map(s => {
+        const v = Number(s.variance || 0);
+        const vColor = Math.abs(v) < 0.01 ? 'var(--green)'
+                     : v > 0 ? 'var(--gold)' : 'var(--red)';
+        return `<tr>
+            <td>${new Date(s.opened_at).toLocaleString()}</td>
+            <td>${s.cashier_name}</td>
+            <td>${formatCurrency(s.opening_float)}</td>
+            <td>${formatCurrency(s.expected_close || 0)}</td>
+            <td>${formatCurrency(s.counted_close || 0)}</td>
+            <td style="color:${vColor};font-weight:700;">
+                ${v >= 0 ? '+' : ''}${formatCurrency(v)}
+            </td>
+        </tr>`;
+    }).join('');
+
+    const totalColor = Math.abs(totalVariance) < 0.01 ? 'var(--green)'
+                     : totalVariance > 0 ? 'var(--gold)' : 'var(--red)';
+
+    document.getElementById('dailyReportContent').innerHTML = `
+        <table class="daily-report-table">
+            <thead><tr>
+                <th data-i18n="openedAt">Opened</th>
+                <th data-i18n="cashier">Cashier</th>
+                <th data-i18n="float">Float</th>
+                <th data-i18n="expected">Expected</th>
+                <th data-i18n="counted">Counted</th>
+                <th data-i18n="variance">Variance</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot>
+                <tr style="background:var(--cream);font-weight:800;">
+                    <td colspan="5" data-i18n="totalVariance">Total Variance</td>
+                    <td style="color:${totalColor};">
+                        ${totalVariance >= 0 ? '+' : ''}${formatCurrency(totalVariance)}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>`;
+    applyLanguage();
+}
+	
 // Helper: filter orders by date range
 function getOrdersInRange(start, end) {
   return APP_STATE.orders.filter(o => {
@@ -5308,6 +5444,493 @@ async function addNewCategory() {
         : baseTitle;
 }
 
+	// ═══════════════════════════════════════════════════════════════
+// CASHIER REGISTER / SHIFT MANAGEMENT — Phase 1
+// ═══════════════════════════════════════════════════════════════
+
+let _cashierTab = 'register';
+
+function openCashierModal() {
+    _cashierTab = 'register';
+    document.querySelectorAll('#cashierModalTabs [data-ctab]').forEach(b => b.classList.remove('active'));
+    document.querySelector('#cashierModalTabs [data-ctab="register"]').classList.add('active');
+    renderCashierTab();
+    document.getElementById('cashierModal').style.display = 'flex';
+}
+
+function closeCashierModal(e) {
+    if (e && e.target !== document.getElementById('cashierModal')) return;
+    document.getElementById('cashierModal').style.display = 'none';
+}
+
+function switchCashierTab(tab) {
+    _cashierTab = tab;
+    document.querySelectorAll('#cashierModalTabs [data-ctab]').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`#cashierModalTabs [data-ctab="${tab}"]`);
+    if (btn) btn.classList.add('active');
+    renderCashierTab();
+}
+
+function renderCashierTab() {
+    const el = document.getElementById('cashierTabContent');
+    if (_cashierTab === 'register') return renderRegisterTab(el);
+    if (_cashierTab === 'cashiers') return renderCashiersTab(el);
+    if (_cashierTab === 'history')  return renderShiftHistoryTab(el);
+}
+
+/* ────────── REGISTER TAB ────────── */
+function renderRegisterTab(el) {
+    const shift = APP_STATE.currentShift;
+
+    if (!shift) {
+        // Closed state → show open form
+        if (APP_STATE.cashiers.filter(c => c.active).length === 0) {
+            el.innerHTML = `
+                <p style="text-align:center;padding:20px;color:var(--text-lighter);"
+                   data-i18n="noCashiersYet">
+                    No cashiers registered yet. Go to the Cashiers tab to add one.
+                </p>`;
+            applyLanguage();
+            return;
+        }
+
+        el.innerHTML = `
+            <div style="background:var(--gold-light);padding:12px;border-radius:12px;margin-bottom:12px;">
+                <div style="font-weight:700;margin-bottom:8px;" data-i18n="openRegister">🗄️ Open Register</div>
+                <label style="font-size:0.8rem;" data-i18n="selectCashier">Cashier</label>
+                <select id="openShiftCashier" style="width:100%;padding:10px;border-radius:16px;border:1.5px solid var(--border);margin-bottom:8px;font-family:inherit;">
+                    ${APP_STATE.cashiers.filter(c => c.active).map(c =>
+                        `<option value="${c.id}">${c.name}</option>`).join('')}
+                </select>
+                <label style="font-size:0.8rem;" data-i18n="cashierPin">Cashier PIN (4 digits)</label>
+                <input type="password" id="openShiftPin" inputmode="numeric" maxlength="4"
+                       style="width:100%;padding:10px;border-radius:16px;border:1.5px solid var(--border);margin-bottom:8px;text-align:center;letter-spacing:8px;font-size:1.2rem;">
+                <label style="font-size:0.8rem;" data-i18n="openingFloat">Opening Float (RM)</label>
+                <input type="number" id="openShiftFloat" step="0.01" min="0" value="200"
+                       style="width:100%;padding:10px;border-radius:16px;border:1.5px solid var(--border);margin-bottom:12px;">
+                <button class="btn btn-primary" style="width:100%;" onclick="doOpenShift()"
+                        data-i18n="openRegisterBtn">🔓 Open Register</button>
+            </div>`;
+    } else {
+        // Open state → show live status + close button
+        const opened = new Date(shift.opened_at);
+        el.innerHTML = `
+            <div style="background:var(--green-light);padding:14px;border-radius:12px;margin-bottom:12px;">
+                <div style="font-weight:800;color:var(--green);font-size:1.05rem;">🟢 Register Open</div>
+                <div style="font-size:0.85rem;margin-top:6px;">
+                    <div><strong data-i18n="cashier">Cashier</strong>: ${shift.cashier_name}</div>
+                    <div><strong data-i18n="openedAt">Opened</strong>: ${opened.toLocaleString()}</div>
+                    <div><strong data-i18n="openingFloat">Opening Float</strong>: ${formatCurrency(shift.opening_float)}</div>
+                </div>
+            </div>
+            <div id="shiftLiveStats" style="font-size:0.85rem;margin-bottom:12px;padding:12px;background:var(--cream);border-radius:12px;">
+                ⏳ Loading live stats…
+            </div>
+            <button class="btn btn-primary" style="width:100%;background:var(--red);"
+                    onclick="openCloseShiftModal()" data-i18n="closeRegisterBtn">
+                🔒 Close Register
+            </button>`;
+        loadShiftLiveStats();
+    }
+    applyLanguage();
+}
+
+async function loadShiftLiveStats() {
+    const el = document.getElementById('shiftLiveStats');
+    if (!el || !APP_STATE.currentShift) return;
+    try {
+        const { data: cashOrders } = await supabaseClient
+            .from('orders')
+            .select('total')
+            .eq('shift_id', APP_STATE.currentShift.id)
+            .eq('paymentMethod', 'cash')
+            .not('status', 'in', '(pending_payment)');
+
+        const cashTotal = (cashOrders || []).reduce((s, o) => s + Number(o.total), 0);
+        const expected = Number(APP_STATE.currentShift.opening_float) + cashTotal;
+
+        el.innerHTML = `
+            <div style="display:flex;justify-content:space-between;">
+                <span data-i18n="cashSales">Cash Sales</span>
+                <span>${formatCurrency(cashTotal)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-weight:800;margin-top:6px;color:var(--persimmon);">
+                <span data-i18n="expectedInDrawer">Expected in Drawer</span>
+                <span>${formatCurrency(expected)}</span>
+            </div>`;
+        applyLanguage();
+    } catch (e) {
+        el.textContent = 'Failed to load stats';
+    }
+}
+
+async function doOpenShift() {
+    const cashierId = document.getElementById('openShiftCashier').value;
+    const pin = document.getElementById('openShiftPin').value;
+    const float = parseFloat(document.getElementById('openShiftFloat').value) || 0;
+
+    if (!pin || !/^\d{4}$/.test(pin)) {
+        return showToast(i18n.t('pinMust4Digits') || 'PIN must be 4 digits');
+    }
+
+    try {
+        const { data, error } = await supabaseClient.rpc('open_cashier_shift', {
+            p_store_id: APP_STATE.storeId,
+            p_cashier_id: cashierId,
+            p_pin: pin,
+            p_opening_float: float
+        });
+        if (error) throw error;
+
+        // Reload current shift
+        const { data: fresh } = await supabaseClient
+            .from('cashier_shifts').select('*').eq('id', data).single();
+        APP_STATE.currentShift = fresh;
+        APP_STATE.shifts.unshift(fresh);
+
+        showToast(i18n.t('registerOpened') || 'Register opened');
+        renderRegisterTab(document.getElementById('cashierTabContent'));
+    } catch (e) {
+        console.error('Open shift error:', e);
+        showToast(i18n.t('openShiftFailed') || 'Failed: ' + e.message);
+    }
+}
+
+/* ────────── CLOSE SHIFT ────────── */
+async function openCloseShiftModal() {
+    const shift = APP_STATE.currentShift;
+    if (!shift) return;
+
+    // Fetch expected first (non-blind: cashier sees it)
+    const { data: cashOrders } = await supabaseClient
+        .from('orders').select('total')
+        .eq('shift_id', shift.id)
+        .eq('paymentMethod', 'cash')
+        .not('status', 'in', '(pending_payment)');
+    const cashTotal = (cashOrders || []).reduce((s, o) => s + Number(o.total), 0);
+    const expected = Number(shift.opening_float) + cashTotal;
+
+    document.getElementById('closeShiftBody').innerHTML = `
+        <div style="font-size:0.85rem;margin-bottom:12px;padding:12px;background:var(--cream);border-radius:12px;">
+            <div style="display:flex;justify-content:space-between;">
+                <span data-i18n="openingFloat">Opening Float</span>
+                <span>${formatCurrency(shift.opening_float)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+                <span data-i18n="cashSales">Cash Sales</span>
+                <span>${formatCurrency(cashTotal)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-weight:800;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);color:var(--persimmon);">
+                <span data-i18n="expectedCash">Expected Cash</span>
+                <span>${formatCurrency(expected)}</span>
+            </div>
+        </div>
+        <label style="font-size:0.8rem;" data-i18n="countedCash">Counted Cash (RM)</label>
+        <input type="number" id="closeShiftCounted" step="0.01" min="0"
+               style="width:100%;padding:12px;border-radius:16px;border:1.5px solid var(--border);margin-bottom:8px;font-size:1.1rem;"
+               oninput="updateVariancePreview(${expected})">
+        <div id="variancePreview" style="font-size:0.9rem;margin-bottom:12px;text-align:center;"></div>
+        <label style="font-size:0.8rem;" data-i18n="supervisorPin">Supervisor PIN (4-6 digits)</label>
+        <input type="password" id="closeShiftSupervisorPin" inputmode="numeric" maxlength="6"
+               style="width:100%;padding:10px;border-radius:16px;border:1.5px solid var(--border);margin-bottom:12px;text-align:center;letter-spacing:6px;">
+        <button class="btn btn-primary" style="width:100%;background:var(--red);" onclick="doCloseShift()"
+                data-i18n="confirmCloseShift">🔒 Confirm Close</button>
+        <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px;" onclick="closeCloseShiftModal()"
+                data-i18n="cancel">Cancel</button>
+    `;
+    document.getElementById('closeShiftModal').style.display = 'flex';
+    applyLanguage();
+}
+
+function updateVariancePreview(expected) {
+    const counted = parseFloat(document.getElementById('closeShiftCounted').value) || 0;
+    const variance = counted - expected;
+    const el = document.getElementById('variancePreview');
+    let color, label;
+    if (Math.abs(variance) < 0.01) {
+        color = 'var(--green)'; label = '✅ Balanced';
+    } else if (variance > 0) {
+        color = 'var(--gold)'; label = `⚠️ Overage +${formatCurrency(variance)}`;
+    } else {
+        color = 'var(--red)'; label = `⚠️ Shortage ${formatCurrency(variance)}`;
+    }
+    el.innerHTML = `<span style="color:${color};font-weight:700;">${label}</span>`;
+}
+
+function closeCloseShiftModal(e) {
+    if (e && e.target !== document.getElementById('closeShiftModal')) return;
+    document.getElementById('closeShiftModal').style.display = 'none';
+}
+
+async function doCloseShift() {
+    const counted = parseFloat(document.getElementById('closeShiftCounted').value);
+    const pin = document.getElementById('closeShiftSupervisorPin').value;
+
+    if (isNaN(counted) || counted < 0) {
+        return showToast(i18n.t('enterValidCount') || 'Enter a valid count');
+    }
+    if (!pin || !/^\d{4,6}$/.test(pin)) {
+        return showToast(i18n.t('supervisorPinInvalid') || 'Enter 4-6 digit supervisor PIN');
+    }
+
+    try {
+        const { data, error } = await supabaseClient.rpc('close_cashier_shift', {
+            p_shift_id: APP_STATE.currentShift.id,
+            p_counted: counted,
+            p_supervisor_pin: pin
+        });
+        if (error) throw error;
+
+        // Refresh state
+        APP_STATE.currentShift = null;
+        const { data: shifts } = await supabaseClient
+            .from('cashier_shifts').select('*')
+            .eq('store_id', APP_STATE.storeId)
+            .order('opened_at', { ascending: false }).limit(100);
+        APP_STATE.shifts = shifts || [];
+
+        closeCloseShiftModal();
+        renderRegisterTab(document.getElementById('cashierTabContent'));
+        showToast(i18n.t('registerClosed') || 'Register closed');
+
+        // Show receipt
+        const closedShift = APP_STATE.shifts.find(s => s.id === data.shift_id);
+        if (closedShift) showShiftReceipt(closedShift);
+    } catch (e) {
+        console.error('Close shift error:', e);
+        showToast(i18n.t('closeShiftFailed') || 'Failed: ' + e.message);
+    }
+}
+
+/* ────────── CASHIERS TAB ────────── */
+function renderCashiersTab(el) {
+    if (!APP_STATE.adminUnlocked) {
+        el.innerHTML = `<p style="text-align:center;padding:20px;color:var(--text-lighter);"
+            data-i18n="unlockAdminToManageCashiers">Unlock admin mode to manage cashiers.</p>`;
+        applyLanguage();
+        return;
+    }
+
+    const rows = APP_STATE.cashiers.map(c => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <div>
+                <strong>${c.name}</strong>
+                ${!c.active ? '<span style="color:var(--text-lighter);font-size:0.75rem;"> (inactive)</span>' : ''}
+            </div>
+            ${c.active
+                ? `<button class="btn btn-xs btn-outline" onclick="deactivateCashier('${c.id}')"
+                          data-i18n="deactivate">Deactivate</button>`
+                : `<button class="btn btn-xs btn-outline" onclick="reactivateCashier('${c.id}')"
+                          data-i18n="reactivate">Reactivate</button>`}
+        </div>`).join('') || '<p style="color:var(--text-lighter);text-align:center;padding:12px;">No cashiers yet.</p>';
+
+    el.innerHTML = `
+        <div style="margin-bottom:12px;">${rows}</div>
+        <div style="border-top:1px solid var(--border);padding-top:12px;">
+            <label style="font-size:0.8rem;" data-i18n="cashierName">Cashier Name</label>
+            <input type="text" id="newCashierName" style="width:100%;padding:10px;border-radius:16px;border:1.5px solid var(--border);margin-bottom:8px;">
+            <label style="font-size:0.8rem;" data-i18n="cashierPin4">4-digit PIN</label>
+            <input type="password" id="newCashierPin" inputmode="numeric" maxlength="4"
+                   style="width:100%;padding:10px;border-radius:16px;border:1.5px solid var(--border);margin-bottom:12px;text-align:center;letter-spacing:8px;font-size:1.1rem;">
+            <button class="btn btn-primary" style="width:100%;" onclick="doRegisterCashier()"
+                    data-i18n="addCashier">+ Add Cashier</button>
+        </div>`;
+    applyLanguage();
+}
+
+async function doRegisterCashier() {
+    const name = document.getElementById('newCashierName').value.trim();
+    const pin = document.getElementById('newCashierPin').value;
+    if (!name) return showToast(i18n.t('nameRequired') || 'Name required');
+    if (!/^\d{4}$/.test(pin)) return showToast(i18n.t('pinMust4Digits') || 'PIN must be 4 digits');
+
+    try {
+        const { data, error } = await supabaseClient.rpc('create_cashier', {
+            p_store_id: APP_STATE.storeId, p_name: name, p_pin: pin
+        });
+        if (error) throw error;
+
+        APP_STATE.cashiers.unshift({
+            id: data, store_id: APP_STATE.storeId, name, active: true
+        });
+        renderCashiersTab(document.getElementById('cashierTabContent'));
+        showToast(i18n.t('cashierAdded') || 'Cashier added');
+    } catch (e) {
+        console.error('Create cashier error:', e);
+        showToast(i18n.t('cashierCreateFailed') || 'Failed: ' + e.message);
+    }
+}
+
+async function deactivateCashier(id) {
+    if (!confirm(i18n.t('deactivateConfirm') || 'Deactivate this cashier?')) return;
+    await supabaseClient.from('cashiers').update({ active: false }).eq('id', id);
+    const c = APP_STATE.cashiers.find(x => x.id === id);
+    if (c) c.active = false;
+    renderCashiersTab(document.getElementById('cashierTabContent'));
+}
+
+async function reactivateCashier(id) {
+    await supabaseClient.from('cashiers').update({ active: true }).eq('id', id);
+    const c = APP_STATE.cashiers.find(x => x.id === id);
+    if (c) c.active = true;
+    renderCashiersTab(document.getElementById('cashierTabContent'));
+}
+
+/* ────────── HISTORY TAB ────────── */
+function renderShiftHistoryTab(el) {
+    const closed = APP_STATE.shifts.filter(s => s.status === 'closed');
+    if (closed.length === 0) {
+        el.innerHTML = `<p style="text-align:center;padding:20px;color:var(--text-lighter);"
+            data-i18n="noShiftHistory">No closed shifts yet.</p>`;
+        applyLanguage();
+        return;
+    }
+    el.innerHTML = `
+        <div style="max-height:60vh;overflow-y:auto;">
+        <table class="daily-report-table">
+            <thead><tr>
+                <th data-i18n="date">Date</th>
+                <th data-i18n="cashier">Cashier</th>
+                <th data-i18n="expected">Expected</th>
+                <th data-i18n="counted">Counted</th>
+                <th data-i18n="variance">Variance</th>
+            </tr></thead>
+            <tbody>
+            ${closed.map(s => {
+                const v = Number(s.variance || 0);
+                const vColor = Math.abs(v) < 0.01 ? 'var(--green)'
+                             : v > 0 ? 'var(--gold)' : 'var(--red)';
+                return `<tr>
+                    <td>${new Date(s.opened_at).toLocaleDateString()}</td>
+                    <td>${s.cashier_name}</td>
+                    <td>${formatCurrency(s.expected_close || 0)}</td>
+                    <td>${formatCurrency(s.counted_close || 0)}</td>
+                    <td style="color:${vColor};font-weight:700;">${v >= 0 ? '+' : ''}${formatCurrency(v)}</td>
+                </tr>`;
+            }).join('')}
+            </tbody>
+        </table>
+        </div>`;
+    applyLanguage();
+}
+
+/* ────────── SUPERVISOR PIN ────────── */
+function openSupervisorPinModal() {
+    document.getElementById('currentSupervisorPin').value = '';
+    document.getElementById('newSupervisorPin').value = '';
+    document.getElementById('confirmSupervisorPin').value = '';
+    document.getElementById('supervisorPinModal').style.display = 'flex';
+}
+function closeSupervisorPinModal(e) {
+    if (e && e.target !== document.getElementById('supervisorPinModal')) return;
+    document.getElementById('supervisorPinModal').style.display = 'none';
+}
+
+async function saveSupervisorPin() {
+    const current = document.getElementById('currentSupervisorPin').value || null;
+    const next = document.getElementById('newSupervisorPin').value;
+    const confirm = document.getElementById('confirmSupervisorPin').value;
+
+    if (!/^\d{4,6}$/.test(next)) return showToast(i18n.t('supervisorPinInvalid') || '4-6 digits');
+    if (next !== confirm) return showToast(i18n.t('pinMismatch') || 'PINs do not match');
+
+    try {
+        const { error } = await supabaseClient.rpc('set_supervisor_pin', {
+            p_store_id: APP_STATE.storeId, p_current_pin: current, p_new_pin: next
+        });
+        if (error) throw error;
+        closeSupervisorPinModal();
+        showToast(i18n.t('supervisorPinSaved') || 'Supervisor PIN saved');
+    } catch (e) {
+        showToast(i18n.t('supervisorPinSaveFailed') || 'Failed: ' + e.message);
+    }
+}
+
+/* ────────── SHIFT RECEIPT ────────── */
+function showShiftReceipt(shift) {
+    const variance = Number(shift.variance || 0);
+    const varianceColor = Math.abs(variance) < 0.01 ? '#2E7D32'
+                        : variance > 0 ? '#B45309' : '#C62828';
+    const varianceLabel = Math.abs(variance) < 0.01 ? 'BALANCED'
+                        : variance > 0 ? 'OVERAGE' : 'SHORTAGE';
+
+    const receiptHtml = `
+      <div style="padding:20px;font-family:'Nunito',sans-serif;text-align:center;max-width:400px;margin:0 auto;">
+        <h2 style="color:#E8784A;margin-bottom:4px;">🧾 SHIFT SUMMARY</h2>
+        <div style="font-size:0.75rem;color:#6B4E4E;margin-bottom:12px;">
+            ${APP_STATE.settings.storeName || 'Store'}<br>
+            Shift #${shift.id.slice(0,8).toUpperCase()}
+        </div>
+        <hr style="border:0;border-top:1px dashed #F0E0D6;margin:12px 0;">
+        <table style="width:100%;font-size:0.8rem;text-align:left;">
+            <tr><td>Cashier</td><td style="text-align:right;">${shift.cashier_name}</td></tr>
+            <tr><td>Opened</td><td style="text-align:right;">${new Date(shift.opened_at).toLocaleString()}</td></tr>
+            <tr><td>Closed</td><td style="text-align:right;">${new Date(shift.closed_at).toLocaleString()}</td></tr>
+        </table>
+        <hr style="border:0;border-top:1px dashed #F0E0D6;margin:12px 0;">
+        <table style="width:100%;font-size:0.85rem;text-align:left;">
+            <tr><td>Opening Float</td><td style="text-align:right;">${formatCurrency(shift.opening_float)}</td></tr>
+            <tr><td>Expected Cash</td><td style="text-align:right;">${formatCurrency(shift.expected_close)}</td></tr>
+            <tr><td>Counted Cash</td><td style="text-align:right;">${formatCurrency(shift.counted_close)}</td></tr>
+            <tr><td colspan="2"><hr style="border:0;border-top:1px dashed #F0E0D6;margin:8px 0;"></td></tr>
+            <tr style="font-weight:800;">
+                <td>Variance</td>
+                <td style="text-align:right;color:${varianceColor};">
+                    ${variance >= 0 ? '+' : ''}${formatCurrency(variance)} ${varianceLabel}
+                </td>
+            </tr>
+        </table>
+        <hr style="border:0;border-top:1px dashed #F0E0D6;margin:16px 0;">
+        <div style="font-size:0.75rem;text-align:left;line-height:2;">
+            <div>Cashier signature: _______________________</div>
+            <div style="margin-top:16px;">Supervisor: ______________ Date: __________</div>
+        </div>
+      </div>`;
+
+    const modal = document.getElementById('shiftReceiptModal');
+    modal.querySelector('.modal-sheet').innerHTML = `
+        ${receiptHtml}
+        <div style="padding:0 16px 16px;display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" style="flex:1;" onclick="printShiftReceipt('${shift.id}')"
+                    data-i18n="printReceipt">🖨️ Print</button>
+            <button class="btn btn-outline btn-sm" style="flex:1;"
+                    onclick="closeShiftReceiptModal()" data-i18n="close">Close</button>
+        </div>`;
+    modal.style.display = 'flex';
+}
+
+function printShiftReceipt(shiftId) {
+    const shift = APP_STATE.shifts.find(s => s.id === shiftId);
+    if (!shift) return;
+    // Reuse the browserPrint overlay pattern
+    const modalHtml = document.querySelector('#shiftReceiptModal .modal-sheet').innerHTML;
+    const overlay = document.createElement('div');
+    overlay.id = 'printReceiptOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:99999;overflow:auto;padding:20px;box-sizing:border-box;';
+    overlay.innerHTML = modalHtml.split('<div style="padding:0 16px 16px')[0];  // strip the buttons
+    document.body.appendChild(overlay);
+
+    const style = document.createElement('style');
+    style.id = 'printOverlayStyle';
+    style.textContent = `@media print {
+        body * { visibility:hidden; }
+        #printReceiptOverlay, #printReceiptOverlay * { visibility:visible; }
+        #printReceiptOverlay { position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;background:white;padding:0; }
+    }`;
+    document.head.appendChild(style);
+
+    window.print();
+    setTimeout(() => {
+        overlay.remove();
+        const s = document.getElementById('printOverlayStyle'); if (s) s.remove();
+    }, 30000);
+}
+
+function closeShiftReceiptModal(e) {
+    if (e && e.target !== document.getElementById('shiftReceiptModal')) return;
+    document.getElementById('shiftReceiptModal').style.display = 'none';
+}
+	
 /* Play a chime when a new unpaid order arrives */
 function playNewOrderChime() {
     try {
@@ -5417,6 +6040,13 @@ async function finalizeCustomerPayment() {
         paymentDetails.refNum = document.getElementById('onlineRefNum').value;
     }
 
+	if (method === 'cash' && !APP_STATE.currentShift) {
+    showToast(i18n.t('registerNotOpen') || 'Please open the register first');
+    document.getElementById('paymentModal').style.display = 'none';
+    openCashierModal();
+    return;
+}
+	
     let callNum = parseInt(APP_STATE.settings.callNumberCounter || '0') + 1;
     APP_STATE.settings.callNumberCounter = callNum;
     await supabaseClient.from('settings').upsert(
@@ -5435,7 +6065,8 @@ async function finalizeCustomerPayment() {
             status: 'pending',
             paymentMethod: method,
             paymentDetails: paymentDetails,
-            callNumber: String(callNum)
+                        callNumber: String(callNum),
+            shift_id:   APP_STATE.currentShift?.id || null    // ← NEW
         })
         .eq('id', orderId)
         .eq('store_id', APP_STATE.storeId);   // ✅ 隔离
