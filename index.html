@@ -5477,11 +5477,25 @@ function renderCashierTab() {
     if (_cashierTab === 'cashiers') return renderCashiersTab(el);
     if (_cashierTab === 'history')  return renderShiftHistoryTab(el);
 }
-
+async function reloadCashierState() {
+    const [ { data: cashiers }, { data: shifts } ] = await Promise.all([
+        supabaseClient.from('cashiers').select('*')
+            .eq('store_id', APP_STATE.storeId)
+            .order('created_at', { ascending: false }),
+        supabaseClient.from('cashier_shifts').select('*')
+            .eq('store_id', APP_STATE.storeId)
+            .order('opened_at', { ascending: false })
+            .limit(100)
+    ]);
+    APP_STATE.cashiers = (cashiers || []).filter(c => c && c.id);
+    APP_STATE.shifts = (shifts || []).filter(s => s && s.id);
+    APP_STATE.currentShift = APP_STATE.shifts.find(s => s.status === 'open') || null;
+}
 /* ────────── REGISTER TAB ────────── */
 function renderRegisterTab(el) {
     const shift = APP_STATE.currentShift;
-
+	const activeCashiers = (APP_STATE.cashiers || []).filter(c => c && c.active);
+	
     if (!shift) {
         // Closed state → show open form
         if (APP_STATE.cashiers.filter(c => c.active).length === 0) {
@@ -5574,19 +5588,47 @@ async function doOpenShift() {
     }
 
     try {
-        const { data, error } = await supabaseClient.rpc('open_cashier_shift', {
+        const { data: shiftId, error } = await supabaseClient.rpc('open_cashier_shift', {
             p_store_id: APP_STATE.storeId,
             p_cashier_id: cashierId,
             p_pin: pin,
             p_opening_float: float
         });
-        if (error) throw error;
 
-        // Reload current shift
-        const { data: fresh } = await supabaseClient
-            .from('cashier_shifts').select('*').eq('id', data).single();
+        if (error) {
+            // "An open shift already exists" → reload state, don't leave UI stale
+            if (error.message && error.message.includes('already exists')) {
+                await reloadCashierState();
+                showToast(i18n.t('shiftAlreadyOpen') || 'A shift is already open. Reloading…');
+                renderRegisterTab(document.getElementById('cashierTabContent'));
+                return;
+            }
+            throw error;
+        }
+
+        // Fetch the freshly created shift — CHECK the error this time
+        const { data: fresh, error: fetchErr } = await supabaseClient
+            .from('cashier_shifts')
+            .select('*')
+            .eq('id', shiftId)
+            .single();
+
+        if (fetchErr || !fresh) {
+            // RPC succeeded but we can't read it back — likely RLS
+            console.error('Open succeeded but fetch failed:', fetchErr);
+            await reloadCashierState();   // try to pick it up via list query
+            if (APP_STATE.currentShift) {
+                showToast(i18n.t('registerOpened') || 'Register opened');
+            } else {
+                showToast(i18n.t('fetchShiftFailed') ||
+                    'Shift created but could not be loaded. Check RLS on cashier_shifts.');
+            }
+            renderRegisterTab(document.getElementById('cashierTabContent'));
+            return;
+        }
+
         APP_STATE.currentShift = fresh;
-        APP_STATE.shifts.unshift(fresh);
+        APP_STATE.shifts = [fresh, ...APP_STATE.shifts.filter(s => s && s.id !== fresh.id)];
 
         showToast(i18n.t('registerOpened') || 'Register opened');
         renderRegisterTab(document.getElementById('cashierTabContent'));
@@ -5778,7 +5820,8 @@ async function reactivateCashier(id) {
 
 /* ────────── HISTORY TAB ────────── */
 function renderShiftHistoryTab(el) {
-    const closed = APP_STATE.shifts.filter(s => s.status === 'closed');
+    const closed = (APP_STATE.shifts || [])
+        .filter(s => s && s.status === 'closed');         // ← guard against null elements
     if (closed.length === 0) {
         el.innerHTML = `<p style="text-align:center;padding:20px;color:var(--text-lighter);"
             data-i18n="noShiftHistory">No closed shifts yet.</p>`;
