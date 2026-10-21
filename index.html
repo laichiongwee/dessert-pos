@@ -4966,11 +4966,14 @@ function renderOrderCard(order) {
     return `
     <div class="order-card ${status === 'completed' ? 'completed' : ''}">
         <div class="flex-row">
-            <span><strong>#${order.id}</strong></span>
-            <span class="status-badge ${badgeClass}">${statusLabel}</span>
-            ${callNumber ? `<span class="call-number">🔔 ${callNumber}</span>` : ''}
-        </div>
-        <div style="font-size:0.75rem;">${items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
+    <span><strong>#${order.id}</strong></span>
+    <span class="status-badge ${badgeClass}">${statusLabel}</span>
+    ${callNumber ? `<span class="call-number">🔔 ${callNumber}</span>` : ''}
+</div>
+${order.memberPhone
+    ? `<div style="font-size:0.75rem; color:var(--text-light);">📞 ${order.memberPhone}</div>`
+    : ''}
+<div style="font-size:0.75rem;">${items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
         <div class="flex-row" style="margin-top:4px;">
             <span>RM ${Number(order.total).toFixed(2)}</span>
             <span style="color:var(--text-lighter);">${order.memberName || ''}</span>
@@ -6084,7 +6087,15 @@ function renderUnpaidOrdersList() {
         const items = (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) || [];
         return `
         <div class="order-card" style="margin-bottom:8px;">
-            <div><strong>#${order.id}</strong> · ${order.memberName || i18n.t('customerLabel')}</div>
+            <div>
+                <strong>#${order.id}</strong>
+                · ${order.memberName || i18n.t('customerLabel')}
+            </div>
+            ${order.memberPhone
+                ? `<div style="font-size:0.8rem; color:var(--text-light); margin-top:2px;">
+                       📞 ${order.memberPhone}
+                   </div>`
+                : ''}
             <div style="font-size:0.75rem;">${items.map(i=>`${i.name} x${i.qty}`).join(', ')}</div>
             <div class="flex-row" style="margin-top:4px;">
                 <span style="font-weight:800;">${formatCurrency(order.total)}</span>
