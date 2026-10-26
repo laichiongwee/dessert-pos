@@ -15,6 +15,9 @@
 <script src="locales/zh-CN.js"></script>
 	<!-- Load this BEFORE your script that contains buildEscPosReceipt -->
 <script src="gbk-table.js"></script>
+	<!-- Star webPRNT SDK (optional — only used if loaded) -->
+<script src="star-webprnt/StarWebPrintBuilder.js"></script>
+<script src="star-webprnt/StarWebPrintTrader.js"></script>
     <style>
         :root {
             --persimmon: #E8784A; --persimmon-light: #FDE8DF; --persimmon-dark: #C45A2E;
@@ -1069,6 +1072,17 @@
   <input type="text" id="bankAccountInput" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);"
          data-i18n-placeholder="bankAccountPlaceholder" placeholder="e.g. 112233445566">
 </div>
+
+	  <div style="margin-bottom:16px;">
+  <label data-i18n="printerModeLabel">Printer Mode</label>
+  <select id="printerModeSelect" style="width:100%;padding:10px;border-radius:20px;border:1.5px solid var(--border);font-family:inherit;">
+    <option value="auto" data-i18n="printerModeAuto">Auto (USB → webPRNT → Browser)</option>
+    <option value="usb" data-i18n="printerModeUsb">USB only</option>
+    <option value="webprnt" data-i18n="printerModeWebprnt">webPRNT only</option>
+    <option value="bluetooth" data-i18n="printerModeBluetooth">Bluetooth BLE (legacy)</option>
+    <option value="browser" data-i18n="printerModeBrowser">Browser print only</option>
+  </select>
+</div>
 	  
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary btn-sm" onclick="saveStoreSettings()" style="flex:1;" data-i18n="save">💾 保存</button>
@@ -1670,6 +1684,10 @@ async function resetDemoStore(silent = false) {
     APP_STATE.orderIdCounter = 1000;
     localStorage.setItem('orderIdCounter', '1000');
 
+	APP_STATE.settings.printerMode = getSetting('printerMode', 'auto');
+	APP_STATE.settings.cashierPrinterUrl = getSetting('cashierPrinterUrl', 'http://localhost:8001/StarWebPrnt/SendMessage');
+	APP_STATE.settings.kitchenPrinterUrl = getSetting('kitchenPrinterUrl', '');
+	  
     // Clear current order & member
     APP_STATE.cashierOrder = [];
     APP_STATE.currentMember = null;
@@ -2599,6 +2617,7 @@ showOrderReceipt(order);
     }
 
     showOrderReceipt(order);
+	printKitchenReceipt(order).catch(e => console.warn('Kitchen print failed:', e));
 }
 function showOrderReceipt(order) {
     const receiptHtml = buildReceiptHtml(order);
@@ -2651,6 +2670,120 @@ function showOrderReceipt(order) {
         </div>
     `;
 }
+
+function buildStarReceiptRequest(order) {
+    const builder = new StarWebPrintBuilder();
+    let req = '';
+
+    // Init + header
+    req += builder.createInitializationElement();
+    req += builder.createAlignmentElement({ alignment: 'center' });
+    req += builder.createTextElement({ text: `🍅 ${APP_STATE.settings.storeName || 'Dessert POS'}\n` });
+    req += builder.createTextElement({ text: '================================\n' });
+
+    // Date + call number
+    req += builder.createAlignmentElement({ alignment: 'left' });
+    req += builder.createTextElement({ text: new Date(order.date).toLocaleString() + '\n' });
+    req += builder.createAlignmentElement({ alignment: 'center' });
+    req += builder.createTextElement({ text: `\n[${order.callNumber}]\n\n`, emphasis: true });
+
+    // Items
+    req += builder.createAlignmentElement({ alignment: 'left' });
+    order.items.forEach(item => {
+        const name = item.name.length > 18 ? item.name.slice(0, 16) + '..' : item.name;
+        const lineTotal = formatCurrency(item.price * item.qty);
+        const qty = `x${item.qty}`;
+        const pad = Math.max(1, 32 - name.length - qty.length - lineTotal.length);
+        req += builder.createTextElement({
+            text: `${name}${qty}${' '.repeat(pad)}${lineTotal}\n`
+        });
+    });
+
+    // Taxes / rounding
+    if (order.taxDetails) {
+        req += builder.createTextElement({ text: '--------------------------------\n' });
+        if (order.taxDetails.tax1Amount > 0) {
+            req += builder.createTextElement({
+                text: `${APP_STATE.taxSettings.tax1Name}: ${formatCurrency(order.taxDetails.tax1Amount)}\n`
+            });
+        }
+        if (order.taxDetails.tax2Amount > 0) {
+            req += builder.createTextElement({
+                text: `${APP_STATE.taxSettings.tax2Name}: ${formatCurrency(order.taxDetails.tax2Amount)}\n`
+            });
+        }
+        if (order.taxDetails.roundingAdjustment !== 0) {
+            req += builder.createTextElement({
+                text: `Rounding: ${formatCurrency(order.taxDetails.roundingAdjustment)}\n`
+            });
+        }
+    }
+
+    // Total
+    req += builder.createTextElement({ text: '--------------------------------\n' });
+    req += builder.createTextElement({
+        text: `TOTAL: ${formatCurrency(order.total)}\n`,
+        emphasis: true
+    });
+    req += builder.createTextElement({ text: '--------------------------------\n' });
+
+    // Payment
+    req += builder.createTextElement({
+        text: `Payment: ${getPaymentMethodLabel(order.paymentMethod)}\n`
+    });
+    if (order.paymentDetails) {
+        if (order.paymentDetails.cardLast4) {
+            req += builder.createTextElement({ text: `Card: **** ${order.paymentDetails.cardLast4}\n` });
+        }
+        if (order.paymentDetails.refNum) {
+            req += builder.createTextElement({ text: `Ref: ${order.paymentDetails.refNum}\n` });
+        }
+        if (order.paymentDetails.amountTendered) {
+            req += builder.createTextElement({ text: `Tendered: ${formatCurrency(order.paymentDetails.amountTendered)}\n` });
+            req += builder.createTextElement({ text: `Change: ${formatCurrency(order.paymentDetails.change)}\n` });
+        }
+    }
+
+    // Footer
+    req += builder.createAlignmentElement({ alignment: 'center' });
+    req += builder.createTextElement({ text: '\nThank you! 谢谢惠顾!\n\n\n' });
+    req += builder.createCutPaperElement({ feed: true });
+
+    return req;
+}
+
+	async function starWebPRNTPrint(order, endpoint) {
+    if (typeof StarWebPrintTrader === 'undefined' || typeof StarWebPrintBuilder === 'undefined') {
+        throw new Error('Star SDK not loaded');
+    }
+    const url = endpoint || APP_STATE.settings.cashierPrinterUrl
+                || 'http://localhost:8001/StarWebPrnt/SendMessage';
+
+    const trader = new StarWebPrintTrader({ url });
+    const request = buildStarReceiptRequest(order);
+
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('webPRNT timeout — is the app running?'));
+        }, 5000);
+
+        trader.onReceive = (response) => {
+            clearTimeout(timeout);
+            if (response && response.success) {
+                showToast('✅ Printed via webPRNT');
+                resolve(true);
+            } else {
+                reject(new Error((response && response.errorMessage) || 'Print failed'));
+            }
+        };
+
+        trader.send(request).catch(err => {
+            clearTimeout(timeout);
+            reject(err);
+        });
+    });
+}
+
 	
 // ==================== SMART BLUETOOTH DISCOVERY ====================
 let bluetoothDevice = null;
@@ -3050,31 +3183,55 @@ lines.push('');
     return gbkEncode(data);
 }
 	
-function printReceipt(orderId) {
+async function printReceipt(orderId) {
     const order = APP_STATE.orders.find(o => o.id === orderId);
-    if (!order) {
-        showToast('Order not found');
+    if (!order) { showToast('Order not found'); return; }
+
+    const mode = APP_STATE.settings.printerMode || 'auto';
+
+    // --- Explicit modes ---
+    if (mode === 'browser') { browserPrint(order); return; }
+    if (mode === 'bluetooth') { tryBluetoothThenFallback(order); return; }
+
+    if (mode === 'usb') {
+        if (navigator.usb && usbDevice) {
+            webUSBPrint(order).catch(() => browserPrint(order));
+        } else {
+            browserPrint(order);
+        }
         return;
     }
 
-    if (navigator.usb && usbDevice) {
-        // USB is already connected this session — prefer it
-        webUSBPrint(order).catch(() => {
-            tryBluetoothThenFallback(order);
-        });
-    } else {
-        tryBluetoothThenFallback(order);
+    if (mode === 'webprnt') {
+        try {
+            await starWebPRNTPrint(order);
+        } catch (e) {
+            console.warn('webPRNT failed:', e);
+            browserPrint(order);
+        }
+        return;
     }
+
+    // --- auto: USB → webPRNT → browser print ---
+    if (navigator.usb && usbDevice) {
+        try { await webUSBPrint(order); return; }
+        catch (e) { console.warn('USB print failed:', e); }
+    }
+
+    if (typeof StarWebPrintTrader !== 'undefined') {
+        try { await starWebPRNTPrint(order); return; }
+        catch (e) { console.warn('webPRNT failed:', e); }
+    }
+
+    browserPrint(order);
 }
 
+// Legacy BLE path (still available via printerMode = 'bluetooth')
 function tryBluetoothThenFallback(order) {
     if (navigator.bluetooth) {
         webBluetoothPrint(order)
-            .then(() => { /* success */ })
-            .catch((err) => {
-                console.warn('Bluetooth print failed:', err);
-                browserPrint(order);
-            });
+            .then(() => {})
+            .catch(() => browserPrint(order));
     } else {
         browserPrint(order);
     }
@@ -3149,6 +3306,37 @@ function browserPrint(order) {
 
     window.print();
     setTimeout(cleanupPrintOverlay, 30000);
+}
+
+	function buildStarKitchenRequest(order) {
+    const builder = new StarWebPrintBuilder();
+    let req = '';
+    req += builder.createInitializationElement();
+    req += builder.createAlignmentElement({ alignment: 'center' });
+    req += builder.createTextElement({ text: `🍳 KITCHEN\n`, emphasis: true });
+    req += builder.createTextElement({ text: '================================\n' });
+    req += builder.createTextElement({ text: `#${order.callNumber}\n`, emphasis: true });
+    req += builder.createAlignmentElement({ alignment: 'left' });
+    req += builder.createTextElement({ text: new Date(order.date).toLocaleTimeString() + '\n' });
+    req += builder.createTextElement({ text: '--------------------------------\n' });
+    order.items.forEach(item => {
+        req += builder.createTextElement({ text: `x${item.qty}  ${item.name}\n` });
+    });
+    req += builder.createTextElement({ text: '\n\n' });
+    req += builder.createCutPaperElement({ feed: true });
+    return req;
+}
+
+async function printKitchenReceipt(order) {
+    const url = APP_STATE.settings.kitchenPrinterUrl;
+    if (!url) return;   // no kitchen printer configured
+    const trader = new StarWebPrintTrader({ url });
+    const request = buildStarKitchenRequest(order);
+    return new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error('Kitchen printer timeout')), 5000);
+        trader.onReceive = (r) => { clearTimeout(t); r.success ? resolve(true) : reject(new Error(r.errorMessage)); };
+        trader.send(request).catch(err => { clearTimeout(t); reject(err); });
+    });
 }
 	
 function getPaymentMethodLabel(method) {
@@ -3934,7 +4122,8 @@ async function saveSettings() {
 function openStoreSettingsModal() {
   // Populate with current values
   document.getElementById('storeNameInput').value = APP_STATE.settings.storeName || i18n.t('storeName');
-  
+  // In openStoreSettingsModal():
+  document.getElementById('printerModeSelect').value = APP_STATE.settings.printerMode || 'auto';
   // Existing logo preview
   const logoUrl = APP_STATE.settings.logoUrl || '';
   const preview = document.getElementById('logoPreview');
@@ -4057,7 +4246,9 @@ async function saveStoreSettings() {
     }
     delete window._newLogoFile;
   }
-
+	// In saveStoreSettings():
+const printerMode = document.getElementById('printerModeSelect').value;
+APP_STATE.settings.printerMode = printerMode;
   // Prepare all settings rows to upsert
   const settingsToUpsert = [
     { key: 'storeName', value: newName, store_id: APP_STATE.storeId },
@@ -4065,7 +4256,8 @@ async function saveStoreSettings() {
     { key: 'bankName', value: bankName, store_id: APP_STATE.storeId },
     { key: 'bankAccount', value: bankAccount, store_id: APP_STATE.storeId },
     { key: 'paymentQrUrl', value: paymentQrUrl || '', store_id: APP_STATE.storeId },
-	  { key: 'paymentLink', value: paymentLink, store_id: APP_STATE.storeId }
+	  { key: 'paymentLink', value: paymentLink, store_id: APP_STATE.storeId },
+	  { key: 'printerMode', value: printerMode, store_id: APP_STATE.storeId }
   ];
 
   const { error } = await supabaseClient.from('settings').upsert(settingsToUpsert, { onConflict: 'key, store_id' });
